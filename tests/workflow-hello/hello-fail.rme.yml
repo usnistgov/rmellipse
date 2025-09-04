@@ -1,0 +1,41 @@
+# fields starting with a . are ignored
+# and can beused to make aliases
+.other-vars:
+  - &name lizardman
+  - &job lizardman
+
+.file-names:
+  - &job-file job-file.txt
+
+state-your-name:
+  inputs: []
+  outputs:
+    - name-file: *name-file
+  # commands are lists of arguments, mirroring
+  # the subprocesses input, so aliases can be
+  # inserted for file names
+  commands:
+    - [uv, run, scripts/state-your.py, *name, *name-file, '--pause', '1']
+
+state-your-occupation:
+  inputs: []
+  outputs:
+    - job-file: *job-file
+  commands:
+    - [uv, run, scripts/state-your.py, *job, *job-file, '--pause', '1.5']
+
+say-hello:
+  inputs:
+    - name-file:
+    - job-file:
+  outputs: []
+  commands:
+    - [uv, run, scripts/say-hello.py, *name-file, *job-file]
+
+job-that-fails:
+  inputs: []
+  outputs: []
+  commands:
+    - [uv, run, scripts/job-that-fails.py]
+
+

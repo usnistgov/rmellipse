@@ -1,0 +1,110 @@
+image: python:3.12.4
+
+.build-env: &build-env
+  - pip install uv
+  - pip install .
+  - pip install -r dev_deps.txt
+
+stages:
+  - test
+  - deploy
+
+unit_test:
+  stage: test
+  script:
+  - *build-env
+  - chmod +x ./tools/test.sh
+  - ./tools/test.sh
+  coverage: '/TOTAL.+ ([0-9]{1,3}%)/'
+  artifacts:
+    when: always
+    reports:
+      junit: tests/report.xml
+  rules:
+  - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  - if: '$CI_COMMIT_REF_NAME =~ "/^development.*$/" || $CI_COMMIT_REF_NAME =~ "/^stable.*$/"'
+
+build_test:
+  stage: test
+  image: python:latest
+  variables:
+    TWINE_USERNAME: gitlab-ci-token
+    TWINE_PASSWORD: $CI_JOB_TOKEN
+  script:
+    - pip install uv
+    - uv build
+  rules:
+  - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  - if: '$CI_COMMIT_REF_NAME =~ "/^development.*$/" || $CI_COMMIT_REF_NAME =~ "/^stable.*$/"'
+
+
+docbuild_test:
+  stage: test
+  variables:
+    GIT_STRATEGY: clone
+  script:
+  - *build-env
+  - chmod +x ./tools/docs.sh
+  - ./tools/docs.sh html
+  rules:
+  - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  - if: '$CI_COMMIT_REF_NAME =~ "/^development.*$/" || $CI_COMMIT_REF_NAME =~ "/^stable.*$/"'
+
+
+# Deploy jobs occur at the creation of a tag,
+# which is used to generate version numbers in the pyproject.toml file
+
+# Pages jobs builds the longer version of the
+# sphinx multiversion that builds the most recent stable and
+# development branch, along with any tagged branches
+# that arent pre-release i.e. X.X.X
+pages:
+  stage: deploy
+  variables:
+    GIT_STRATEGY: clone
+  script:
+  - *build-env
+  # this fetches the remote and tracks all the origin branches
+  # as locals so that sphinx multiversion can recognize them
+  - git fetch --all
+  - git branch -r | grep -v '\->' | while read remote; do git branch --track "${remote#origin/}" "$remote"; done
+  - chmod +x ./tools/docs.sh
+  - ./tools/docs.sh html-multiversioned-ci
+  artifacts:
+    paths:
+    - public
+  rules:
+    - if: $CI_COMMIT_TAG
+
+
+project-package-registry:
+  stage: deploy
+  image: python:latest
+  needs: ["pages"]
+  variables:
+    TWINE_USERNAME: gitlab-ci-token
+    TWINE_PASSWORD: $CI_JOB_TOKEN
+  script:
+    - pip install uv
+    - pip install twine
+    - uv build
+    - python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/* --verbose
+  rules:
+    - if: $CI_COMMIT_TAG
+
+internal-package-registry:
+  stage: deploy
+  image: python:latest
+  needs: ["pages"]
+  variables:
+    TWINE_USERNAME: $INTERNAL_REGISTRY_TOKEN_NAME
+    TWINE_PASSWORD: $INTERNAL_REGISTRY_TOKEN
+  script:
+    - pip install uv
+    - pip install twine
+    - uv build
+    - python -m twine upload --repository-url ${CI_API_V4_URL}/projects/10154/packages/pypi dist/* --verbose
+  rules:
+    - if: $CI_COMMIT_TAG
+
+

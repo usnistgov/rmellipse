@@ -1,0 +1,21 @@
+name: "workflow-hello"
+version: "0.1.0"
+
+requires-cdcs:
+  my-server:
+     url: "https//my-server//"
+     user: "$USERNAME"
+     password: "$PASSWORD"
+
+  datasets:
+    my-dataset:
+      project_id: "ID/project/path/to/dataset.hdf5"
+      version: ">=0.3.0,<0.4.0"
+      pick: newest, oldest, all...
+      exclude: "0.3.2" 
+
+requires-tools:
+  uv:
+    version: ">=0.3.0"
+  matlab:
+    version: ">0.1.0,<0.2.0"

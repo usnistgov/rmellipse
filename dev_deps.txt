@@ -1,0 +1,9 @@
+astroid==3.3.8
+sphinx-rtd-theme>=3.0.2
+sphinx==7.4.0
+sphinx-autoapi==3.6.0
+sphinx-gallery==0.17.0
+pytest==8.3.3
+numpydoc==1.7.0
+pytest-cov==6.1.1
+

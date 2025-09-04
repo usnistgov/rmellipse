@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm[simple]>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]  # list of folders that contain the packages (["."] by default)
+include = ["rmellipse*"]  # package names should match these glob patterns (["*"] by default)
+exclude = [""]  # exclude packages matching these glob patterns (empty by default)
+namespaces = false
+
+[tool.setuptools.package-data]
+myModule = ["*.s2p","*.hdf5"]
+
+[tool.uv.workspace]
+members = [
+    "tests/workflow-hello",
+    "tests/workflow-hello/workspace",
+]
+
+[project]
+name = "rmellipse"
+dynamic = ["version"]
+authors = [
+  {name="Daniel Cole Gray", email="daniel.c.gray@nist.gov" },
+  {name = "Zenn C. Roberts",email = "zenn.roberts@nist.gov"},
+  {name ="Aaron M. Hagerstrom", email = "aaron.hagerstrom@nist.gov"},
+
+]
+description = "A package for propagating uncertainties according to the GUM."
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: Microsoft :: Windows"
+]
+
+dependencies = [
+  "pandas>=2.2.2",
+  "numpy>=2.0.0",
+  "matplotlib>=3.9.0",
+  "h5py>=3.11.0",
+  "scipy>=1.15.2",
+  "xarray>=2025.3.1, <2025.6.0",
+  "click>=8.2.1",
+  "pyyaml>=6.0.2",
+  "jsonschema>=4.25.0",
+  "cdcs>=0.2.6",
+  "h5netcdf>=1.6.4",
+]
+license-files = ["LICENSE.md"]
+
+[project.scripts]
+rmellipse = 'rmellipse._cli:main'
+
+[dependency-groups]
+dev = [
+    "astroid==3.3.8",
+    "numpydoc==1.7.0",
+    "pytest==8.3.3",
+    "pytest-cov==6.1.1",
+    "sphinx==7.4.0",
+    "sphinx-autoapi==3.6.0",
+    "sphinx-gallery==0.17.0",
+    "sphinx-rtd-theme>=3.0.2",
+    "sphinx-click>=6.0.0",
+    "snakeviz>=2.2.2",
+    "sphinx-multiversion>=0.2.4",
+]

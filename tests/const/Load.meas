@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='us-ascii'?>
+<CorrectedMeasurement FileName="O:\67201\ReferenceData\Data defined models\2.4 mm\Ck2 F nominals//Load.meas" CreationTime="unknown" AssemblyVersion="unknown" UserName="unknown">
+    <MenuStripTextBoxes>
+      <CreatedByUserName Enabled="True" Text="unknown" />
+      <CreatedByProgram Enabled="True" Text="RockyMountainAdvanced" />
+      <CreatedByVersion Enabled="True" Text="uknonwn" />
+      <CreatedByDate Enabled="True" Text="unknown" />
+      <CreatedByFirstFileName Enabled="True" Text="unknown" />
+      <CreatedByUpdatedFileName Enabled="True" Text="unknown" />
+      <CreatedFromFirstFileName Enabled="True" Text="unknown" />
+      <CreatedFromUpdatedFileName Enabled="True" Text="unknown" />
+      <MyVersion Enabled="True" Text="unknown" />
+    </MenuStripTextBoxes>
+    <Controls>
+      <MeasurementName ControlType="System.Windows.Forms.TextBox" ControlText="cal_file" FullName="Me_SplitContainer2__MeasurementName" Enabled="True" Visible="True" />
+      <MeasurementDocumentation ControlType="System.Windows.Forms.TextBox" ControlText="unknown" FullName="Me_SplitContainer2__GroupBox5_MeasurementDocumentation" />
+      <MonteCarloPerturbedSParams ControlType="CustomFormControls.FLV_VariableDetailsList" FullName="Me_SplitContainer2__GroupBox3_Panel2_MonteCarloPerturbedSParams" Count="0" />
+      <MeasSParams ControlType="CustomFormControls.FLV_FixedDetailsList" FullName="Me_SplitContainer2__GroupBox2_Panel3_MeasSParams" Count="1">
+        <Item Index="0" Text="cal_file" Count="2">
+          <SubItem Index="0" Text="cal_file" />
+          <SubItem Index="1" Text="dummy_dir//Load////cal_file_Support//cal_file.s2p" />
+        </Item>
+      </MeasSParams>
+      <PerturbedSParams ControlType="CustomFormControls.FLV_VariableDetailsListMeas" FullName="Me_SplitContainer2__GroupBox1_Panel1_PerturbedSParams" Count="3">
+        <Item Index="0" Text="cal_file_0" Count="3">
+          <SubItem Index="0" Text="cal_file_0" />
+          <SubItem Index="1" Text="dummy_dir//Load////cal_file_Support//Covariance//cal_file_0.s2p" />
+          <SubItem Index="2" Text="TypeD_S_params_PCA_1" />
+        </Item>
+        <Item Index="1" Text="cal_file_1" Count="3">
+          <SubItem Index="0" Text="cal_file_1" />
+          <SubItem Index="1" Text="dummy_dir///Load////cal_file_Support//Covariance//cal_file_1.s2p" />
+          <SubItem Index="2" Text="TypeD_S_params_PCA_2" />
+        </Item>
+        <Item Index="2" Text="cal_file_2" Count="3">
+          <SubItem Index="0" Text="cal_file_2" />
+          <SubItem Index="1" Text="dummy_dir//Load////cal_file_Support//Covariance//cal_file_2.s2p" />
+          <SubItem Index="2" Text="TypeD_S_params_PCA_0" />
+        </Item>
+      </PerturbedSParams>
+    </Controls>
+  </CorrectedMeasurement>
+  

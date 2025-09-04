@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Common Grid Handling &#8212; Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=fd3f3429" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../../_static/documentation_options.js?v=888cb622"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Using Non-Vectorized Propagation" href="plot_e05_vectorizing.html" />
+    <link rel="prev" title="Reading/Writing RMEMeas Objects" href="plot_e03_reading_writing.html" />
+<link rel="stylesheet" href="https://pages.nist.gov/nist-header-footer/css/nist-combined.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" type="text/javascript"></script>
+  <script src="https://pages.nist.gov/nist-header-footer/js/nist-header-footer.js" type="text/javascript" defer="defer"></script>
+
+
+<script type="text/javascript" src="https://pages.nist.gov/leaveNotice/js/jquery.leaveNotice-nist.min.js"></script>
+<script>
+$(document).ready(function(){
+  // Mark external (non-nist.gov) A tags with class "external"
+  //If the adress start with https and ends with nist.gov
+  var re_nist = new RegExp('^https?:\/\/((^\/)*\.)*nist\\.gov(\/|$)');
+  //Regex to find address that start with https
+  var re_absolute_address = new RegExp('^((https?:)?\/\/)');
+  $("a").each(function(){
+    var url=$(this).attr('href');
+    if(re_nist.test(url) || !re_absolute_address.test(url)){
+      $(this).addClass('local');
+    }else{
+      //This a href appears to be external, so tag it
+      $(this).addClass('external');
+    }
+  });
+  // Add leaveNotice to external A elements
+  $('a.external').leaveNotice();
+});
+</script>
+<link rel="stylesheet" type="text/css" href="https://pages.nist.gov/leaveNotice/css/jquery.leaveNotice.css" />
+
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="plot_e05_vectorizing.html" title="Using Non-Vectorized Propagation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="plot_e03_reading_writing.html" title="Reading/Writing RMEMeas Objects"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >rmellipse Gallery</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">Fundementals</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Common Grid Handling</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+
+
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-rme-gettingstarted-plot-e04-common-grid-handling-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="common-grid-handling">
+<span id="sphx-glr-auto-examples-rme-gettingstarted-plot-e04-common-grid-handling-py"></span><h1>Common Grid Handling<a class="headerlink" href="#common-grid-handling" title="Link to this heading">¶</a></h1>
+<p>A common problem is when multiple inputs into a workflow
+share a common dimension like frequency, but those frequency grids aren’t
+aligned properly. This often results in having to manually
+trim down arrays based on a known frequency list.</p>
+<p>The RME offers an automatic common grid handling feature to do that for you.
+It acts on any RMEMeas input into a propagating function.</p>
+<section id="creating-an-objects">
+<h2>Creating an Objects<a class="headerlink" href="#creating-an-objects" title="Link to this heading">¶</a></h2>
+<p>First lets create 2 RMEMeas objects with slightly different
+coordinates on dimension ‘d1’.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">rmellipse.uobjects</span><span class="w"> </span><span class="kn">import</span> <span class="n">RMEMeas</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rmellipse.propagators</span><span class="w"> </span><span class="kn">import</span> <span class="n">RMEProp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">make_measurement</span><span class="p">(</span><span class="n">d1_coords</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Make a sample measurement with length 4 coordinate set.&quot;&quot;&quot;</span>
+    <span class="n">nom</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)),</span>
+                       <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;d1&#39;</span><span class="p">,</span> <span class="s1">&#39;d2&#39;</span><span class="p">),</span>
+                       <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;d1&#39;</span><span class="p">:</span> <span class="n">d1_coords</span><span class="p">,</span>
+                               <span class="s1">&#39;d2&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="p">)})</span>
+
+    <span class="n">meas</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_nom</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;meas&#39;</span><span class="p">,</span> <span class="n">nom</span><span class="o">=</span><span class="n">nom</span><span class="p">)</span>
+
+    <span class="n">meas</span><span class="o">.</span><span class="n">add_umech</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;mymechanisms&#39;</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.01</span><span class="p">,</span>
+        <span class="n">dof</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
+        <span class="n">category</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;Origin&#39;</span><span class="p">:</span> <span class="s1">&#39;Data Sheet&#39;</span><span class="p">},</span>
+        <span class="n">add_uid</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+        <span class="n">meas</span><span class="o">.</span><span class="n">add_mc_sample</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="o">*</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.01</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">meas</span>
+
+
+<span class="n">m1</span> <span class="o">=</span> <span class="n">make_measurement</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">m2</span> <span class="o">=</span> <span class="n">make_measurement</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">2.9</span><span class="p">])</span>
+</pre></div>
+</div>
+</section>
+<section id="setting-up-the-propagator">
+<h2>Setting up the Propagator<a class="headerlink" href="#setting-up-the-propagator" title="Link to this heading">¶</a></h2>
+<p>Next, let’s create a propagator. We are going to define the common grid
+as ‘d1’ and tell it to interpolate that grid to a set of common values. We
+tell it what those common values are with the common_coords argument. The
+verbose argument will print some information about the propagation as we go.
+See the <code class="xref py py-func docutils literal notranslate"><span class="pre">rmellipse.propagators.RME.handle_common_grid()</span></code> function for
+what methods are available for the propagator.</p>
+<p>When we wrap our add function in the propagator and print the d1 coordinate,
+we see that the d1 coordinate of x and y are now the same because the RME
+interpolated them down to supplied values. Note how the print statement
+happens twice, because a vectorized
+propagator calls the function on the`RMEMeas.cov`attribute then on the`RMEMeas.mc` attribute.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">myprop</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="p">(</span>
+    <span class="n">sensitivity</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">montecarlo_sims</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">common_grid</span><span class="o">=</span><span class="s1">&#39;d1&#39;</span><span class="p">,</span>
+    <span class="n">handle_common_grid_method</span><span class="o">=</span><span class="s1">&#39;interp_common&#39;</span><span class="p">,</span>
+    <span class="n">common_coords</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;d1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mf">.5</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">]},</span>
+    <span class="n">vectorize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+<span class="nd">@myprop</span><span class="o">.</span><span class="n">propagate</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add two data sets.&quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">d1</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">y</span><span class="o">.</span><span class="n">d1</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span>
+
+
+<span class="n">m3</span> <span class="o">=</span> <span class="n">add</span><span class="p">(</span><span class="n">m1</span><span class="p">,</span> <span class="n">m2</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Propagating: add
+----------------
+[0.  0.5 1.5 2.5] [0.  0.5 1.5 2.5]
+[0.  0.5 1.5 2.5] [0.  0.5 1.5 2.5]
+grid handling runtime:0.011608600616455078 sec
+    linear mechanisms:2
+       linear runtime:0.010084152221679688 sec
+    montecarlo trials:100
+           mc runtime:0.0019702911376953125 sec
+ recategorize runtime:0.014024496078491211 sec
+       repack runtime:5.8650970458984375e-05 sec
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.437 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-rme-gettingstarted-plot-e04-common-grid-handling-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/8118e3328d165e7558054b6df43d10e6/plot_e04_common_grid_handling.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">plot_e04_common_grid_handling.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/541ac2b53ff558b80a77b7f36d743bcc/plot_e04_common_grid_handling.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">plot_e04_common_grid_handling.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/46ab14104bead00d55aaca45e493040f/plot_e04_common_grid_handling.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">plot_e04_common_grid_handling.zip</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+</section>
+
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">rmellipse Gallery</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#examples">Examples</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#fundementals">Fundementals</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../Examples/index.html">Examples</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Fundementals</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../for_contributors/index.html">For Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/auto_examples/RME_gettingstarted/plot_e04_common_grid_handling.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+<h3>Versions</h3>
+<ul>
+  <li><a href="plot_e04_common_grid_handling.html">v0.3.4</a></li>
+  <li><a href="../../../stable/index.html">stable</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="plot_e05_vectorizing.html" title="Using Non-Vectorized Propagation"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="plot_e03_reading_writing.html" title="Reading/Writing RMEMeas Objects"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >rmellipse Gallery</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" >Fundementals</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Common Grid Handling</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2024, National Institute of Standards and Technology.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.0.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>rmellipse.utils &#8212; Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=fd3f3429" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../../../_static/documentation_options.js?v=888cb622"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="prev" title="rmellipse.uobjects" href="../uobjects/index.html" />
+<link rel="stylesheet" href="https://pages.nist.gov/nist-header-footer/css/nist-combined.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" type="text/javascript"></script>
+  <script src="https://pages.nist.gov/nist-header-footer/js/nist-header-footer.js" type="text/javascript" defer="defer"></script>
+
+
+<script type="text/javascript" src="https://pages.nist.gov/leaveNotice/js/jquery.leaveNotice-nist.min.js"></script>
+<script>
+$(document).ready(function(){
+  // Mark external (non-nist.gov) A tags with class "external"
+  //If the adress start with https and ends with nist.gov
+  var re_nist = new RegExp('^https?:\/\/((^\/)*\.)*nist\\.gov(\/|$)');
+  //Regex to find address that start with https
+  var re_absolute_address = new RegExp('^((https?:)?\/\/)');
+  $("a").each(function(){
+    var url=$(this).attr('href');
+    if(re_nist.test(url) || !re_absolute_address.test(url)){
+      $(this).addClass('local');
+    }else{
+      //This a href appears to be external, so tag it
+      $(this).addClass('external');
+    }
+  });
+  // Add leaveNotice to external A elements
+  $('a.external').leaveNotice();
+});
+</script>
+<link rel="stylesheet" type="text/css" href="https://pages.nist.gov/leaveNotice/css/jquery.leaveNotice.css" />
+
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../uobjects/index.html" title="rmellipse.uobjects"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >API Reference</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="../index.html" accesskey="U">rmellipse</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">rmellipse.utils</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+
+
+  <section id="module-rmellipse.utils">
+<span id="rmellipse-utils"></span><h1>rmellipse.utils<a class="headerlink" href="#module-rmellipse.utils" title="Link to this heading">¶</a></h1>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading">¶</a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#rmellipse.utils.MUFMeasParser" title="rmellipse.utils.MUFMeasParser"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MUFMeasParser</span></code></a></p></td>
+<td><p>Object for reading legacy Microwave Uncertainry Framework xml files into uncertainty objects.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#rmellipse.utils.GroupSaveable" title="rmellipse.utils.GroupSaveable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GroupSaveable</span></code></a></p></td>
+<td><p>Interface for objects that can be saved as HDF5 or Exdir groups or files.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#rmellipse.utils.load_object" title="rmellipse.utils.load_object"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_object</span></code></a>(→ any)</p></td>
+<td><p>Construct Python object from group or dataset.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#rmellipse.utils.save_object" title="rmellipse.utils.save_object"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_object</span></code></a>(→ SAVED)</p></td>
+<td><p>Save an object to a group.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="package-contents">
+<h2>Package Contents<a class="headerlink" href="#package-contents" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="rmellipse.utils.MUFMeasParser">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">rmellipse.utils.</span></span><span class="sig-name descname"><span class="pre">MUFMeasParser</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/utils/_xml_parser.html#MUFMeasParser"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.MUFMeasParser" title="Link to this definition">¶</a></dt>
+<dd><p>Object for reading legacy Microwave Uncertainry Framework xml files into uncertainty objects.</p>
+<p>Initialize a MUFMeas parser.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>file</strong><span class="classifier">str, optional</span></dt><dd><p>Path to xml header file (usually has extension .meas), by default None.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.utils.MUFMeasParser.etree">
+<span class="sig-name descname"><span class="pre">etree</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#rmellipse.utils.MUFMeasParser.etree" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.utils.MUFMeasParser.parmameter_dict">
+<span class="sig-name descname"><span class="pre">parmameter_dict</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#rmellipse.utils.MUFMeasParser.parmameter_dict" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.utils.MUFMeasParser.covariance_dict">
+<span class="sig-name descname"><span class="pre">covariance_dict</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#rmellipse.utils.MUFMeasParser.covariance_dict" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.utils.MUFMeasParser.montecarlo_dict">
+<span class="sig-name descname"><span class="pre">montecarlo_dict</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#rmellipse.utils.MUFMeasParser.montecarlo_dict" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.utils.MUFMeasParser.nominal_dict">
+<span class="sig-name descname"><span class="pre">nominal_dict</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#rmellipse.utils.MUFMeasParser.nominal_dict" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.utils.MUFMeasParser.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#rmellipse.utils.MUFMeasParser.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.utils.MUFMeasParser.file_ext">
+<span class="sig-name descname"><span class="pre">file_ext</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#rmellipse.utils.MUFMeasParser.file_ext" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.utils.MUFMeasParser.open_meas">
+<span class="sig-name descname"><span class="pre">open_meas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/utils/_xml_parser.html#MUFMeasParser.open_meas"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.MUFMeasParser.open_meas" title="Link to this definition">¶</a></dt>
+<dd><p>Open up an xml header file and parse it for file paths and other info.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>file</strong><span class="classifier">str</span></dt><dd><p>Path to file to be opened.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.utils.MUFMeasParser.open_data">
+<span class="sig-name descname"><span class="pre">open_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">open_fcn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">open_fcn_extra_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">old_base_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_base_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/utils/_xml_parser.html#MUFMeasParser.open_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.MUFMeasParser.open_data" title="Link to this definition">¶</a></dt>
+<dd><p>Loads data into an initialized object.</p>
+<p>Loads into memory all of the perturbed measurements in the sensitivity
+analysis, and all of the Monte-Carlo trials.</p>
+<p>You should call open_meas before opening data.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.utils.MUFMeasParser.init_from_data">
+<span class="sig-name descname"><span class="pre">init_from_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">montecarlo_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nominal_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">covariance_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">umech_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/utils/_xml_parser.html#MUFMeasParser.init_from_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.MUFMeasParser.init_from_data" title="Link to this definition">¶</a></dt>
+<dd><p>Generate an object from user supplied data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>name</strong><span class="classifier">_type_</span></dt><dd><p>_description_</p>
+</dd>
+<dt><strong>montecarlo_data</strong><span class="classifier">list</span></dt><dd><p>a list of data objects of the same type as
+nominal_data, representing Monte-Carlo trials. Can be empty.</p>
+</dd>
+<dt><strong>nominal_data</strong><span class="classifier">object</span></dt><dd><p>a data object (usually a numpy array) representing
+a nominal value for some quantity</p>
+</dd>
+<dt><strong>covariance_data</strong><span class="classifier">list</span></dt><dd><p>a list of data objects of the same type as
+nominal_data, representing the nominal data perturbed by
+various error mechanisms. Can be empty.</p>
+</dd>
+<dt><strong>umech_id</strong><span class="classifier">list, optional</span></dt><dd><p>a list of strings with the
+same length as covariance_data. The locations of parameter files
+for error mechanisms. If empty, the location will be set to</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.utils.MUFMeasParser.save_data">
+<span class="sig-name descname"><span class="pre">save_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_fcn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">callable</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_fcn_extra_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_ext</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/utils/_xml_parser.html#MUFMeasParser.save_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.MUFMeasParser.save_data" title="Link to this definition">¶</a></dt>
+<dd><p>Save data to disk, call before save_meas.</p>
+<p>Given a target directory, creates a “&lt;self.name&gt;_Support” folder with
+subdirectories “Covariance”, containing files consisting of perturbed measurements
+for the sensitivity analysis, and “MonteCarlo”, containing files consisting
+of Monte-Carlo trials. The save_fcn provide is called as
+save_fcn_extra_args(data,filepath,*save_fcn_extra_args).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>target_dir</strong><span class="classifier">str</span></dt><dd><p>directory where data should be saved</p>
+</dd>
+<dt><strong>save_fcn</strong><span class="classifier">callable, optional</span></dt><dd><p>function that saves data in the propper format. Should take
+the data to be saved as the first argument and the file path as
+the second.</p>
+</dd>
+<dt><strong>save_fcn_extra_args</strong><span class="classifier">tuple, optional</span></dt><dd><p>extra arguments for the save function if necessary, by default ().</p>
+</dd>
+<dt><strong>file_ext</strong><span class="classifier">str, optional</span></dt><dd><p>Extension to use for filepaths, by default None</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.utils.MUFMeasParser.save_meas">
+<span class="sig-name descname"><span class="pre">save_meas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/utils/_xml_parser.html#MUFMeasParser.save_meas"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.MUFMeasParser.save_meas" title="Link to this definition">¶</a></dt>
+<dd><p>Save the xml header.</p>
+<p>Saves a MUF-style .meas file. This function only writes the XML file,
+it does not save the raw data.</p>
+<p>If you are also saving raw data, you should do that first, because
+that function will alter file paths.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>output_file</strong><span class="classifier">str</span></dt><dd><p>Path to the xml header.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="rmellipse.utils.load_object">
+<span class="sig-prename descclassname"><span class="pre">rmellipse.utils.</span></span><span class="sig-name descname"><span class="pre">load_object</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">saved_object</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GROUP</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DATASET</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GROUP_SAVEABLE</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load_big_objects</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">any</span></span></span><a class="reference internal" href="../../../_modules/rmellipse/utils/_group_saveable.html#load_object"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.load_object" title="Link to this definition">¶</a></dt>
+<dd><p>Construct Python object from group or dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>saved_object</strong><span class="classifier">Union[GROUP, DATASET]</span></dt><dd><p>Group or datset that contains Python object.</p>
+</dd>
+<dt><strong>parent</strong><span class="classifier">GROUP_SAVEABLE, optional</span></dt><dd><p>Parent of this object (Python object). The default is None.</p>
+</dd>
+<dt><strong>load_big_objects</strong><span class="classifier">bool, optional</span></dt><dd><p>If True, fully load all objects into memory. If False,
+only the attributes of big objects will be loaded. The default is False.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>any</dt><dd><p>A Python object.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="rmellipse.utils.save_object">
+<span class="sig-prename descclassname"><span class="pre">rmellipse.utils.</span></span><span class="sig-name descname"><span class="pre">save_object</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">group</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GROUP</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">o</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">SAVED</span></span></span><a class="reference internal" href="../../../_modules/rmellipse/utils/_group_saveable.html#save_object"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.save_object" title="Link to this definition">¶</a></dt>
+<dd><p>Save an object to a group.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>group</strong><span class="classifier">GROUP</span></dt><dd><p>Group where object will be saved.</p>
+</dd>
+<dt><strong>name</strong><span class="classifier">str</span></dt><dd><p>Name the object will have in the group.</p>
+</dd>
+<dt><strong>o</strong><span class="classifier">any</span></dt><dd><p>Object to save.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>SAVED</dt><dd><p>The newly-created saved object.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="rmellipse.utils.GroupSaveable">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">rmellipse.utils.</span></span><span class="sig-name descname"><span class="pre">GroupSaveable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GROUP_SAVEABLE</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attrs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/utils/_group_saveable.html#GroupSaveable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.GroupSaveable" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">GROUP_SAVEABLE</span></code></p>
+<p>Interface for objects that can be saved as HDF5 or Exdir groups or files.</p>
+<p>These objects are organized in a tree-like structure to avoid data
+duplication. Specifically, a group-saveable object is a node in a tree
+graph. It stores references to its children, and also to its parent.</p>
+<p>Each node also has a lookup table that stores the paths to data objects
+below it.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.utils.GroupSaveable.attrs">
+<span class="sig-name descname"><span class="pre">attrs</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#rmellipse.utils.GroupSaveable.attrs" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.utils.GroupSaveable.parent">
+<span class="sig-name descname"><span class="pre">parent</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#rmellipse.utils.GroupSaveable.parent" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.utils.GroupSaveable.lookup_table">
+<span class="sig-name descname"><span class="pre">lookup_table</span></span><a class="headerlink" href="#rmellipse.utils.GroupSaveable.lookup_table" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.utils.GroupSaveable.children">
+<span class="sig-name descname"><span class="pre">children</span></span><a class="headerlink" href="#rmellipse.utils.GroupSaveable.children" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.utils.GroupSaveable.is_big_object">
+<span class="sig-name descname"><span class="pre">is_big_object</span></span><a class="headerlink" href="#rmellipse.utils.GroupSaveable.is_big_object" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.utils.GroupSaveable.load">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">group</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GROUP</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GROUP_SAVEABLE</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load_big_objects</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">GROUP_SAVEABLE</span></span></span><a class="reference internal" href="../../../_modules/rmellipse/utils/_group_saveable.html#GroupSaveable.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.GroupSaveable.load" title="Link to this definition">¶</a></dt>
+<dd><p>Initialize GROUP_SAVEABLE object from a group.</p>
+<p>The group_saveable class is designed to be used as an archive, and may
+store many large data sets. So, to save space in memory, some objects
+must be open explicitly using the load_big_objects argument.</p>
+<p>The attribute “is_big_object” determines if the object is
+fully loaded or not. If an object is not loaded, a placeholder with
+the same attributes will be added.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>group</strong><span class="classifier">GROUP</span></dt><dd><p>An hdf5 (or equivalent) group.</p>
+</dd>
+<dt><strong>parent</strong><span class="classifier">GROUP_SAVEABLE, optional</span></dt><dd><p>The parent of this object. The default is None.</p>
+</dd>
+<dt><strong>load_big_objects</strong><span class="classifier">bool, optional</span></dt><dd><p>If False, attributes marked as big objects are not loaded into
+memory. The default is False.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>new_object</strong><span class="classifier">GROUP_SAVEABLE</span></dt><dd><p>New data tree object loaded from group.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.utils.GroupSaveable.get_root">
+<span class="sig-name descname"><span class="pre">get_root</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">GROUP_SAVEABLE</span></span></span><a class="reference internal" href="../../../_modules/rmellipse/utils/_group_saveable.html#GroupSaveable.get_root"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.GroupSaveable.get_root" title="Link to this definition">¶</a></dt>
+<dd><p>Get the root of the data tree.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>GROUP_SAVEABLE</dt><dd><p>The root (the tree with no parents).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.utils.GroupSaveable.look_up_node">
+<span class="sig-name descname"><span class="pre">look_up_node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">unique_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">GROUP_SAVEABLE</span></span></span><a class="reference internal" href="../../../_modules/rmellipse/utils/_group_saveable.html#GroupSaveable.look_up_node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.GroupSaveable.look_up_node" title="Link to this definition">¶</a></dt>
+<dd><p>Find the node that holds an object by unique id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>unique_id</strong><span class="classifier">str</span></dt><dd><p>The hex representation of the unique id of an object stored in a
+subtree.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>GROUP_SAVEABLE</dt><dd><p>The data tree that holds the object with that unique id.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.utils.GroupSaveable.update_lookup_table">
+<span class="sig-name descname"><span class="pre">update_lookup_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">unique_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../../../_modules/rmellipse/utils/_group_saveable.html#GroupSaveable.update_lookup_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.GroupSaveable.update_lookup_table" title="Link to this definition">¶</a></dt>
+<dd><p>Try to update lookup table with path to data stored in a subtree.</p>
+<p>This method will also recursively try to update the parent’s lookup
+tables.</p>
+<p>If there is already an object with the same unique id in a
+parent’s lookup table, then that is the real one, and this is a copy.
+In that case, do not upate the lookup table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>unique_id</strong><span class="classifier">str</span></dt><dd><p>The hex representation of the unique id of an object stored in a
+subtree.</p>
+</dd>
+<dt><strong>path</strong><span class="classifier">str, optional</span></dt><dd><p>Used for recursion. Do not change. The default is “”.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>bool</dt><dd><p>True if object is successfully added (does not already exist in
+parents’ lookup table)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.utils.GroupSaveable.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GROUP</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/utils/_group_saveable.html#GroupSaveable.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.GroupSaveable.save" title="Link to this definition">¶</a></dt>
+<dd><p>Save a group_saveable object as a group.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>parent</strong><span class="classifier">GROUP</span></dt><dd><p>Parent of group to be created.</p>
+</dd>
+<dt><strong>name</strong><span class="classifier">str, optional</span></dt><dd><p>If not None, overwrite name attribute of the group. The default is
+None.</p>
+</dd>
+<dt><strong>verbose: bool, optional</strong></dt><dd><p>if True, prints information about what is being saved</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>None.</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.utils.GroupSaveable.add_child">
+<span class="sig-name descname"><span class="pre">add_child</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SAVEABLE</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_big_object</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/utils/_group_saveable.html#GroupSaveable.add_child"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.GroupSaveable.add_child" title="Link to this definition">¶</a></dt>
+<dd><p>Add child to this node.</p>
+<p>If the new data is a GROUP_SAVEABLE object, enforce that
+data.attrs[“name”] == key.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>key: str, optional</strong></dt><dd><p>Name of child. If None, check if the data has a name.
+The defualt is None.</p>
+</dd>
+<dt><strong>data</strong><span class="classifier">SAVEABLE, optional</span></dt><dd><p>Data to add. If None, initialize an empty group_saveable object.
+The defualt is None.</p>
+</dd>
+<dt><strong>is_big_object: bool, optional</strong></dt><dd><p>If True, when this object is read from a file, it will
+be ignored if the load_big_objects argument is set to False.
+The default is False.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>None.</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.utils.GroupSaveable.update_parents">
+<span class="sig-name descname"><span class="pre">update_parents</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/utils/_group_saveable.html#GroupSaveable.update_parents"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.utils.GroupSaveable.update_parents" title="Link to this definition">¶</a></dt>
+<dd><p>Recursively update the parents lookup tables all of this object’s children.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>None.</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../../../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../auto_examples/index.html">rmellipse Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../for_contributors/index.html">For Contributors</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html">rmellipse</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../_sources/autoapi/rmellipse/utils/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+<h3>Versions</h3>
+<ul>
+  <li><a href="../../../../v0.3.4/index.html">v0.3.4</a></li>
+  <li><a href="index.html">stable</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../uobjects/index.html" title="rmellipse.uobjects"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >API Reference</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="../index.html" >rmellipse</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">rmellipse.utils</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2024, National Institute of Standards and Technology.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.0.
+    </div>
+  </body>
+</html>

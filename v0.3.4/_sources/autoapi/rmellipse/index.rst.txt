@@ -1,0 +1,17 @@
+rmellipse
+=========
+
+.. py:module:: rmellipse
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/rmellipse/propagators/index
+   /autoapi/rmellipse/uobjects/index
+   /autoapi/rmellipse/utils/index
+
+

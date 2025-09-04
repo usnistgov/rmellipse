@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>rmellipse.utils._xml_parser &#8212; Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=fd3f3429" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../../../_static/documentation_options.js?v=888cb622"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+<link rel="stylesheet" href="https://pages.nist.gov/nist-header-footer/css/nist-combined.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" type="text/javascript"></script>
+  <script src="https://pages.nist.gov/nist-header-footer/js/nist-header-footer.js" type="text/javascript" defer="defer"></script>
+
+
+<script type="text/javascript" src="https://pages.nist.gov/leaveNotice/js/jquery.leaveNotice-nist.min.js"></script>
+<script>
+$(document).ready(function(){
+  // Mark external (non-nist.gov) A tags with class "external"
+  //If the adress start with https and ends with nist.gov
+  var re_nist = new RegExp('^https?:\/\/((^\/)*\.)*nist\\.gov(\/|$)');
+  //Regex to find address that start with https
+  var re_absolute_address = new RegExp('^((https?:)?\/\/)');
+  $("a").each(function(){
+    var url=$(this).attr('href');
+    if(re_nist.test(url) || !re_absolute_address.test(url)){
+      $(this).addClass('local');
+    }else{
+      //This a href appears to be external, so tag it
+      $(this).addClass('external');
+    }
+  });
+  // Add leaveNotice to external A elements
+  $('a.external').leaveNotice();
+});
+</script>
+<link rel="stylesheet" type="text/css" href="https://pages.nist.gov/leaveNotice/css/jquery.leaveNotice.css" />
+
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">rmellipse.utils._xml_parser</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+
+
+  <h1>Source code for rmellipse.utils._xml_parser</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Backward compatability module for the Microwave Uncertainty Framework (MUF).</span>
+
+<span class="sd">The MUF saves csv files that are distributed across a folder system, with</span>
+<span class="sd">an XML file that points to these files and describes their relation ships</span>
+<span class="sd">to a nominal value. This module can parse that fodler structure, and save</span>
+<span class="sd">data into that structure so that other uncertainty object schemas in</span>
+<span class="sd">the package can read/write to them.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>  <span class="c1"># to manipulate file paths</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xml.etree.ElementTree</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ET</span>  <span class="c1"># to manipulate XML</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_indent</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;XML indenting function.&quot;&quot;&quot;</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">level</span> <span class="o">*</span> <span class="s2">&quot;  &quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">elem</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">text</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">elem</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="s2">&quot;  &quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">tail</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">tail</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">elem</span><span class="o">.</span><span class="n">tail</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">elem</span><span class="p">:</span>
+            <span class="n">_indent</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">tail</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">tail</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">elem</span><span class="o">.</span><span class="n">tail</span> <span class="o">=</span> <span class="n">i</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">level</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">tail</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">tail</span><span class="o">.</span><span class="n">strip</span><span class="p">()):</span>
+            <span class="n">elem</span><span class="o">.</span><span class="n">tail</span> <span class="o">=</span> <span class="n">i</span>
+
+
+<div class="viewcode-block" id="MUFMeasParser">
+<a class="viewcode-back" href="../../../autoapi/rmellipse/utils/index.html#rmellipse.utils.MUFMeasParser">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MUFMeasParser</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Object for reading legacy Microwave Uncertainry Framework xml files into uncertainty objects.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a MUFMeas parser.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        file : str, optional</span>
+<span class="sd">            Path to xml header file (usually has extension .meas), by default None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">etree</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parmameter_dict</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nominal_dict</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_ext</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">open_meas</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MUFMeasParser.open_meas">
+<a class="viewcode-back" href="../../../autoapi/rmellipse/utils/index.html#rmellipse.utils.MUFMeasParser.open_meas">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">open_meas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Open up an xml header file and parse it for file paths and other info.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        file : str</span>
+<span class="sd">            Path to file to be opened.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">etree</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_name</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parmameter_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_parameter_dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_covariance_dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_montecarlo_dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nominal_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_nominal_dict</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="MUFMeasParser.open_data">
+<a class="viewcode-back" href="../../../autoapi/rmellipse/utils/index.html#rmellipse.utils.MUFMeasParser.open_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">open_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                  <span class="n">open_fcn</span><span class="p">:</span> <span class="nb">callable</span><span class="p">,</span>
+                  <span class="n">open_fcn_extra_args</span><span class="o">=</span><span class="p">(),</span>
+                  <span class="n">old_base_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                  <span class="n">new_base_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Loads data into an initialized object.</span>
+
+<span class="sd">        Loads into memory all of the perturbed measurements in the sensitivity</span>
+<span class="sd">        analysis, and all of the Monte-Carlo trials.</span>
+
+<span class="sd">        You should call open_meas before opening data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">old_base_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># change nominal path</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nominal_dict</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nominal_dict</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">old_base_dir</span><span class="p">,</span> <span class="n">new_base_dir</span><span class="p">)</span>
+
+            <span class="c1"># change montecarlo path</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span><span class="p">):</span>
+                <span class="n">item</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">old_base_dir</span><span class="p">,</span> <span class="n">new_base_dir</span><span class="p">)</span>
+
+            <span class="c1"># change covariance path</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span><span class="p">):</span>
+                <span class="n">item</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">old_base_dir</span><span class="p">,</span> <span class="n">new_base_dir</span><span class="p">)</span>
+
+        <span class="c1"># load nominal</span>
+        <span class="n">nominal_data</span> <span class="o">=</span> <span class="n">open_fcn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nominal_dict</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">],</span> <span class="o">*</span><span class="n">open_fcn_extra_args</span><span class="p">)</span>
+
+        <span class="c1"># load monte carlo</span>
+        <span class="n">montecarlo_data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span><span class="p">):</span>
+            <span class="n">montecarlo_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">open_fcn</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">],</span> <span class="o">*</span><span class="n">open_fcn_extra_args</span><span class="p">))</span>
+
+        <span class="c1"># load sensitivity analysis</span>
+        <span class="n">covariance_data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">umech_id</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span><span class="p">):</span>
+            <span class="n">umech_id</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;parameter_location&quot;</span><span class="p">])</span>
+            <span class="n">covariance_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">open_fcn</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">],</span> <span class="o">*</span><span class="n">open_fcn_extra_args</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_from_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">montecarlo_data</span><span class="p">,</span> <span class="n">nominal_data</span><span class="p">,</span> <span class="n">covariance_data</span><span class="p">,</span> <span class="n">umech_id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MUFMeasParser.init_from_data">
+<a class="viewcode-back" href="../../../autoapi/rmellipse/utils/index.html#rmellipse.utils.MUFMeasParser.init_from_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">init_from_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                       <span class="n">montecarlo_data</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                       <span class="n">nominal_data</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
+                       <span class="n">covariance_data</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                       <span class="n">umech_id</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate an object from user supplied data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        name : _type_</span>
+<span class="sd">            _description_</span>
+<span class="sd">        montecarlo_data : list</span>
+<span class="sd">            a list of data objects of the same type as</span>
+<span class="sd">            nominal_data, representing Monte-Carlo trials. Can be empty.</span>
+<span class="sd">        nominal_data : object</span>
+<span class="sd">            a data object (usually a numpy array) representing</span>
+<span class="sd">            a nominal value for some quantity</span>
+<span class="sd">        covariance_data : list</span>
+<span class="sd">            a list of data objects of the same type as</span>
+<span class="sd">            nominal_data, representing the nominal data perturbed by</span>
+<span class="sd">            various error mechanisms. Can be empty.</span>
+<span class="sd">        umech_id : list, optional</span>
+<span class="sd">            a list of strings with the</span>
+<span class="sd">            same length as covariance_data. The locations of parameter files</span>
+<span class="sd">            for error mechanisms. If empty, the location will be set to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Erase old data to avoid confusion</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">etree</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parmameter_dict</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nominal_dict</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># monte-carlo</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_data</span> <span class="o">=</span> <span class="n">montecarlo_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">montecarlo_data</span><span class="p">):</span>
+            <span class="n">subdict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span>
+                       <span class="s2">&quot;location&quot;</span><span class="p">:</span> <span class="s2">&quot;unknown&quot;</span><span class="p">}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">subdict</span><span class="p">)</span>
+
+        <span class="c1"># nominal</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nominal_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;location&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                             <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nominal_data</span> <span class="o">=</span> <span class="n">nominal_data</span>
+
+        <span class="c1"># covariance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covariance_data</span> <span class="o">=</span> <span class="n">covariance_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">covariance_data</span><span class="p">):</span>
+            <span class="n">parameter_location</span> <span class="o">=</span> <span class="s2">&quot;unknown_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">umech_id</span><span class="p">:</span>
+                <span class="n">parameter_location</span> <span class="o">=</span> <span class="n">umech_id</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+            <span class="n">subdict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span>
+                       <span class="s2">&quot;location&quot;</span><span class="p">:</span> <span class="s2">&quot;unknown&quot;</span><span class="p">,</span>
+                       <span class="s2">&quot;parameter_location&quot;</span><span class="p">:</span> <span class="n">parameter_location</span><span class="p">}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">subdict</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MUFMeasParser.save_data">
+<a class="viewcode-back" href="../../../autoapi/rmellipse/utils/index.html#rmellipse.utils.MUFMeasParser.save_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                  <span class="n">target_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="n">save_fcn</span><span class="p">:</span> <span class="nb">callable</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="n">save_fcn_extra_args</span><span class="o">=</span><span class="p">(),</span>
+                  <span class="n">file_ext</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save data to disk, call before save_meas.</span>
+
+<span class="sd">        Given a target directory, creates a &quot;&lt;self.name&gt;_Support&quot; folder with</span>
+<span class="sd">        subdirectories &quot;Covariance&quot;, containing files consisting of perturbed measurements</span>
+<span class="sd">        for the sensitivity analysis, and &quot;MonteCarlo&quot;, containing files consisting</span>
+<span class="sd">        of Monte-Carlo trials. The save_fcn provide is called as</span>
+<span class="sd">        save_fcn_extra_args(data,filepath,*save_fcn_extra_args).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        target_dir : str</span>
+<span class="sd">            directory where data should be saved</span>
+<span class="sd">        save_fcn : callable, optional</span>
+<span class="sd">            function that saves data in the propper format. Should take</span>
+<span class="sd">            the data to be saved as the first argument and the file path as</span>
+<span class="sd">            the second.</span>
+<span class="sd">        save_fcn_extra_args : tuple, optional</span>
+<span class="sd">           extra arguments for the save function if necessary, by default ().</span>
+<span class="sd">        file_ext : str, optional</span>
+<span class="sd">            Extension to use for filepaths, by default None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_ext</span> <span class="o">=</span> <span class="n">file_ext</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_ext</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">file_ext</span> <span class="o">=</span> <span class="s2">&quot;.complex&quot;</span>
+
+        <span class="n">out_dir</span> <span class="o">=</span> <span class="n">target_dir</span> <span class="o">+</span> <span class="s2">&quot;//&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_Support//&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">out_dir</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">out_dir</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">out_dir</span> <span class="o">+</span> <span class="s2">&quot;MonteCarlo//&quot;</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">out_dir</span> <span class="o">+</span> <span class="s2">&quot;MonteCarlo//&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">out_dir</span> <span class="o">+</span> <span class="s2">&quot;Covariance//&quot;</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">out_dir</span> <span class="o">+</span> <span class="s2">&quot;Covariance//&quot;</span><span class="p">)</span>
+
+        <span class="c1"># save montecarlo</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span><span class="p">):</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">+</span> <span class="s2">&quot;MonteCarlo//&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_ext</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;location&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">filename</span>
+            <span class="n">save_fcn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_data</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">filename</span><span class="p">,</span> <span class="o">*</span><span class="n">save_fcn_extra_args</span><span class="p">)</span>
+
+        <span class="c1"># save nominal</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nominal_dict</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_ext</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nominal_dict</span><span class="p">[</span><span class="s1">&#39;location&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">filename</span>
+        <span class="n">save_fcn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nominal_data</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="o">*</span><span class="n">save_fcn_extra_args</span><span class="p">)</span>
+
+        <span class="c1"># save covariance</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span><span class="p">):</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">+</span> <span class="s2">&quot;Covariance//&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_ext</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;location&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">filename</span>
+            <span class="n">save_fcn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_data</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">filename</span><span class="p">,</span> <span class="o">*</span><span class="n">save_fcn_extra_args</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parse_parameter_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a dictionary of &#39;name&#39;:&#39;parameter_name&#39; pairs to correlate covariance files with their mechanism names.&quot;&quot;&quot;</span>
+        <span class="n">out_dictionary</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="s2">&quot;Text&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">etree</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;.//PerturbedSParams/Item/SubItem[@Index=&#39;0&#39;]&quot;</span><span class="p">)]</span>
+        <span class="n">mechanisms</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="s2">&quot;Text&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">etree</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;.//PerturbedSParams/Item/SubItem[@Index=&#39;2&#39;]&quot;</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">names</span><span class="p">):</span>
+            <span class="n">split_parameter_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">mechanisms</span><span class="p">[</span><span class="n">index</span><span class="p">])[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">parameter_name</span> <span class="o">=</span> <span class="n">split_parameter_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">out_dictionary</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">parameter_name</span>
+
+        <span class="k">return</span> <span class="n">out_dictionary</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parse_covariance_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a list of dictionaries that has the keys name, location, and parameter_location.&quot;&quot;&quot;</span>
+        <span class="n">covariance_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="s2">&quot;Text&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">etree</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;.//PerturbedSParams/Item/SubItem[@Index=&#39;0&#39;]&quot;</span><span class="p">)]</span>
+        <span class="n">locations</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="s2">&quot;Text&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">etree</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;.//PerturbedSParams/Item/SubItem[@Index=&#39;1&#39;]&quot;</span><span class="p">)]</span>
+        <span class="n">mechanisms</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="s2">&quot;Text&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">etree</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;.//PerturbedSParams/Item/SubItem[@Index=&#39;2&#39;]&quot;</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">names</span><span class="p">):</span>
+            <span class="n">name_location_dictionary</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;location&quot;</span><span class="p">:</span> <span class="n">locations</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="s2">&quot;parameter_location&quot;</span><span class="p">:</span> <span class="n">mechanisms</span><span class="p">[</span><span class="n">index</span><span class="p">]}</span>
+            <span class="n">covariance_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name_location_dictionary</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">covariance_list</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parse_montecarlo_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a list of dictionaries that has the keys name, location.&quot;&quot;&quot;</span>
+        <span class="n">montecarlo_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="s2">&quot;Text&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">etree</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;.//MonteCarloPerturbedSParams/Item/SubItem[@Index=&#39;0&#39;]&quot;</span><span class="p">)]</span>
+        <span class="n">locations</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="s2">&quot;Text&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">etree</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;.//MonteCarloPerturbedSParams/Item/SubItem[@Index=&#39;1&#39;]&quot;</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">names</span><span class="p">):</span>
+            <span class="n">name_location_dictionary</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;location&quot;</span><span class="p">:</span> <span class="n">locations</span><span class="p">[</span><span class="n">index</span><span class="p">]}</span>
+            <span class="n">montecarlo_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name_location_dictionary</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">montecarlo_list</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parse_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the measurement name.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">etree</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;Controls/MeasurementName&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="s1">&#39;ControlText&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parse_nominal_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a single dictionary with nominal name and location.&quot;&quot;&quot;</span>
+        <span class="n">nominal_dictionary</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">location</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="s2">&quot;Text&quot;</span><span class="p">],</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">etree</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;.//MeasSParams/Item/SubItem[@Index=&#39;1&#39;]&quot;</span><span class="p">)))[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">location</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">nominal_dictionary</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">location</span>
+        <span class="n">nominal_dictionary</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="k">return</span> <span class="n">nominal_dictionary</span>
+
+<div class="viewcode-block" id="MUFMeasParser.save_meas">
+<a class="viewcode-back" href="../../../autoapi/rmellipse/utils/index.html#rmellipse.utils.MUFMeasParser.save_meas">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_meas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_file</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save the xml header.</span>
+
+<span class="sd">        Saves a MUF-style .meas file. This function only writes the XML file,</span>
+<span class="sd">        it does not save the raw data.</span>
+
+<span class="sd">        If you are also saving raw data, you should do that first, because</span>
+<span class="sd">        that function will alter file paths.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        output_file : str</span>
+<span class="sd">            Path to the xml header.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># **********************************************************************</span>
+        <span class="c1"># These attributes document the provenance of the file</span>
+        <span class="c1"># For now, I&#39;m not worryting about them</span>
+        <span class="c1"># **********************************************************************</span>
+        <span class="n">CorrectedMeasurement_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;FileName&quot;</span><span class="p">:</span> <span class="n">output_file</span><span class="p">,</span>
+                                       <span class="s2">&quot;CreationTime&quot;</span><span class="p">:</span> <span class="s2">&quot;unknown&quot;</span><span class="p">,</span>
+                                       <span class="s2">&quot;AssemblyVersion&quot;</span><span class="p">:</span> <span class="s2">&quot;unknown&quot;</span><span class="p">,</span>
+                                       <span class="s2">&quot;UserName&quot;</span><span class="p">:</span> <span class="s2">&quot;unknown&quot;</span><span class="p">}</span>
+
+        <span class="n">CreatedByUserName_attrbib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Enabled&quot;</span><span class="p">:</span> <span class="s2">&quot;True&quot;</span><span class="p">,</span> <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="s2">&quot;unknown&quot;</span><span class="p">}</span>
+        <span class="n">CreatedByProgram_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Enabled&quot;</span><span class="p">:</span> <span class="s2">&quot;True&quot;</span><span class="p">,</span> <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="s2">&quot;RockyMountainAdvanced&quot;</span><span class="p">}</span>
+        <span class="n">CreatedByVersion_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Enabled&quot;</span><span class="p">:</span> <span class="s2">&quot;True&quot;</span><span class="p">,</span> <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="s2">&quot;uknonwn&quot;</span><span class="p">}</span>
+        <span class="n">CreatedByDate_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Enabled&quot;</span><span class="p">:</span> <span class="s2">&quot;True&quot;</span><span class="p">,</span> <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="s2">&quot;unknown&quot;</span><span class="p">}</span>
+        <span class="n">CreatedByFirstFileName_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Enabled&quot;</span><span class="p">:</span> <span class="s2">&quot;True&quot;</span><span class="p">,</span> <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="s2">&quot;unknown&quot;</span><span class="p">}</span>
+        <span class="n">CreatedByUpdatedFileName_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Enabled&quot;</span><span class="p">:</span> <span class="s2">&quot;True&quot;</span><span class="p">,</span> <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="s2">&quot;unknown&quot;</span><span class="p">}</span>
+        <span class="n">CreatedFromFirstFileName_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Enabled&quot;</span><span class="p">:</span> <span class="s2">&quot;True&quot;</span><span class="p">,</span> <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="s2">&quot;unknown&quot;</span><span class="p">}</span>
+        <span class="n">CreatedFromUpdatedFileName_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Enabled&quot;</span><span class="p">:</span> <span class="s2">&quot;True&quot;</span><span class="p">,</span> <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="s2">&quot;unknown&quot;</span><span class="p">}</span>
+        <span class="n">MyVersion_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Enabled&quot;</span><span class="p">:</span> <span class="s2">&quot;True&quot;</span><span class="p">,</span> <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="s2">&quot;unknown&quot;</span><span class="p">}</span>
+
+        <span class="n">MeasurementName_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;ControlType&quot;</span><span class="p">:</span> <span class="s2">&quot;System.Windows.Forms.TextBox&quot;</span><span class="p">,</span>
+                                  <span class="s2">&quot;ControlText&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                                  <span class="s2">&quot;FullName&quot;</span><span class="p">:</span> <span class="s2">&quot;Me_SplitContainer2__MeasurementName&quot;</span><span class="p">,</span>
+                                  <span class="s2">&quot;Enabled&quot;</span><span class="p">:</span> <span class="s2">&quot;True&quot;</span><span class="p">,</span>
+                                  <span class="s2">&quot;Visible&quot;</span><span class="p">:</span> <span class="s2">&quot;True&quot;</span><span class="p">}</span>
+
+        <span class="n">MeasurementDocumentation_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;ControlType&quot;</span><span class="p">:</span> <span class="s2">&quot;System.Windows.Forms.TextBox&quot;</span><span class="p">,</span>
+                                           <span class="s2">&quot;ControlText&quot;</span><span class="p">:</span> <span class="s2">&quot;unknown&quot;</span><span class="p">,</span>
+                                           <span class="s2">&quot;FullName&quot;</span><span class="p">:</span> <span class="s2">&quot;Me_SplitContainer2__GroupBox5_MeasurementDocumentation&quot;</span><span class="p">}</span>
+
+        <span class="n">CorrectedMeasurement</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="s2">&quot;CorrectedMeasurement&quot;</span><span class="p">,</span> <span class="n">CorrectedMeasurement_attrib</span><span class="p">)</span>
+        <span class="n">MenuStripTextBoxes</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">CorrectedMeasurement</span><span class="p">,</span> <span class="s2">&quot;MenuStripTextBoxes&quot;</span><span class="p">)</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">MenuStripTextBoxes</span><span class="p">,</span> <span class="s2">&quot;CreatedByUserName&quot;</span><span class="p">,</span> <span class="n">CreatedByUserName_attrbib</span><span class="p">)</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">MenuStripTextBoxes</span><span class="p">,</span> <span class="s2">&quot;CreatedByProgram&quot;</span><span class="p">,</span> <span class="n">CreatedByProgram_attrib</span><span class="p">)</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">MenuStripTextBoxes</span><span class="p">,</span> <span class="s2">&quot;CreatedByVersion&quot;</span><span class="p">,</span> <span class="n">CreatedByVersion_attrib</span><span class="p">)</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">MenuStripTextBoxes</span><span class="p">,</span> <span class="s2">&quot;CreatedByDate&quot;</span><span class="p">,</span> <span class="n">CreatedByDate_attrib</span><span class="p">)</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">MenuStripTextBoxes</span><span class="p">,</span> <span class="s2">&quot;CreatedByFirstFileName&quot;</span><span class="p">,</span> <span class="n">CreatedByFirstFileName_attrib</span><span class="p">)</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">MenuStripTextBoxes</span><span class="p">,</span> <span class="s2">&quot;CreatedByUpdatedFileName&quot;</span><span class="p">,</span> <span class="n">CreatedByUpdatedFileName_attrib</span><span class="p">)</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">MenuStripTextBoxes</span><span class="p">,</span> <span class="s2">&quot;CreatedFromFirstFileName&quot;</span><span class="p">,</span> <span class="n">CreatedFromFirstFileName_attrib</span><span class="p">)</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">MenuStripTextBoxes</span><span class="p">,</span> <span class="s2">&quot;CreatedFromUpdatedFileName&quot;</span><span class="p">,</span> <span class="n">CreatedFromUpdatedFileName_attrib</span><span class="p">)</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">MenuStripTextBoxes</span><span class="p">,</span> <span class="s2">&quot;MyVersion&quot;</span><span class="p">,</span> <span class="n">MyVersion_attrib</span><span class="p">)</span>
+
+        <span class="c1"># **********************************************************************</span>
+        <span class="c1"># Nominal, Covariance, and Monte-Carlo information is under Controls</span>
+        <span class="c1"># **********************************************************************</span>
+        <span class="n">Controls</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">CorrectedMeasurement</span><span class="p">,</span> <span class="s2">&quot;Controls&quot;</span><span class="p">)</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">Controls</span><span class="p">,</span> <span class="s2">&quot;MeasurementName&quot;</span><span class="p">,</span> <span class="n">MeasurementName_attrib</span><span class="p">)</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">Controls</span><span class="p">,</span> <span class="s2">&quot;MeasurementDocumentation&quot;</span><span class="p">,</span> <span class="n">MeasurementDocumentation_attrib</span><span class="p">)</span>
+
+        <span class="c1"># **********************************************************************</span>
+        <span class="c1"># Monte-Carlo</span>
+        <span class="c1"># **********************************************************************</span>
+        <span class="n">MonteCarloPerturbedSParams_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;ControlType&quot;</span><span class="p">:</span> <span class="s2">&quot;CustomFormControls.FLV_VariableDetailsList&quot;</span><span class="p">,</span>
+                                             <span class="s2">&quot;FullName&quot;</span><span class="p">:</span> <span class="s2">&quot;Me_SplitContainer2__GroupBox3_Panel2_MonteCarloPerturbedSParams&quot;</span><span class="p">,</span>
+                                             <span class="s2">&quot;Count&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span><span class="p">))}</span>
+
+        <span class="n">MonteCarloPerturbedSParams</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">Controls</span><span class="p">,</span> <span class="s2">&quot;MonteCarloPerturbedSParams&quot;</span><span class="p">,</span> <span class="n">MonteCarloPerturbedSParams_attrib</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span><span class="p">)):</span>
+            <span class="n">Item_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Index&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span>
+                           <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
+                           <span class="s2">&quot;Count&quot;</span><span class="p">:</span> <span class="s2">&quot;2&quot;</span><span class="p">}</span>
+
+            <span class="n">SubItem0_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Index&quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
+                               <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;name&quot;</span><span class="p">]}</span>
+
+            <span class="n">SubItem1_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Index&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
+                               <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">montecarlo_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;location&quot;</span><span class="p">]}</span>
+
+            <span class="n">Item</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">MonteCarloPerturbedSParams</span><span class="p">,</span> <span class="s2">&quot;Item&quot;</span><span class="p">,</span> <span class="n">Item_attrib</span><span class="p">)</span>
+            <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">Item</span><span class="p">,</span> <span class="s2">&quot;SubItem&quot;</span><span class="p">,</span> <span class="n">SubItem0_attrib</span><span class="p">)</span>
+            <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">Item</span><span class="p">,</span> <span class="s2">&quot;SubItem&quot;</span><span class="p">,</span> <span class="n">SubItem1_attrib</span><span class="p">)</span>
+
+        <span class="c1"># **********************************************************************</span>
+        <span class="c1"># Nominal</span>
+        <span class="c1"># **********************************************************************</span>
+        <span class="n">MeasSParams_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;ControlType&quot;</span><span class="p">:</span> <span class="s2">&quot;CustomFormControls.FLV_FixedDetailsList&quot;</span><span class="p">,</span>
+                              <span class="s2">&quot;FullName&quot;</span><span class="p">:</span> <span class="s2">&quot;Me_SplitContainer2__GroupBox2_Panel3_MeasSParams&quot;</span><span class="p">,</span>
+                              <span class="s2">&quot;Count&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">}</span>
+
+        <span class="n">MeasSParams</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">Controls</span><span class="p">,</span> <span class="s2">&quot;MeasSParams&quot;</span><span class="p">,</span> <span class="n">MeasSParams_attrib</span><span class="p">)</span>
+        <span class="n">Item_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Index&quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
+                       <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">nominal_dict</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
+                       <span class="s2">&quot;Count&quot;</span><span class="p">:</span> <span class="s2">&quot;2&quot;</span><span class="p">}</span>
+
+        <span class="n">SubItem0_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Index&quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
+                           <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">nominal_dict</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]}</span>
+
+        <span class="n">SubItem1_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Index&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
+                           <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">nominal_dict</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">]}</span>
+
+        <span class="n">Item</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">MeasSParams</span><span class="p">,</span> <span class="s2">&quot;Item&quot;</span><span class="p">,</span> <span class="n">Item_attrib</span><span class="p">)</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">Item</span><span class="p">,</span> <span class="s2">&quot;SubItem&quot;</span><span class="p">,</span> <span class="n">SubItem0_attrib</span><span class="p">)</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">Item</span><span class="p">,</span> <span class="s2">&quot;SubItem&quot;</span><span class="p">,</span> <span class="n">SubItem1_attrib</span><span class="p">)</span>
+
+        <span class="c1"># **********************************************************************</span>
+        <span class="c1"># Covariance</span>
+        <span class="c1"># **********************************************************************</span>
+        <span class="n">PerturbedSParams_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;ControlType&quot;</span><span class="p">:</span> <span class="s2">&quot;CustomFormControls.FLV_VariableDetailsListMeas&quot;</span><span class="p">,</span>
+                                   <span class="s2">&quot;FullName&quot;</span><span class="p">:</span> <span class="s2">&quot;Me_SplitContainer2__GroupBox1_Panel1_PerturbedSParams&quot;</span><span class="p">,</span>
+                                   <span class="s2">&quot;Count&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span><span class="p">))}</span>
+
+        <span class="n">PerturbedSParams</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">Controls</span><span class="p">,</span> <span class="s2">&quot;PerturbedSParams&quot;</span><span class="p">,</span> <span class="n">PerturbedSParams_attrib</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span><span class="p">)):</span>
+            <span class="n">Item_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Index&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span>
+                           <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
+                           <span class="s2">&quot;Count&quot;</span><span class="p">:</span> <span class="s2">&quot;3&quot;</span><span class="p">}</span>
+
+            <span class="n">SubItem0_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Index&quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
+                               <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;name&quot;</span><span class="p">]}</span>
+
+            <span class="n">SubItem1_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Index&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
+                               <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;location&quot;</span><span class="p">]}</span>
+
+            <span class="n">SubItem2_attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Index&quot;</span><span class="p">:</span> <span class="s2">&quot;2&quot;</span><span class="p">,</span>
+                               <span class="s2">&quot;Text&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;parameter_location&quot;</span><span class="p">]}</span>
+
+            <span class="n">Item</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">PerturbedSParams</span><span class="p">,</span> <span class="s2">&quot;Item&quot;</span><span class="p">,</span> <span class="n">Item_attrib</span><span class="p">)</span>
+            <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">Item</span><span class="p">,</span> <span class="s2">&quot;SubItem&quot;</span><span class="p">,</span> <span class="n">SubItem0_attrib</span><span class="p">)</span>
+            <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">Item</span><span class="p">,</span> <span class="s2">&quot;SubItem&quot;</span><span class="p">,</span> <span class="n">SubItem1_attrib</span><span class="p">)</span>
+            <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">Item</span><span class="p">,</span> <span class="s2">&quot;SubItem&quot;</span><span class="p">,</span> <span class="n">SubItem2_attrib</span><span class="p">)</span>
+
+        <span class="c1"># **********************************************************************</span>
+        <span class="c1"># The end</span>
+        <span class="c1"># **********************************************************************</span>
+
+        <span class="n">_indent</span><span class="p">(</span><span class="n">CorrectedMeasurement</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">new_ET</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">ElementTree</span><span class="p">(</span><span class="n">CorrectedMeasurement</span><span class="p">)</span>
+        <span class="n">new_ET</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="n">xml_declaration</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../../../index.html">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../auto_examples/index.html">rmellipse Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../for_contributors/index.html">For Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+<h3>Versions</h3>
+<ul>
+  <li><a href="_xml_parser.html">v0.3.4</a></li>
+  <li><a href="../../../../stable/index.html">stable</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">rmellipse.utils._xml_parser</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2024, National Institute of Standards and Technology.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.0.
+    </div>
+  </body>
+</html>

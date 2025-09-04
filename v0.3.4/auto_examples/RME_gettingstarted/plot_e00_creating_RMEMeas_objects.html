@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>RMEMeas Objects &#8212; Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=fd3f3429" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../../_static/documentation_options.js?v=888cb622"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Basics of RME Propagation" href="plot_e01_basic_uncertainty_analysis.html" />
+    <link rel="prev" title="Fundementals" href="index.html" />
+<link rel="stylesheet" href="https://pages.nist.gov/nist-header-footer/css/nist-combined.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" type="text/javascript"></script>
+  <script src="https://pages.nist.gov/nist-header-footer/js/nist-header-footer.js" type="text/javascript" defer="defer"></script>
+
+
+<script type="text/javascript" src="https://pages.nist.gov/leaveNotice/js/jquery.leaveNotice-nist.min.js"></script>
+<script>
+$(document).ready(function(){
+  // Mark external (non-nist.gov) A tags with class "external"
+  //If the adress start with https and ends with nist.gov
+  var re_nist = new RegExp('^https?:\/\/((^\/)*\.)*nist\\.gov(\/|$)');
+  //Regex to find address that start with https
+  var re_absolute_address = new RegExp('^((https?:)?\/\/)');
+  $("a").each(function(){
+    var url=$(this).attr('href');
+    if(re_nist.test(url) || !re_absolute_address.test(url)){
+      $(this).addClass('local');
+    }else{
+      //This a href appears to be external, so tag it
+      $(this).addClass('external');
+    }
+  });
+  // Add leaveNotice to external A elements
+  $('a.external').leaveNotice();
+});
+</script>
+<link rel="stylesheet" type="text/css" href="https://pages.nist.gov/leaveNotice/css/jquery.leaveNotice.css" />
+
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="plot_e01_basic_uncertainty_analysis.html" title="Basics of RME Propagation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Fundementals"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >rmellipse Gallery</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">Fundementals</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">RMEMeas Objects</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+
+
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-rme-gettingstarted-plot-e00-creating-rmemeas-objects-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="rmemeas-objects">
+<span id="sphx-glr-auto-examples-rme-gettingstarted-plot-e00-creating-rmemeas-objects-py"></span><h1>RMEMeas Objects<a class="headerlink" href="#rmemeas-objects" title="Link to this heading">¶</a></h1>
+<p>This is a basic example demonstrating how to create and use RMEMeas objects. In this
+example we go over different ways to initialize one from scratch,
+how to create linear uncertainty mechanisms, and how to create probability
+distributions for Monte Carlo analysis. Indexing and interpolating are also
+briefly discussed.</p>
+<section id="initializing-from-a-nominal-data-set">
+<h2>Initializing from a Nominal Data Set<a class="headerlink" href="#initializing-from-a-nominal-data-set" title="Link to this heading">¶</a></h2>
+<p>The easiest - and most versatile - way to make a RMEMeas object from scratch is to
+use the <a class="reference internal" href="../../autoapi/rmellipse/uobjects/index.html#rmellipse.uobjects.RMEMeas.from_nom" title="rmellipse.uobjects.RMEMeas.from_nom"><code class="xref py py-func docutils literal notranslate"><span class="pre">rmellipse.uobjects.RMEMeas.from_nom()</span></code></a> function, then
+add the uncertainty mechanisms and Monte Carlo data.
+With this function you just provide a nominal data set and a name for
+your object. The name is used when saving to formats like xml and hdf5.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">rmellipse.uobjects</span><span class="w"> </span><span class="kn">import</span> <span class="n">RMEMeas</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="n">nom</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+    <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]],</span>
+    <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;d1&#39;</span><span class="p">,</span><span class="s1">&#39;d2&#39;</span><span class="p">),</span>
+    <span class="n">coords</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;d1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">],</span>
+        <span class="s1">&#39;d2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">]</span>
+        <span class="p">}</span>
+<span class="p">)</span>
+
+<span class="n">meas</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_nom</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;myval&#39;</span><span class="p">,</span> <span class="n">nom</span><span class="o">=</span><span class="n">nom</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;xarray.DataArray (d1: 2, d2: 3)&gt; Size: 48B
+array([[1, 2, 3],
+       [4, 5, 6]])
+Coordinates:
+  * d1       (d1) float64 16B 0.1 0.2
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;
+</pre></div>
+</div>
+<hr class="docutils" />
+<p>Then we can manually add linear uncertainty mechanisms, defining the degrees
+of freedom and categorizing the mechanisms as we go. The
+<a class="reference internal" href="../../autoapi/rmellipse/uobjects/index.html#rmellipse.uobjects.RMEMeas.add_umech" title="rmellipse.uobjects.RMEMeas.add_umech"><code class="xref py py-func docutils literal notranslate"><span class="pre">rmellipse.uobjects.RMEMeas.add_umech()</span></code></a> function
+is expecting the value to be the same shape, dimensions, and coordinates of the
+nominal. It is easiest to use the <cite>nom</cite> attribute of your object, then perturb
+it 1 standard uncertainty.
+This example adds a linear uncertainty mechanism with infinite degrees of
+freedom, because
+it comes from an external source we trust, and perturbs each element in the
+nominal data set by 0.001.
+We also add a unique ID to the mechanism name, because we want to be sure
+that this mechanism will be fully independent in the event someone
+uses it with other uncertainty objects they might create in their own
+scripts. We also categorize it as Type B and categorize it’s origin from
+a data sheet so we can group this mechanism down the road with mechanisms
+from similar sources.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">meas</span><span class="o">.</span><span class="n">add_umech</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;My Uncertainty Mechanism&#39;</span><span class="p">,</span>
+    <span class="n">value</span><span class="o">=</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.01</span><span class="p">,</span>
+    <span class="n">dof</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
+    <span class="n">category</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;Origin&#39;</span><span class="p">:</span> <span class="s1">&#39;Data Sheet&#39;</span><span class="p">},</span>
+    <span class="n">add_uid</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">stdunc</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">cov</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;xarray.DataArray (d1: 2, d2: 3)&gt; Size: 48B
+array([[0.01, 0.01, 0.01],
+       [0.01, 0.01, 0.01]])
+Coordinates:
+  * d1       (d1) float64 16B 0.1 0.2
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;
+</pre></div>
+</div>
+<p>For linear uncertainties can calculate degrees of freedom
+associated with each measurand.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">dof</span><span class="p">())</span>
+
+<span class="c1"># Calculate uncertainty bounds for a given expansion factor</span>
+<span class="c1"># (nominal + k * standard uncertainty).</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">uncbounds</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">cov</span><span class="p">)</span>
+
+<span class="c1"># And estimate confidence intervals.</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">confint</span><span class="p">(</span><span class="mf">0.95</span><span class="p">))</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;xarray.DataArray (d1: 2, d2: 3)&gt; Size: 48B
+array([[inf, inf, inf],
+       [inf, inf, inf]])
+Coordinates:
+  * d1       (d1) float64 16B 0.1 0.2
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;
+&lt;xarray.DataArray (d1: 2, d2: 3)&gt; Size: 48B
+array([[1.01, 2.01, 3.01],
+       [4.01, 5.01, 6.01]])
+Coordinates:
+  * d1       (d1) float64 16B 0.1 0.2
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;
+(&lt;xarray.DataArray (d1: 2, d2: 3)&gt; Size: 48B
+array([[0.98040036, 1.98040036, 2.98040036],
+       [3.98040036, 4.98040036, 5.98040036]])
+Coordinates:
+  * d1       (d1) float64 16B 0.1 0.2
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;, &lt;xarray.DataArray (d1: 2, d2: 3)&gt; Size: 48B
+array([[1.01959964, 2.01959964, 3.01959964],
+       [4.01959964, 5.01959964, 6.01959964]])
+Coordinates:
+  * d1       (d1) float64 16B 0.1 0.2
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;)
+</pre></div>
+</div>
+</section>
+<section id="monte-carlo-distributions">
+<h2>Monte Carlo Distributions<a class="headerlink" href="#monte-carlo-distributions" title="Link to this heading">¶</a></h2>
+<p>We also sample from a random distribution to add samples for use
+in Monte Carlo uncertainty analysis using
+<a class="reference internal" href="../../autoapi/rmellipse/uobjects/index.html#rmellipse.uobjects.RMEMeas.add_mc_sample" title="rmellipse.uobjects.RMEMeas.add_mc_sample"><code class="xref py py-func docutils literal notranslate"><span class="pre">rmellipse.uobjects.RMEMeas.add_mc_sample()</span></code></a>. It is expecting a DataArray
+with the same dimensions and coordinates as the nominal.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">meas</span><span class="o">.</span><span class="n">add_mc_sample</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="o">*</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.01</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">stdunc</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">mc</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;xarray.DataArray (d1: 2, d2: 3)&gt; Size: 48B
+array([[0.02704453, 0.02704453, 0.02704453],
+       [0.02704453, 0.02704453, 0.02704453]])
+Coordinates:
+  * d1       (d1) float64 16B 0.1 0.2
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;
+</pre></div>
+</div>
+<p>We can also calculate uncertainty bounds for a given expansion factor
+(nominal + k * standard uncertainty).</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">uncbounds</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">cov</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;xarray.DataArray (d1: 2, d2: 3)&gt; Size: 48B
+array([[1.01, 2.01, 3.01],
+       [4.01, 5.01, 6.01]])
+Coordinates:
+  * d1       (d1) float64 16B 0.1 0.2
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;
+</pre></div>
+</div>
+</section>
+<section id="indexing">
+<h2>Indexing<a class="headerlink" href="#indexing" title="Link to this heading">¶</a></h2>
+<p>RMEMeas objects support xarray style indexing, which allows for label based
+indexing into arrays (like pandas) and integer based indexing into arrays
+(like numpy).The cov/mc attributes of the newly
+created RMEMeas object will be views on the original. Call RMEMeas.copy()
+to turn the view into it’s own measurement.</p>
+<p>Importantly, when indexing into a RMEMeas array with xarray like functions (
+__getitem__ , loc, sel, and isel) you index into the RMEMeas object as if you
+were indexing into the nominal value. These functions, when called on the
+RMEMeas object, will always keep all the linear uncertainty mechanisms or
+Monte Carlo samples.</p>
+<p>Please refer to the xarray documentation for more details on how to use
+these indexing functions.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Inspect the nominal to see the dimensions and coordinates to index&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">coords</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;positional lookup by integer&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;positional lookup by label&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">],</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;named lookup by integer&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">d1</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">d2</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;named lookup by label&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">d1</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">d2</span><span class="o">=</span><span class="s1">&#39;a&#39;</span><span class="p">),</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Inspect the nominal to see the dimensions and coordinates to index
+(2, 3)
+(&#39;d1&#39;, &#39;d2&#39;)
+Coordinates:
+  * d1       (d1) float64 16B 0.1 0.2
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;
+
+positional lookup by integer
+myval with nominal:
+&lt;xarray.DataArray ()&gt; Size: 8B
+array(1.)
+Coordinates:
+    d1       float64 8B 0.1
+    d2       &lt;U1 4B &#39;a&#39;
+
+positional lookup by label
+myval with nominal:
+&lt;xarray.DataArray ()&gt; Size: 8B
+array(1.)
+Coordinates:
+    d1       float64 8B 0.1
+    d2       &lt;U1 4B &#39;a&#39;
+
+named lookup by integer
+myval with nominal:
+&lt;xarray.DataArray ()&gt; Size: 8B
+array(1.)
+Coordinates:
+    d1       float64 8B 0.1
+    d2       &lt;U1 4B &#39;a&#39;
+
+named lookup by label
+myval with nominal:
+&lt;xarray.DataArray ()&gt; Size: 8B
+array(1.)
+Coordinates:
+    d1       float64 8B 0.1
+    d2       &lt;U1 4B &#39;a&#39;
+</pre></div>
+</div>
+</section>
+<section id="indexing-covariance-and-monte-carlo-data">
+<h2>Indexing Covariance and Monte Carlo Data<a class="headerlink" href="#indexing-covariance-and-monte-carlo-data" title="Link to this heading">¶</a></h2>
+<p>If you wish to get a view into specific uncertainty mechanisms, or specific
+samples in the Monte Carlo distribution, then use the function <cite>usel</cite>.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># This example throws away the montecarlo samples and looks only at a single</span>
+<span class="c1"># linear uncertainty mechanism.</span>
+<span class="n">mech</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">usel</span><span class="p">(</span>
+    <span class="n">umech_id</span><span class="o">=</span><span class="n">meas</span><span class="o">.</span><span class="n">umech_id</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="n">mcsamples</span><span class="o">=</span><span class="p">[]</span>
+<span class="p">)</span>
+
+<span class="n">linunc</span><span class="p">,</span> <span class="n">mcunc</span> <span class="o">=</span> <span class="n">mech</span><span class="o">.</span><span class="n">stdunc</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">linunc</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;xarray.DataArray (d1: 2, d2: 3)&gt; Size: 48B
+array([[0.01, 0.01, 0.01],
+       [0.01, 0.01, 0.01]])
+Coordinates:
+  * d1       (d1) float64 16B 0.1 0.2
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;
+</pre></div>
+</div>
+<p>We can also look a one or more of the Monte Carlo samples
+by throwing away the covariance data and just keeping one of the Monte Carlo
+samples.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">sample</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">usel</span><span class="p">(</span>
+    <span class="n">umech_id</span><span class="o">=</span><span class="p">[],</span>
+    <span class="n">mcsamples</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">mc</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;xarray.DataArray (d1: 2, d2: 3)&gt; Size: 48B
+array([[1.01228537, 2.01228537, 3.01228537],
+       [4.01228537, 5.01228537, 6.01228537]])
+Coordinates:
+  * d1        (d1) float64 16B 0.1 0.2
+  * d2        (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;
+    umech_id  int64 8B 1
+</pre></div>
+</div>
+<p>While the xarray indexing methods index across uncertainty mechanisms and
+Monte Carlo samples, the usel method indexes into uncertainty mechanisms
+and Monte Carlo samples. In either case, the nominal values (the ‘nominal’
+parameter location and 0th Monte Carlo sample) are always protected and
+always kept regardless of method.</p>
+<p>For example, using usel and giving empty lists for umech_id
+and mcsamples throws away all the uncertainty information, and just keeps
+the nominal. This effectively means it no longer has any associated
+uncertainties.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">nominal_only</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">usel</span><span class="p">(</span>
+    <span class="n">umech_id</span><span class="o">=</span><span class="p">[],</span>
+    <span class="n">mcsamples</span><span class="o">=</span><span class="p">[]</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">nominal_only</span><span class="o">.</span><span class="n">nom</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">nominal_only</span><span class="o">.</span><span class="n">stdunc</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;xarray.DataArray (d1: 2, d2: 3)&gt; Size: 48B
+array([[1., 2., 3.],
+       [4., 5., 6.]])
+Coordinates:
+  * d1       (d1) float64 16B 0.1 0.2
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;
+RMEUncTuple(cov=&lt;xarray.DataArray (d1: 2, d2: 3)&gt; Size: 48B
+array([[0., 0., 0.],
+       [0., 0., 0.]])
+Coordinates:
+  * d1       (d1) float64 16B 0.1 0.2
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;, mc=&lt;xarray.DataArray (d1: 2, d2: 3)&gt; Size: 48B
+array([[0., 0., 0.],
+       [0., 0., 0.]])
+Coordinates:
+  * d1       (d1) float64 16B 0.1 0.2
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;)
+</pre></div>
+</div>
+</section>
+<section id="assigning-rmemeas">
+<h2>Assigning RMEMeas<a class="headerlink" href="#assigning-rmemeas" title="Link to this heading">¶</a></h2>
+<p>Currently, RMEMeas objects indexing functions do not support item assignment.
+Values can be reassigned through propagation.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
+    <span class="n">meas</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="k">except</span> <span class="ne">TypeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&#39;RMEMeas&#39; object does not support item assignment
+</pre></div>
+</div>
+</section>
+<section id="interpolating">
+<h2>Interpolating<a class="headerlink" href="#interpolating" title="Link to this heading">¶</a></h2>
+<p>RMEMeas supports interpolation by wrapping xarray’s built in <cite>interp</cite> function.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">d1</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.125</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.175</span><span class="p">]))</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>myval with nominal:
+&lt;xarray.DataArray (d1: 3, d2: 3)&gt; Size: 72B
+array([[1.75, 2.75, 3.75],
+       [2.5 , 3.5 , 4.5 ],
+       [3.25, 4.25, 5.25]])
+Coordinates:
+  * d2       (d2) &lt;U1 12B &#39;a&#39; &#39;b&#39; &#39;c&#39;
+  * d1       (d1) float64 24B 0.125 0.15 0.175
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 1.334 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-rme-gettingstarted-plot-e00-creating-rmemeas-objects-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/31596b417a2c86756af82cfdfee5b7c9/plot_e00_creating_RMEMeas_objects.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">plot_e00_creating_RMEMeas_objects.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/7fb8d884de2f6b85cede8c3c207b94ec/plot_e00_creating_RMEMeas_objects.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">plot_e00_creating_RMEMeas_objects.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/c931163342f850163605389c0d066533/plot_e00_creating_RMEMeas_objects.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">plot_e00_creating_RMEMeas_objects.zip</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+</section>
+
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">rmellipse Gallery</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#examples">Examples</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#fundementals">Fundementals</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../Examples/index.html">Examples</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Fundementals</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../for_contributors/index.html">For Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/auto_examples/RME_gettingstarted/plot_e00_creating_RMEMeas_objects.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+<h3>Versions</h3>
+<ul>
+  <li><a href="plot_e00_creating_RMEMeas_objects.html">v0.3.4</a></li>
+  <li><a href="../../../stable/index.html">stable</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="plot_e01_basic_uncertainty_analysis.html" title="Basics of RME Propagation"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Fundementals"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >rmellipse Gallery</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" >Fundementals</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">RMEMeas Objects</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2024, National Institute of Standards and Technology.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.0.
+    </div>
+  </body>
+</html>

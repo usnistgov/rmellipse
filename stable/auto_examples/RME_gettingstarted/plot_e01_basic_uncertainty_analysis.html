@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Basics of RME Propagation &#8212; Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=fd3f3429" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../../_static/documentation_options.js?v=888cb622"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Reading/Writing RMEMeas Objects" href="plot_e03_reading_writing.html" />
+    <link rel="prev" title="RMEMeas Objects" href="plot_e00_creating_RMEMeas_objects.html" />
+<link rel="stylesheet" href="https://pages.nist.gov/nist-header-footer/css/nist-combined.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" type="text/javascript"></script>
+  <script src="https://pages.nist.gov/nist-header-footer/js/nist-header-footer.js" type="text/javascript" defer="defer"></script>
+
+
+<script type="text/javascript" src="https://pages.nist.gov/leaveNotice/js/jquery.leaveNotice-nist.min.js"></script>
+<script>
+$(document).ready(function(){
+  // Mark external (non-nist.gov) A tags with class "external"
+  //If the adress start with https and ends with nist.gov
+  var re_nist = new RegExp('^https?:\/\/((^\/)*\.)*nist\\.gov(\/|$)');
+  //Regex to find address that start with https
+  var re_absolute_address = new RegExp('^((https?:)?\/\/)');
+  $("a").each(function(){
+    var url=$(this).attr('href');
+    if(re_nist.test(url) || !re_absolute_address.test(url)){
+      $(this).addClass('local');
+    }else{
+      //This a href appears to be external, so tag it
+      $(this).addClass('external');
+    }
+  });
+  // Add leaveNotice to external A elements
+  $('a.external').leaveNotice();
+});
+</script>
+<link rel="stylesheet" type="text/css" href="https://pages.nist.gov/leaveNotice/css/jquery.leaveNotice.css" />
+
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="plot_e03_reading_writing.html" title="Reading/Writing RMEMeas Objects"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="plot_e00_creating_RMEMeas_objects.html" title="RMEMeas Objects"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >rmellipse Gallery</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">Fundementals</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Basics of RME Propagation</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+
+
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-rme-gettingstarted-plot-e01-basic-uncertainty-analysis-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="basics-of-rme-propagation">
+<span id="sphx-glr-auto-examples-rme-gettingstarted-plot-e01-basic-uncertainty-analysis-py"></span><h1>Basics of RME Propagation<a class="headerlink" href="#basics-of-rme-propagation" title="Link to this heading">¶</a></h1>
+<p>This is a basic example demonstrating how to propagate RMEMeas objects
+through functions.</p>
+<p>This example generates a hypothetical voltage and current measurement each
+with a Monte Carlo distribution and single linear uncertainty mechanism.</p>
+<p>We define a propagator and a propagation function to calculate power and
+perform the uncertainty analysis.</p>
+<section id="importing-packages">
+<h2>Importing packages<a class="headerlink" href="#importing-packages" title="Link to this heading">¶</a></h2>
+<p>For this example we only need RMEMeas objects and the RME propagator.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">rmellipse.uobjects</span><span class="w"> </span><span class="kn">import</span> <span class="n">RMEMeas</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rmellipse.propagators</span><span class="w"> </span><span class="kn">import</span> <span class="n">RMEProp</span>
+</pre></div>
+</div>
+</section>
+<section id="creating-a-propagator">
+<h2>Creating a propagator<a class="headerlink" href="#creating-a-propagator" title="Link to this heading">¶</a></h2>
+<p>The first step is to define a propagator. This is the object that inspects
+functions for uncertainty objects, propagating them according to its settings.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">N</span> <span class="o">=</span> <span class="mi">1000</span>
+
+<span class="n">myprop</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="p">(</span><span class="n">montecarlo_sims</span><span class="o">=</span><span class="n">N</span><span class="p">,</span> <span class="n">sensitivity</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="creating-rmemeas-objects">
+<h2>Creating RMEMeas objects<a class="headerlink" href="#creating-rmemeas-objects" title="Link to this heading">¶</a></h2>
+<p>RMEMeas objects (Rocky Mountain Ellipse Measurements) carry
+along with them 2 key attributes <cite>.cov</cite> and <cite>RMEMeas.mc</cite>, along attributes for
+propagating metadata - <cite>RMEMeas.covcats</cite> and <cite>RMEMeas.covdofs</cite>.</p>
+<p>The`RMEMeas.cov`is an xarray.DataArray
+object that stores both the nominal value of the measurement, and copies of the nominal
+value perturbed by 1 standard deviation for each uncertainty mechanism. The
+perturbed copies are stored along the first dimension of the`RMEMeas.cov`attribute,
+which is always called ‘umech_id’. Along that dimension
+the first index is always labeled ‘nominal’ and holds the nominal value, the remaining
+indexes store the names of the linear uncertainty mechanisms. These are labelled
+to be unique. Importantly, if two RMEMeas objects being propagated share an
+uncertainty mechanism with the same umech_id (i.e. they both have a perturbed copy of the nominal
+with the same index label), then they are assume to be fully correlated.</p>
+<p>The`RMEMeas.mc` attribute stores the monte-carlo data. It is also an xarray.DataArray,
+where the first dimension is always called umech_id, and the first
+index of the dimension represents the nominal value. However, the index is
+instead a numeric index, starting at zero and counting up. Indexes starting from
+1 and up of this dimension represent samples of the probability distribution of
+the measurement. The RMEMeas will randomly sample from this distribution to
+perform the monte-carlo analysis.</p>
+<p>In this case, we will create a voltage and current measurement, both drawing
+from a gaussian distribution. Because we are creating a measurement using
+a float, the resulting`RMEMeas.cov`attribute will be shape (2,) (index 0 for the nominal
+value and index 1 representing the uncertainty associated with the Gaussian
+we sampled from). The`RMEMeas.mc` attribute will have shape (1001,) (index 0 for the
+nominal and index 1-1001 representing the samples from the gaussian
+distribution)</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">use_sample_mean</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="n">V</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_dist</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;voltage&#39;</span><span class="p">,</span>
+    <span class="n">nom</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+    <span class="n">samples</span><span class="o">=</span><span class="n">N</span><span class="p">,</span>
+    <span class="n">dist</span><span class="o">=</span><span class="s1">&#39;gaussian&#39;</span><span class="p">,</span>
+    <span class="n">use_sample_mean</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
+
+<span class="n">I</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_dist</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;current&#39;</span><span class="p">,</span>
+    <span class="n">nom</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+    <span class="n">samples</span><span class="o">=</span><span class="n">N</span><span class="p">,</span>
+    <span class="n">dist</span><span class="o">=</span><span class="s1">&#39;gaussian&#39;</span><span class="p">,</span>
+    <span class="n">use_sample_mean</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">V</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;            dimensions of V.cov :&#39;</span><span class="p">,</span> <span class="n">V</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="n">V</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;             dimensions of V.mc :&#39;</span><span class="p">,</span> <span class="n">V</span><span class="o">.</span><span class="n">mc</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="n">V</span><span class="o">.</span><span class="n">mc</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;V linear uncertainty mechanisms :&#39;</span><span class="p">,</span> <span class="n">V</span><span class="o">.</span><span class="n">umech_id</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>voltage with nominal:
+&lt;xarray.DataArray ()&gt; Size: 8B
+array(2.)
+            dimensions of V.cov : (&#39;umech_id&#39;,) (2,)
+             dimensions of V.mc : (&#39;umech_id&#39;,) (1001,)
+V linear uncertainty mechanisms : [np.str_(&#39;voltage_gaussian&#39;)]
+</pre></div>
+</div>
+</section>
+<section id="propagating-through-a-function">
+<h2>Propagating Through a Function<a class="headerlink" href="#propagating-through-a-function" title="Link to this heading">¶</a></h2>
+<p>Writing a function to be propagated requires a little knowledge about how
+the propagator works, but in trade enables you to take advantage of vectorized
+operations for significantly faster computation.</p>
+<p>First we define a function and wrap it the myprop.propagator decorator. This
+is equivalent to calling power = myprop.propagate(power) after defining
+the function power. This will tell the propagator to inspect the arguments of
+power when it is called and propagate any RMEMeas objects that are
+positional or keyword arguments.</p>
+<p>The propagator will call the function twice. Once for the linear sensitivity
+analysis where it passes in the`RMEMeas.cov`attribute, and once for the monte-carlo
+analysis where it passes in the`RMEMeas.mc` attribute.</p>
+<p>In the case of the sensitivity analysis, the propagator will align the
+linear uncertainty mechanisms of each RMEMeas object so that they can be
+used in math operations. In this example this means that the shape of the v
+and i arguments will have shape (3,) each, with the first axis aligning the
+uncertainty mechanisms that existed in both v and i. Uncertainty mechanisms
+that don’t exist in a variable are filled with a copy of the nominal in the
+newly aligned dimension.</p>
+<p>For the Monte Carlo analysis, the propagator will pick random samples from the
+data stored in the`RMEMeas.mc` attribute. We defined 1000 montecarlo sims in our propagator
+so v and i will have shape (1001,) when passed through our power function (
+1000 random samples and 1 copy of the nominal value).</p>
+<p>Note that while the propagator is design to encourage vectorization for
+efficiency, if that is not possible simply you can turn off vectorization
+with the vectorize setting. See the example on non-vectorized propagation
+for more details.</p>
+<p>The propagator will name your RMEMeas object using the name of the function
+you used to propagate it.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="nd">@myprop</span><span class="o">.</span><span class="n">propagate</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">power</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="n">v</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">i</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">v</span> <span class="o">*</span> <span class="n">i</span>
+
+
+<span class="c1"># when we call this, note that the power function is called twice, and the shapes</span>
+<span class="c1"># of the v and i arguments are changed from the original definitions for the</span>
+<span class="c1">#`RMEMeas.cov`attribute, now (3,) after the uncertainty mechanisms were aligned.</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">power</span><span class="p">(</span><span class="n">V</span><span class="p">,</span> <span class="n">I</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>(&#39;umech_id&#39;,) (3,) (3,)
+(&#39;umech_id&#39;,) (1001,) (1001,)
+</pre></div>
+</div>
+</section>
+<section id="evaluating-uncertainty">
+<h2>Evaluating Uncertainty<a class="headerlink" href="#evaluating-uncertainty" title="Link to this heading">¶</a></h2>
+<p>We can calculate the standard uncertainty of a RMEMeas object easily!</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">covunc</span><span class="p">,</span> <span class="n">mcunc</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">stdunc</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;sensitivity analysis uncertainty:&#39;</span><span class="p">,</span> <span class="n">covunc</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;monte-carlo uncertainty:&#39;</span><span class="p">,</span> <span class="n">mcunc</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>sensitivity analysis uncertainty: &lt;xarray.DataArray ()&gt; Size: 8B
+array(0.025)
+monte-carlo uncertainty: &lt;xarray.DataArray ()&gt; Size: 8B
+array(0.0244059)
+</pre></div>
+</div>
+<p>We can easily calculate the lower/upper uncertainty bounds for a given
+expansion factor on the uncertainty, degrees of freedom based on the linear
+sensitivity analysis, and confidence intervals based on the linear sensitivity
+analysis.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">uncbounds</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">dof</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">dof</span><span class="p">()</span>
+<span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">confint</span><span class="p">(</span><span class="mf">0.95</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can plot the montecarlo distributions of our results as well.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">V</span><span class="o">.</span><span class="n">mc</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">label</span><span class="o">=</span><span class="n">V</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">I</span><span class="o">.</span><span class="n">mc</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">label</span><span class="o">=</span><span class="n">I</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">mc</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">label</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;best&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Value&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Quantity&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<img src="../../_images/sphx_glr_plot_e01_basic_uncertainty_analysis_001.png" srcset="../../_images/sphx_glr_plot_e01_basic_uncertainty_analysis_001.png" alt="plot e01 basic uncertainty analysis" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Text(38.347222222222214, 0.5, &#39;Quantity&#39;)
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.190 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-rme-gettingstarted-plot-e01-basic-uncertainty-analysis-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/dd4e1db8c8f5b89e0d19bfc8d2a38855/plot_e01_basic_uncertainty_analysis.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">plot_e01_basic_uncertainty_analysis.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/8e81d2429a5db29e6101fc6e4e929768/plot_e01_basic_uncertainty_analysis.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">plot_e01_basic_uncertainty_analysis.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/96ee1f1055da0c47dc89f602ba8e06d5/plot_e01_basic_uncertainty_analysis.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">plot_e01_basic_uncertainty_analysis.zip</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+</section>
+
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">rmellipse Gallery</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#examples">Examples</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#fundementals">Fundementals</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../Examples/index.html">Examples</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Fundementals</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../for_contributors/index.html">For Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/auto_examples/RME_gettingstarted/plot_e01_basic_uncertainty_analysis.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+<h3>Versions</h3>
+<ul>
+  <li><a href="../../../v0.3.4/index.html">v0.3.4</a></li>
+  <li><a href="plot_e01_basic_uncertainty_analysis.html">stable</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="plot_e03_reading_writing.html" title="Reading/Writing RMEMeas Objects"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="plot_e00_creating_RMEMeas_objects.html" title="RMEMeas Objects"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >rmellipse Gallery</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" >Fundementals</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Basics of RME Propagation</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2024, National Institute of Standards and Technology.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.0.
+    </div>
+  </body>
+</html>

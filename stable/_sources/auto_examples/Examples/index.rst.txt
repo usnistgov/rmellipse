@@ -1,0 +1,49 @@
+
+
+.. _sphx_glr_auto_examples_Examples:
+
+Examples
+--------
+These examples demonstrate expected use cases for the package, and illustrate some of the
+core concepts.
+
+
+
+
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example  a performs a short,  open, and load (SOL) calibration with a linear sensitivity analysis.">
+
+.. only:: html
+
+  .. image:: /auto_examples/Examples/images/thumb/sphx_glr_plot_e00_SOL_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_Examples_plot_e00_SOL.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">SOL Calibration</div>
+    </div>
+
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+
+
+.. toctree::
+   :hidden:
+
+   /auto_examples/Examples/plot_e00_SOL
+

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>rmellipse.propagators &#8212; Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=fd3f3429" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../../../_static/documentation_options.js?v=888cb622"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="rmellipse.uobjects" href="../uobjects/index.html" />
+    <link rel="prev" title="rmellipse" href="../index.html" />
+<link rel="stylesheet" href="https://pages.nist.gov/nist-header-footer/css/nist-combined.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" type="text/javascript"></script>
+  <script src="https://pages.nist.gov/nist-header-footer/js/nist-header-footer.js" type="text/javascript" defer="defer"></script>
+
+
+<script type="text/javascript" src="https://pages.nist.gov/leaveNotice/js/jquery.leaveNotice-nist.min.js"></script>
+<script>
+$(document).ready(function(){
+  // Mark external (non-nist.gov) A tags with class "external"
+  //If the adress start with https and ends with nist.gov
+  var re_nist = new RegExp('^https?:\/\/((^\/)*\.)*nist\\.gov(\/|$)');
+  //Regex to find address that start with https
+  var re_absolute_address = new RegExp('^((https?:)?\/\/)');
+  $("a").each(function(){
+    var url=$(this).attr('href');
+    if(re_nist.test(url) || !re_absolute_address.test(url)){
+      $(this).addClass('local');
+    }else{
+      //This a href appears to be external, so tag it
+      $(this).addClass('external');
+    }
+  });
+  // Add leaveNotice to external A elements
+  $('a.external').leaveNotice();
+});
+</script>
+<link rel="stylesheet" type="text/css" href="https://pages.nist.gov/leaveNotice/css/jquery.leaveNotice.css" />
+
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../uobjects/index.html" title="rmellipse.uobjects"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="rmellipse"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >API Reference</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="../index.html" accesskey="U">rmellipse</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">rmellipse.propagators</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+
+
+  <section id="module-rmellipse.propagators">
+<span id="rmellipse-propagators"></span><h1>rmellipse.propagators<a class="headerlink" href="#module-rmellipse.propagators" title="Link to this heading">¶</a></h1>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading">¶</a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#rmellipse.propagators.Propagator" title="rmellipse.propagators.Propagator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Propagator</span></code></a></p></td>
+<td><p>Defines what a Propagator should look like and how it should behave.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#rmellipse.propagators.RMEProp" title="rmellipse.propagators.RMEProp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RMEProp</span></code></a></p></td>
+<td><p>Microwave Uncertainty Framework uncertainty propagators.Propagator.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="package-contents">
+<h2>Package Contents<a class="headerlink" href="#package-contents" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="rmellipse.propagators.Propagator">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">rmellipse.propagators.</span></span><span class="sig-name descname"><span class="pre">Propagator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">settings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/propagators/_propagator.html#Propagator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.propagators.Propagator" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<p>Defines what a Propagator should look like and how it should behave.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.propagators.Propagator.active">
+<span class="sig-name descname"><span class="pre">active</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#rmellipse.propagators.Propagator.active" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.propagators.Propagator.settings">
+<span class="sig-name descname"><span class="pre">settings</span></span><a class="headerlink" href="#rmellipse.propagators.Propagator.settings" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.propagators.Propagator.set_active">
+<span class="sig-name descname"><span class="pre">set_active</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/propagators/_propagator.html#Propagator.set_active"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.propagators.Propagator.set_active" title="Link to this definition">¶</a></dt>
+<dd><p>Make this propagator the active one.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.propagators.Propagator.propagate">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">propagate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/propagators/_propagator.html#Propagator.propagate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.propagators.Propagator.propagate" title="Link to this definition">¶</a></dt>
+<dd><p>Wrap a function in an uncertainty propagation engine.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>function</strong><span class="classifier">Callable</span></dt><dd><p>any function that should be wrapped to be propagateable.</p>
+</dd>
+<dt><strong>*args</strong><span class="classifier">TYPE</span></dt><dd><p>DESCRIPTION.</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier">TYPE</span></dt><dd><p>DESCRIPTION.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>Function wrapped in the propagation logic.</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.propagators.Propagator.combine">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">combine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">measurements</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/propagators/_propagator.html#Propagator.combine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.propagators.Propagator.combine" title="Link to this definition">¶</a></dt>
+<dd><p>Combine realizations of the same measurement into a single measurement.</p>
+<p>Adds uncertainty based on the inputs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>function</strong><span class="classifier">Callable</span></dt><dd><p>any function that should be wrapped to be propagateable.</p>
+</dd>
+<dt><strong>*measurements: TYPE</strong></dt><dd><p>Realizations of the measurement.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>combined measurement.</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="rmellipse.propagators.RMEProp">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">rmellipse.propagators.</span></span><span class="sig-name descname"><span class="pre">RMEProp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">montecarlo_sims</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensitivity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handle_common_grid_method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">common_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'frequency'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">common_coords</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interp_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vectorize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">set_active</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/propagators/_rmeprop.html#RMEProp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.propagators.RMEProp" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#rmellipse.propagators.Propagator" title="rmellipse.propagators.Propagator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rmellipse.propagators.Propagator</span></code></a></p>
+<p>Microwave Uncertainty Framework uncertainty propagators.Propagator.</p>
+<p>Stores perturbations to data sets and samples of a Monte Carlo distribution
+along a dimension called ‘umech_id’ for the cov and mc
+attributes respectively.</p>
+<p>This class is used to represent data sets with uncertainty, and the provided
+propagators.Propagator wrapper and combine function are used to propagate those
+uncertainties through arbitrary functions using first order linear
+sensitivity analysis, or monte carlo simulations.</p>
+<p>The class structure and algorithms are designed to support vectorized
+operations, and label based indexing with numpy/xarray libraries in the
+functions being propagated, enabling larger data sets/large numbers of
+uncertainties to be propagated efficiently without parallelization.</p>
+<p>The class also supports the automatic handling of data sets with a common
+grid/dimensions, like frequency points.</p>
+<p>Creates a RMEMeas propagators.Propagator initialized with the defined settings.
+Keyword arguments are initialized into a settings dictionary that
+can be modified on runtime.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>montecarlo_sims</strong><span class="classifier">int, optional</span></dt><dd><p>How many Monte Carlo trials to run. 0 turns off. The default is 0.</p>
+</dd>
+<dt><strong>sensitivity</strong><span class="classifier">bool, optional</span></dt><dd><p>If true, performs a sensitivity analysis, linear first order
+via finite differences. The default is False.</p>
+</dd>
+<dt><strong>handle_common_grid_method</strong><span class="classifier">str, optional</span></dt><dd><p>How to select common dimensions on RMEMeas inputs, done automatically
+by propagated functions. See
+RMEMeas.handle_common_grid for more info. None turns off.</p>
+</dd>
+<dt><strong>common_grid</strong><span class="classifier">str, optional</span></dt><dd><p>Name of the common dimension to handle. The default is ‘frequency’.</p>
+</dd>
+<dt><strong>common_coords</strong><span class="classifier">dict, optional</span></dt><dd><p>Coordinates to pair RMEMeas inputs down to. Used for certain
+handle_common_grid_method values.See
+RMEMeas.handle_common_grid The default is {}.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool, optional</span></dt><dd><p>IF true, propagators.Propagator prints information about operations
+as they happen. The default is False.</p>
+</dd>
+<dt><strong>vectorize: bool, optional;</strong></dt><dd><p>IF true, propagators.Propagator will loop over uncertainty mechanisms and
+repeatedly call the propagating function. The default is False.</p>
+</dd>
+<dt><strong>set_active</strong><span class="classifier">bool, optional</span></dt><dd><p>Sets this as the active propagators.Propagator, used for some magic
+methods that need to infer what propagators.Propagator to use.
+The default is True.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rmellipse.propagators.RMEProp.settings">
+<span class="sig-name descname"><span class="pre">settings</span></span><a class="headerlink" href="#rmellipse.propagators.RMEProp.settings" title="Link to this definition">¶</a></dt>
+<dd><p>dict: Stores the current settings of the propagator.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.propagators.RMEProp.handle_common_grid">
+<span class="sig-name descname"><span class="pre">handle_common_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">process_args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">process_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handle_method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../_modules/rmellipse/propagators/_rmeprop.html#RMEProp.handle_common_grid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.propagators.RMEProp.handle_common_grid" title="Link to this definition">¶</a></dt>
+<dd><p>Handle common grids on RMEMeas objects in process_args or process_kwargs.</p>
+<p>This function is called automatically by propagate to align and select
+common grid elements of RMEMeas objects so they are suitable for
+arithemetic and linear algebra.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>process_args</strong><span class="classifier">tuple</span></dt><dd><p>DESCRIPTION.</p>
+</dd>
+<dt><strong>process_kwargs</strong><span class="classifier">dict</span></dt><dd><p>DESCRIPTION.</p>
+</dd>
+<dt><strong>dim</strong><span class="classifier">str</span></dt><dd><p>Name of the dimensions being handled.</p>
+</dd>
+<dt><strong>handle_method</strong><span class="classifier">str</span></dt><dd><p>Name of the handle method. Valid options are:
+“common”,”interp_smallest”,”interp_common”
+“common” will only use values along dim that are shared among ALL
+the inputs.</p>
+<p>“interp_common” will interpolate (1D) to the the provided frequency list
+in the common_coords dictionary of the propagators.Propagators settings. The
+common_coords settings is expected to be a dictionary of key value
+pairs with {dim:array} where dim is the name of the dimension and
+array is the 1d set of indexes.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>tuple</dt><dd><p>Modified positional arguments with common grid handled.</p>
+</dd>
+<dt>dict</dt><dd><p>Modified key worded arguments with common grid handled.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>Exception</dt><dd><p>If a handle common grid method is provided that has not been defined.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.propagators.RMEProp.propagate">
+<span class="sig-name descname"><span class="pre">propagate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fun</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rmellipse/propagators/_rmeprop.html#RMEProp.propagate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.propagators.RMEProp.propagate" title="Link to this definition">¶</a></dt>
+<dd><p>Decorate to make function automatically pass itself through propagate.</p>
+<p>Assumes that all the RMEMeas arguments are passed as positional arguments.
+Any positional arguments that are not RMEMeas instances are turned
+into RMEMeas objects without any covariance or nominal data, and named
+‘auto_arg’. The  __name__ property of the function is assigned as the name
+of the output RMEMeas object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>RMEMeas</dt><dd><p>RMEMeas object of output.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="rmellipse.propagators.RMEProp.combine">
+<span class="sig-name descname"><span class="pre">combine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">measurements</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../uobjects/index.html#rmellipse.uobjects.RMEMeas" title="rmellipse.uobjects.RMEMeas"><span class="pre">rmellipse.uobjects.RMEMeas</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">error_of_mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_single_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">combine_basename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'combined'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_uuid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">combine_categories</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{'Type':</span> <span class="pre">'A'}</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../uobjects/index.html#rmellipse.uobjects.RMEMeas" title="rmellipse.uobjects.RMEMeas"><span class="pre">rmellipse.uobjects.RMEMeas</span></a></span></span><a class="reference internal" href="../../../_modules/rmellipse/propagators/_rmeprop.html#RMEProp.combine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rmellipse.propagators.RMEProp.combine" title="Link to this definition">¶</a></dt>
+<dd><p>Combine repeated measurements with uncertainty into a single measurement.</p>
+<p>Additional uncertainty mechanisms are created with the ‘combine_basename’
+as the name of the mechanisms + an iterated integer. Principal component
+analysis is used to create the additional mechanisms.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>*measurements</strong><span class="classifier">RMEMeas</span></dt><dd><p>DESCRIPTION.</p>
+</dd>
+<dt><strong>error_of_mean</strong><span class="classifier">bool, optional</span></dt><dd><p>If true, uses the error of the mean when creating the new uncertainty
+mechanisms. The default is False.</p>
+</dd>
+<dt><strong>n_single_values</strong><span class="classifier">Union[float,int], optional</span></dt><dd><p>Describes how many of the singular values to keep as
+error mechanisms when performing the PCA.If n_single_values&lt;1,
+will provide the min number of values to describe n_single_values
+ratio of the total variance described by the SVD. If
+n_single_values&gt; 1, will utilize the integer n_single_values number
+of singular values. If None, will use all the singular values
+available. Useful for reducing the size of data sets when
+large numbers of repeated measurements are used.The default is None.</p>
+</dd>
+<dt><strong>combine_basename</strong><span class="classifier">dict[str], optional</span></dt><dd><p>Base name usd when creating new uncertainty mechanisms.
+Uncertainty mechanisms are named with &lt;basename&gt;+_+&lt;int&gt;, int is
+iterated for each new mechanism. The default is ‘combined’.</p>
+</dd>
+<dt><strong>add_uid: str, optional</strong></dt><dd><p>If true, adds a UID to the combine_basename to make it unique. The
+default is True.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">RMEMeas</span></dt><dd><p>Returns a RMEMeas object with combined uncertainties.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../../../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../auto_examples/index.html">rmellipse Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../for_contributors/index.html">For Contributors</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html">rmellipse</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../_sources/autoapi/rmellipse/propagators/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+<h3>Versions</h3>
+<ul>
+  <li><a href="index.html">v0.3.4</a></li>
+  <li><a href="../../../../stable/index.html">stable</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../uobjects/index.html" title="rmellipse.uobjects"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="rmellipse"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >API Reference</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="../index.html" >rmellipse</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">rmellipse.propagators</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2024, National Institute of Standards and Technology.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.0.
+    </div>
+  </body>
+</html>

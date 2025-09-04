@@ -1,0 +1,1834 @@
+rmellipse.uobjects
+==================
+
+.. py:module:: rmellipse.uobjects
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   rmellipse.uobjects.RMEMeasFormatError
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   rmellipse.uobjects.UObj
+   rmellipse.uobjects.RMEMeas
+
+
+Package Contents
+----------------
+
+.. py:class:: UObj
+
+   Bases: :py:obj:`abc.ABC`
+
+
+   
+   Generic Uncertain Object.
+
+   Defines the interface that all uncertainty objects should inherit from.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   .. py:method:: copy()
+      :classmethod:
+
+      :abstractmethod:
+
+
+      
+      Return a copy of a uncertain object.
+
+
+
+      :Returns:
+
+          None.
+              ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:property:: stdunc
+      :abstractmethod:
+
+
+      
+      Get the standard uncertainty with expansion factor k.
+
+      Return type should be the natural typing for the object being
+      evauluated.
+
+      :Parameters:
+
+          **k** : float, optional
+              Expansion factor The default is 1.
+
+      :Returns:
+
+          Standard uncertainty.
+              ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:property:: nom
+      :abstractmethod:
+
+
+      
+      Get the nominal value of the uncertain object.
+
+      Return type should be the natural typing for the object being
+      evauluated.
+
+
+      :Returns:
+
+          Nominal value.
+              ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+.. py:class:: RMEMeas(name: str = 'RMEMeas', cov: xarray.DataArray = None, mc: xarray.DataArray = None, covdofs: xarray.DataArray = None, covcats: xarray.DataArray = None)
+
+   Bases: :py:obj:`rmellipse.uobjects.UObj`, :py:obj:`rmellipse.utils.GroupSaveable`
+
+
+   Class that stores monte-carlo and linear sensitivity uncertainty information.
+
+   Used with the rmellipse.RMEProp propagator.
+
+
+
+   Initialize a RMEMeas object.
+
+   Please refer to xarray's documentation for information about how to 
+   use DataArrays, and how to define coordinates and dimensions.
+
+   If covdofs is not provided, distributions of linear uncertainty
+   mechanisms are assumed to have infinite degrees of freedom (Gaussian).
+
+   :Parameters:
+
+       **name** : str, optional
+           Name of RMEMeas object. The default is 'RMEMeas'.
+
+       **cov** : xr.DataArray, optional
+           Covariance data for linear sensitivity analysis. Copies of data set
+           are stored along the first dimension (axis 0) of the DataArray, where
+           the first index of axis 0 is the nominal data set, and the rest of
+           the indexes along that dimension are perturbed by one standard deviation
+           (i.e. 1 standard uncertainty). 
+           
+           The first dimension must be called 'umech_id', and the
+           first label of the 'parameter_dimensions' coordinate must be
+           'nominal'. The remaining labels for the 'umech_id'
+           coordinate should be strings corresponding the the uncertainty
+           mechanism. The default is None.
+
+       **mc** : xr.DataArray, optional
+           Montecarlo data for linear sensitivity analysis. Samples of the data
+           sets distribution are stored along the first dimension (axis 0) of the DataArray, where
+           the first index of axis 0 is the nominal data set, and the rest of
+           the indexes are samples of the distribution.
+           
+           The first dimension must be called 'umech_id', and the
+           first labels of the 'parameter_dimensions' must start at 0 and
+           count up by 1 (i,e typical integer based indexing).
+           The default is None.
+
+       **covdofs** : xr.DataArray, optional
+           DataArray that stores the degrees of freedom for each linear
+           uncertainty mechanism in cov. It should be a 1 dimensional
+           DataArray with the dimension called 'umech_id' and
+           the coordinate set should be identical to the
+           'umech_id' coordinate in cov. If covariance data
+           is provided and covdofs is not, one will be created that assumes 
+           all linear mechanisms have infinite degrees of freedom (i.e.
+           gaussian distributions). The default is None.
+
+       **covcats** : xr.DataArray, optional
+           DataArray that stores the categories of each uncertainty mechanism.
+           Expected to be have dimensions ('umech_id','categories'),
+           If not provided, all umech_id are assigned a 'Type' category
+           of 'B'. If a mechanism doesn't have a category, it should be an empty
+           string.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+   .. py:property:: name
+
+      
+      str: The name of the object.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:property:: cov
+
+      
+      xr.DataArray: Linear uncertainty mechanisms.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:property:: mc
+
+      
+      xr.DataArray: samples of Monte-Carlo distributions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:property:: covdofs
+
+      
+      xr.DataArray: The degrees of freedom on linear mechanisms.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:property:: covcats
+
+      
+      xr.DataArray: String metadata for linear uncertainty mechanisms.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: from_nom(name: str, nom: xarray.DataArray) -> RMEMeas
+      :classmethod:
+
+
+      
+      Create a RMEMeas object with just a nominal dataset.
+
+
+      :Parameters:
+
+          **name** : str
+              The name of the object to be created.
+
+          **nom** : xr.DataArray
+              Nominal data set.
+
+      :Returns:
+
+          'RMEMeas'
+              A RMEMeas object with only nominal values.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: from_dist(name: str, nom: float, std: float, dist='gaussian', mechanism_name: str = None, samples: float = 100, categories: dict[str] = {'Type': 'B'}, use_sample_mean: bool = False) -> RMEMeas
+      :classmethod:
+
+
+      
+      Generate a RMEMeas object from a probability distribution.
+
+
+      :Parameters:
+
+          **name** : str
+              Name of the object.
+
+          **nom** : float
+              Expected value of the distribution.
+
+          **std** : float
+              Standard deviation of the distribution.
+
+          **dist** : str, {'gaussian', 'normal', 'uniform', 'rectangular'}
+              Name of the distribution to use. Supports 'gaussian' or 'uniform'.
+              The default is 'gaussian'.
+
+          **mechanism_name** : str, optional
+              What to name the linear uncertainty mechanisms associated with the
+              distribution. The default is None.
+
+          **samples** : float, optional
+              How many monte-carlo samples to draw from. The default is 100.
+
+          **categories** : dict[str], optional
+              What to categorize the linear uncertainty mechanism as
+              Should be {category:value} pairs. The default is {'Type':'B'}.
+
+          **use_sample_mean_std** : bool, optional
+              If true, uses the mean and standard deviation of random samples drawn
+              from the defined distribution for the linear sensitivity analysis and
+              as the nominal and standard uncertainty values. If False, uses the provided nominal and
+              standard deviation of the distribution. The default is True.
+
+      :Returns:
+
+          'RMEMeas'
+              RMEMeas based on defined distribution.
+
+
+
+
+      :Raises:
+
+          Exception
+              Unsupported distribution.
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: dict_from_group(file: str, group_path: str = None, verbose: bool = False) -> dict[RMEMeas]
+      :classmethod:
+
+
+      
+      Read any RMEMeas objects saved in an hdf5 group.
+
+
+      :Parameters:
+
+          **file** : str
+              path to the hdf5 file.
+
+          **group_path** : str, optional
+              path to group. The default is None.
+
+          **verbose** : bool , optional
+              If True, prints information about attempts to read
+              files. The default is False.
+
+      :Returns:
+
+          dict['RMEMeas']
+              Dictionary where keys are names of the RMEMeas objects and values
+              are the RMEMeas objects themselves.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: from_h5(group: h5py.Group, nominal_only: bool = False, keep_attrs: bool = True) -> RMEMeas
+      :classmethod:
+
+
+      
+      Read a RMEMeas object from HDF5.
+
+
+      :Parameters:
+
+          **group:**
+              HDF5 Group object
+
+          **nominal_only: bool, optional**
+              If true, will only load the nominal value of the data set. Saves
+              time and memory if you don't need that data.
+
+          **keep_attrs: bool, optional**
+              If true, copies over all metadata in attrs. Otherwise, only
+              keeps metadata required for class instantiation.
+
+      :Returns:
+
+          RMEMeas
+              RMEMeas object.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: to_h5(group: h5py.Group, override: bool = False, name: str = None, verbose: bool = False)
+
+      
+      Save to an hdf5 object. Wrapper for the group_saveable method 'save'.
+
+
+      :Parameters:
+
+          **group** : h5py.Group
+              hdf5 group to save under.
+
+          **override: bool,**
+              if True, will delete the group object being saved to if it already
+              exists. Default is false.
+
+          **name:str,**
+              If provided will change Name of RMEMeas object prior to saving.
+              Equivalent to calling self.name = name prior to calling save.
+
+      :Returns:
+
+          None.
+              ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: from_xml(path: str, from_csv: callable, old_dir: str = None, new_dir: str = None, verbose: bool = False) -> RMEMeas
+      :classmethod:
+
+
+      
+      Read a legacy xml MUFmeas object (xml .meas format).
+
+      covcats and covdofs metadata will be loaded as the default values.
+
+      :Parameters:
+
+          **path** : str
+              Path to xml header file.
+
+          **from_csv** : callable
+              Read function, takes a path to a copy of the data file and returns
+              an xarray object.
+
+          **old_dir** : str, optional
+              Name of old path stored in xml file. Will be swapped with new_dir
+              if provided. Old XML format isn't portable, and the paths
+              need to be manually swapped when the files are moved around.
+              The default is None.
+
+          **new_dir** : str, optional
+              Path string to replace old_dir with. The default is None.
+
+      :Returns:
+
+          **new** : MUFmeas
+              MUFmeas object from the legacy format.
+
+
+
+
+      :Raises:
+
+          Exception
+              If old_dir/new_dir are not both provided, but one is.
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: to_xml(target_directory: str, to_csv: callable, data_extension: str, header_extension: str = '.meas', header_directory: str = None)
+
+      
+      Save to a the Microwave Uncertainty Framework Format.
+
+      This does not preserve metadata in covdofs or covcats.
+
+      :Parameters:
+
+          **target_directory** : str
+              Directory in which to save the support folder which stores all
+              the copies of the data.
+
+          **to_csv** : callable
+              Dataformat of the underlying cov-data. Will be inferred if left
+              as None. The default is None.
+
+          **data_extension: str**
+              What to save the datafile extensions as (e.g. .s1p, .csv, etc)
+
+          **header_extension** : str, optional
+              What to save the xml header file extension as.
+              The default is '.meas'.
+
+          **header_directory** : str, optional
+              Location in which to store the header file. If None, defaults
+              to the target_directory. Default is None.
+
+      :Returns:
+
+          None.
+              ..
+
+
+
+
+      :Raises:
+
+          Exception
+              If no dataformat provided and one cannot be inferred.
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: copy() -> RMEMeas
+
+      
+      Make a copy of a RMEMeas object.
+
+
+
+      :Returns:
+
+          RMEMeas
+              Copied object.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: cull_cov(tolerance: float = 0)
+
+      
+      Remove trivial linear uncertainty mechanisms set by tolerance.
+
+      Any linear uncertainty mechanisms with a sum of all standard
+      uncertainties < tolerance will be removed from the object.
+
+      For example if tolerance is 0.1, the nominal is  [0,0,0] and
+      the perturbed data for a mechanisms is [0.0,0.1,-0.2], then the
+      function will evaluate the total standard uncertainty for the mechanism
+      as 0.1 + 0.0 + 0.2 = 0.3, and not remove the mechanism.
+
+      This function is called by the auto-cull setting in the RME
+      propagator.
+
+      :Parameters:
+
+          **tolerance** : float, optional
+              Maximum value a sum of standard uncertainties that is deemed
+              trivial, used to determine what mechanisms should be removed.
+              The default is 0.
+
+      :Returns:
+
+          None.
+              ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: make_umechs_unique(same_uid: bool = False)
+
+      
+      Make parameter locations unique by adding a uuid4 string to end of each.
+
+      A uiid4 string is added to the end of each parameter_location string.
+      Useful when reading data from different sources that have the same
+      names of uncertainty files. (E.G, multiple device definitions come
+      from calibration service formats with generic 'ua,ub' naming)
+
+      :Parameters:
+
+          **same_uid: bool, optional**
+              If true, all parameter locations will have the same uid added
+              to the end. Default is False.
+
+      :Returns:
+
+          None.
+              ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: add_mc_sample(sample: xarray.DataArray)
+
+      
+      Add a Monte Carlo sample to the distribution.
+
+
+      :Parameters:
+
+          **sample** : xr.DataArray
+              Single sample of the probability distribution that represents the
+              data set. Expected to be the same shape, dimensions, and
+              coordinates of the nominal.
+
+      :Returns:
+
+          None.
+              ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: add_umech(name: str, value: xarray.DataArray, dof: float = np.inf, category: dict = {'Type': 'B'}, add_uid: bool = False)
+
+      
+      Add a linear mechanisms to covariance data.
+
+
+      :Parameters:
+
+          **name** : str
+              Name of new mechanism, must be unique.
+
+          **value** : xr.DataArray
+              Array of nominal+1 standard uncertainty of new mechanism.
+              If value has the same size as the nominal data, the function will insert a 
+              new dimension at axis zero before concatenating to the covariance data.
+
+          **dof: float,optional**
+              Degrees of freedom associated with the uncertainty mechanism.
+              Default is infinite.
+
+          **category: dict,**
+              Dictionary of key-value string pairs categorizing the uncertainty
+              mechanisms. E.g. {'Type':'B','Origin':'Datasheet'}. The default
+              is {'Type':'B'}.
+
+          **add_uid: bool,**
+              If true, adds a uuid4 string to the uncertainty mechanism name
+              to make it unique.
+
+      :Returns:
+
+          None.
+              ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:property:: nom
+
+      
+      Get the nominal values of the RMEMeas object.
+
+
+
+      :Returns:
+
+          xr.DataArray
+              Nominal values in an xr.DataArray
+
+
+
+
+      :Raises:
+
+          Exception
+              if no data is store.
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:property:: umech_id
+
+      
+      Get the names of uncertainty mechanisms, excluding the nominal.
+
+
+
+      :Returns:
+
+          List
+              List of uncertainty mechanism strings.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: confint(percent: float, deg: bool = False, rad: bool = False)
+
+      
+      Generate the lower, upper confidence intervals for a fractional percent confidence.
+
+      Confidence intervals are generate using the linear sensitivity analysis
+      data (.cov) using a student-t distribution with means of .nominal, and 
+      a scale of 1 standard uncertainty.
+
+      :Parameters:
+
+          **percent** : float
+              Percent confidence to calculate intervals on, centered about the
+              nominal. For example, a value of 0.5 will calculate intervals such
+              that 0.25 of samples are between the mean and the lower, and 0.25
+              of expected samples are between the mean and the upper.
+
+          **deg** : bool, optional
+              If you are calculated confidence intervals on degrees.
+              The default is False.
+
+          **rad** : bool, optional
+              If you are calculating confidence intervals on radians.
+              The default is False.
+
+      :Returns:
+
+          **lower** : xr.DataArray
+              Lower bounds on the confidence interval.
+
+          **upper** : xr.DataArray
+              Upper bounds on the confidence interval.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: dof(deg: bool = False, rad: bool = False)
+
+      
+      Get the dof of of the RMEMeas object's covariance data.
+
+
+
+      :Returns:
+
+          float
+              degrees of freedom of standard uncertainty from linear sensitivity.
+
+          float
+              degrees of freedom of standard uncertainty from monte-carlo
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: stdunc(k: float = 1, deg: bool = False, rad: bool = False)
+
+      
+      Get the standard uncertainty with expansion factor k.
+
+      Supports uncertainties on angles via the deg/rad key word arguments.
+
+      :Parameters:
+
+          **k** : float, optional
+              Expansion factor. The default is 1.
+
+          **deg: bool, optional**
+              If true, treats the values as angles and finds the minimum
+              distance between the perturbed and un-perturbed data sets in
+              degrees. The default is False
+
+          **rad: bool, optional**
+              If true, treats the values as angles and finds the minimum
+              distance between the perturbed and un-perturbed data sets in
+              radians. The default is False
+
+      :Returns:
+
+          **covunc** : xr.DataArray
+              xr.DataArray of std unc from covariance data.
+
+          **mcunc** : xr.DataArray
+              standard uncertainty of montecarlo data.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: uncbounds(k: float = 1, deg: bool = False, rad: bool = False)
+
+      
+      Get uncertainty bounds (nominal + k*stdunc).
+
+      Supports uncertainties on angles via the deg/rad key word arguments.
+
+      :Parameters:
+
+          **k** : float, optional
+              Expansion factor. The default is 1.
+
+          **deg: bool, optional**
+              If true, treats the values as angles and finds the minimum
+              distance between the perturbed and un-perturbed data sets in
+              degrees. The default is False
+
+          **rad: bool, optional**
+              If true, treats the values as angles and finds the minimum
+              distance between the perturbed and un-perturbed data sets in
+              radians. The default is False
+
+      :Returns:
+
+          xr.DataArray
+              Uncertainty bounds from cov data.
+
+          xr.DataArray
+              Uncertainty bounds from montecarlo data.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: assign_categories(mechanisms: list[str], categories: list[str], designation: list[str])
+
+      
+      Assign categories to mechanisms.
+
+      Mechanisms, categories, and designation should all be the same shape.
+
+      categories and designation correspond to key,
+
+      :Parameters:
+
+          **mechanisms** : list[str]
+              1-d List of mechanisms to be assigned a category
+
+          **categories** : list[str]
+              1-d list of categories being assigned. Can be new categories that don't
+              already exist. Index corresponds to index of mechanisms.
+
+          **designation: list[str]**
+              1-d list of designation to assign each mechanism. Index corresponds
+              to index of mechanisms.
+
+      :Returns:
+
+          None.
+              ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: assign_categories_to_all(**categories: dict)
+
+      
+      Assign categories to all the linear uncertainty mechanisms.
+
+
+      :Parameters:
+
+          **\*\*categories** : list[str]
+              Keyword argument pairs of category names : designation to assign
+              to all linear uncertainty mechanisms in a variable.
+
+      :Returns:
+
+          None.
+              ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: create_empty_categories(categories: list[str])
+
+      
+      Add empty categories to the covcats array.
+
+      If an element in categories already exists, it is ignored and not added.
+
+      :Parameters:
+
+          **category** : list[str]
+              List of categories to create. If they already exist, they are not
+              added.
+
+      :Returns:
+
+          None.
+              ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: group_combine_mechanisms(deg: bool = False, rad: bool = False) -> RMEMeas
+
+      
+      Group linear uncertainty mechanism originating from the same combine call.
+
+      Preserves degrees of freedom does NOT preserve categorical information, used
+      by the self.dof() function prior to running the welch-stat equation.
+
+
+      :Returns:
+
+          RMEMeas:
+              New RMEMeas object with the linear uncertainty mechanisms originating
+              from the same combine call (Type A Analysis) grouped together.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: categorize_by(category: str, combine_uncategorized: bool = True, uncategorized_name: str = 'uncategorized', deg: bool = False, rad: bool = False, verbose: bool = False) -> RMEMeas
+
+      
+      Group linear uncertainty mechanisms into categories.
+
+      Mechanisms sharing a common category will be combined quadratically
+      into a single mechanism. For example, if the 'Type' category is
+      selected, all the mechanisms with the 'Type' = 'A' designation in
+      the covcats attribute will be quadratically combined.
+
+      This function does NOT preserve the DOF's or the category information
+      of the uncertainty mechanisms after categorization, and is recommended
+      to be used for debugging and presentation purposes only. It is NOT
+      recommended for categorized RMEMeas objects to be saved.
+
+      :Parameters:
+
+          **category** : str
+              String identifying the category of uncertainty mechanism.
+
+          **combine_uncategorized: bool,**
+              If True, mechanisms that do not contain 'category' will all be
+              combined into a single mechanism called uncategorized_name.
+
+          **uncategorized_name:str,**
+              String to call all uncategorized mechanisms IF they are being
+              combined. The default is 'uncategorized'.
+
+          **deg: bool,**
+              If true, calculates minimum angle differences for uncertainties
+              as degrees.
+
+          **rad: bool,**
+              If true, calculates minimum angle differences for uncertainties
+              as radians.
+
+          **verbose** : bool, optional
+              Print information about grouping. The default is False.
+
+      :Returns:
+
+          **out** : RMEMeas
+              DESCRIPTION.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_unique_categories()
+
+      
+      Get list of unique categories.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: print_categories()
+
+      
+      Print out the unique categories.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: interp(coords: dict = None, method: str = 'linear', assume_sorted: bool = False, kwargs: dict = None, **coords_kwargs)
+
+      
+      Interpolate RMEMeas object.
+
+      See xarray interp documentation for more details.
+
+      :Parameters:
+
+          **coords** : dict, optional
+              Mapping from dimension names to the new coordinates.
+              New coordinate can be a scalar, array-like or DataArray.
+              If DataArrays are passed as new coordinates, their dimensions are
+              used for the broadcasting. Missing values are skipped.
+              The default is None.
+
+          **method** : str, optional
+              {"linear", "nearest", "zero", "slinear", "quadratic", "cubic",
+               "quintic", "polynomial", "pchip", "barycentric", "krogh", "akima",
+               "makima"}) – Interpolation method. The default is 'linear'.
+
+          **assume_sorted** : bool, optional
+              If False, values of x can be in any order and they are sorted
+              first. If True, x has to be an array of monotonically increasing
+              values. The default is False.
+
+          **kwargs** : dict, optional
+              Additional keyword arguments passed to scipy’s interpolator.
+              Valid options and their behavior depend whether interp1d or
+              interpn is used.. The default is None.
+
+          **\*\*coords_kwargs** : dict like
+              The keyword arguments form of coords. One of coords or
+              coords_kwargs must be provided..
+
+      :Returns:
+
+          None.
+              ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: usel(umech_id: collections.abc.Iterable[str] = None, mcsamples: collections.abc.Iterable[int] = None) -> RMEMeas
+
+      
+      Get a view into specific uncertainty mechanisms or Monte Carlo samples.
+
+
+      :Parameters:
+
+          **umech_id** : iter[str], optional
+              Linear uncertainty mechanisms to look at. The default is None.
+
+          **mcsamples** : iter[int], optional
+              Monte Carlo samples to look at. The default is None.
+
+      :Returns:
+
+          'RMEMeas'
+              View into RMEMeas object with only the selected linear uncertainty
+              mechanisms and Monte Carlo samples.
+
+
+
+
+      :Raises:
+
+          ValueError
+              If 'nominal' is passed to umech_id, or 0 is passed to
+              the mcsamples. Those represent the nominal values and are
+              always included by default, since an uncertainty object should
+              always have a nominal value.
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:property:: loc
+
+      
+      Get view into underlying data with label based indexing.
+
+      Ignores the umech_id dimension, it cannot be indexed into
+      with this function.Index into array assuming the umech_id
+      dimensions doesn't exist in cov (i.e. as if indexing into only the
+      nominal)
+
+      Generates a view on the underlying cov,mc, covcats
+      and covdofs array. Use .copy() to create an unconnected version.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: sel(indexers: dict = None, method: str = None, tolerance: float = None, **indexers_kwargs) -> RMEMeas
+
+      
+      Get view into underlying data with label based selection.
+
+      Ignores the umech_id dimension, it cannot be indexed into
+      with this function.Index into array assuming the umech_id
+      dimensions doesn't exist in cov (i.e. as if indexing into only the
+      nominal)
+
+      Generates a view on the underlying cov,mc, covcats
+      and covdofs array. Use .copy() to create an unconnected version.
+
+      See documentation on DataArray.sel in the xarray package for details.
+
+      :Parameters:
+
+          **indexers** : TYPE, optional
+              A dict with keys matching dimensions and values given by scalars,
+              slices or arrays of tick labels. For dimensions with multi-index,
+              the indexer may also be a dict-like object with keys matching index
+              level names.
+              umech_id can't be provided.
+
+          **method** : str, optional
+              Method to use for inexact matches:
+              * None (default): only exact matches
+              * pad / ffill: propagate last valid index value forward
+              * backfill / bfill: propagate next valid index value backward
+              * nearest: use nearest valid index value
+              The default is None.
+
+          **tolerance** : float, optional
+              Maximum distance between original and new labels for inexact
+              matches. The values of the index at the matching locations must
+              satisfy the equation abs(index[indexer] - target) <= tolerance.
+
+          **\*\*indexers_kwargs** : dict
+              The keyword arguments form of indexers.
+              One of indexers or indexers_kwargs must be provided.
+
+      :Returns:
+
+          **out** : RMEMeas
+              View into indexed RMEMeas object.
+
+
+
+
+      :Raises:
+
+          ValueError
+              DESCRIPTION.
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: isel(indexers: dict = None, drop: bool = False, missing_dims: str = 'raise', **indexers_kwargs) -> RMEMeas
+
+      
+      Get view into underlying data with integer based selection.
+
+      Ignores the umech_id dimension, it cannot be indexed into
+      with this function.Index into array assuming the umech_id
+      dimensions doesn't exist in cov (i.e. as if indexing into only the
+      nominal)
+
+      Generates a view on the underlying cov,mc, covcats
+      and covdofs array. Use .copy() to create an unconnected version.
+
+      :Parameters:
+
+          **indexers** : dict, optional
+              A dict with keys matching dimensions and values given by integers,
+              slice objects or arrays. indexer can be a integer, slice,
+              array-like or DataArray. If DataArrays are passed as indexers,
+              xarray-style indexing will be carried out.One of indexers or
+              indexers_kwargs must be provided.. The default is None.
+
+          **drop** : bool, optional
+              drop coordinates variables indexed by integers instead of making
+              them scalar. The default is False.
+
+          **missing_dims** : str, optional
+              What to do if dimensions that should be selected from are not
+              present in the DataArray: - “raise”: raise an exception - “warn”:
+              raise a warning, and ignore the missing dimensions - “ignore”:
+              ignore the missing dimensions. The default is 'raise'.
+
+          **\*\*indexers_kwargs** : TYPE
+              The keyword arguments form of indexers..
+
+      :Returns:
+
+          **out** : RMEMeas
+              View into indexed RMEMeas object.
+
+
+
+
+      :Raises:
+
+          ValueError
+              DESCRIPTION.
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: polyfit(dim: str, deg: int, apply_cov: bool = True) -> RMEMeas
+
+      
+      Apply a polynominal fit along dim.
+
+
+      :Parameters:
+
+          **dim** : str
+              Name of dimension to fit along.
+
+          **deg** : int
+              Degree of fit
+
+          **aoo**
+              ..
+
+      :Returns:
+
+          RMEMeas
+              Coefficients of data.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: polyval(coord: xarray.DataArray, degree_dim: str) -> RMEMeas
+
+      
+      Evaluate a polynomial fit along coord.
+
+      Assumes self is a measurement of fit-parameters, with the
+      dimension of polynomial fits along degree_dim.
+
+      :Parameters:
+
+          **coord** : xr.DataArray
+              Coordinate to fit along.
+
+          **degree_dim** : str
+              Polynomial degree dimension.
+
+      :Returns:
+
+          RMEMeas
+              Coefficients of data.
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: curvefit(coords: str | xarray.DataArray | Sequence[str] | Sequence[xarray.DataArray], func: callable, reduce_dims: str | collections.abc.Iterable | None = None, skipna: bool = True, p0: dict = None, bounds: dict = None, param_names: Sequence | None = None, errors: str = 'raise', **kwargs)
+
+      
+      Simple binding to curvefit on xarray.
+
+      The nominal value is solved for first, than used as an initial guess for the
+      perturbed datasets.
+
+      See https://docs.xarray.dev/en/stable/generated/xarray.DataArray.curvefit.html for
+      more details.
+
+      :Parameters:
+
+          **coords** : str | xr.DataArray | Sequence[str] | Sequence[xr.DataArray], DataArray
+              Independent coordinate(s) over which to perform the curve fitting.
+              Must share at least one dimension with the calling object.
+              When fitting multi-dimensional functions,
+              supply coords as a sequence in the same order as arguments in func.
+              To fit along existing dimensions of the calling object, coords can also be specified as a str or sequence of strs.
+
+          **func** : callable
+              User specified function in the form f(x, *params) which returns a numpy array of length len(x).
+              Params are the fittable parameters which are optimized by scipy curve_fit. 
+              x can also be specified as a sequence containing multiple coordinates, e.g. f((x0, x1), *params).
+
+          **reduce_dims: str | Iterable | None, optional**
+              Additional dimension(s) over which to aggregate while fitting. For example, calling ds.curvefit(coords=’time’, reduce_dims=[‘lat’, ‘lon’], …)
+              will aggregate all lat and lon points and fit the specified function along the time dimension.
+
+          **skipna** : bool, optional
+              Whether to skip missing values when fitting. Default is True.
+
+          **p0** : dict, optional
+              Optional dictionary of parameter names to initial guesses passed to the curve_fit p0 arg.
+              If the values are DataArrays, they will be appropriately broadcast to the coordinates of the array.
+              If none or only some parameters are passed, the rest will be assigned initial values following the default
+              scipy behavior
+
+          **bounds** : dict, optional
+              Optional dictionary of parameter names to tuples of bounding values passed to the curve_fit bounds arg.
+              If any of the bounds are DataArrays, they will be appropriately broadcast to the coordinates of the array.
+              If none or only some parameters are passed, the rest will be unbounded following the default scipy behavior.
+
+          **param_names** : Sequence | None, optional
+              Sequence of names for the fittable parameters of func. If not supplied, this will be automatically determined
+              by arguments of func. param_names should be manually supplied when fitting a function that takes a
+              variable number of parameters.
+
+          **errors** : str, optional
+              If ‘raise’, any errors from the scipy.optimize_curve_fit optimization will raise an exception.
+              If ‘ignore’, the coefficients and covariances for the coordinates where the fitting failed will be NaN.
+
+          **\*\*kwargs** : optional
+              Additional keyword arguments passed to scipy curve_fit.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: curveval(func: callable, coords: xarray.DataArray)
+
+      
+      Evaluate the output of curvefit.
+
+      Assumes there is a dimension called 'param' that coresponds.
+      to the fit coefficients of func. Assumes function is nonlinear
+      and iterates over each function evaluation, which can be slow.
+
+      :Parameters:
+
+          **func** : callable
+              callable function
+
+          **coords** : xr.DataArray
+              coordinates.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+.. py:exception:: RMEMeasFormatError(message)
+
+   Bases: :py:obj:`Exception`
+
+
+   Error in formatting of data inside RMEMeas
+
+   Parameters
+   ----------
+   Exception : _type_
+       _description_
+
+
+   Initialize self.  See help(type(self)) for accurate signature.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+   .. py:attribute:: message
+
+

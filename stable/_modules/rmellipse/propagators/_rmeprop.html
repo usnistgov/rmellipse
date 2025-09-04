@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>rmellipse.propagators._rmeprop &#8212; Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=fd3f3429" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../../../_static/documentation_options.js?v=888cb622"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+<link rel="stylesheet" href="https://pages.nist.gov/nist-header-footer/css/nist-combined.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" type="text/javascript"></script>
+  <script src="https://pages.nist.gov/nist-header-footer/js/nist-header-footer.js" type="text/javascript" defer="defer"></script>
+
+
+<script type="text/javascript" src="https://pages.nist.gov/leaveNotice/js/jquery.leaveNotice-nist.min.js"></script>
+<script>
+$(document).ready(function(){
+  // Mark external (non-nist.gov) A tags with class "external"
+  //If the adress start with https and ends with nist.gov
+  var re_nist = new RegExp('^https?:\/\/((^\/)*\.)*nist\\.gov(\/|$)');
+  //Regex to find address that start with https
+  var re_absolute_address = new RegExp('^((https?:)?\/\/)');
+  $("a").each(function(){
+    var url=$(this).attr('href');
+    if(re_nist.test(url) || !re_absolute_address.test(url)){
+      $(this).addClass('local');
+    }else{
+      //This a href appears to be external, so tag it
+      $(this).addClass('external');
+    }
+  });
+  // Add leaveNotice to external A elements
+  $('a.external').leaveNotice();
+});
+</script>
+<link rel="stylesheet" type="text/css" href="https://pages.nist.gov/leaveNotice/css/jquery.leaveNotice.css" />
+
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">rmellipse.propagators._rmeprop</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+
+
+  <h1>Source code for rmellipse.propagators._rmeprop</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Microwave Uncertainty Framework (RME) propagators.Propagator Definition module.</span>
+
+<span class="sd">This RME propagators.Propagator is used for propagating RMEMeas objects, and is based</span>
+<span class="sd">on the xarray package.</span>
+
+<span class="sd">Created on Tue Jun  4 14:04:58 2024</span>
+
+<span class="sd">@author: dcg2</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="c1"># These need to be imported this way to delay access</span>
+<span class="c1"># to the underlying classes to avoid a circular import error</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">rmellipse.propagators</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">propagators</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">rmellipse.uobjects</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">uobjs</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">wraps</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span>
+
+
+<div class="viewcode-block" id="RMEProp">
+<a class="viewcode-back" href="../../../autoapi/rmellipse/propagators/index.html#rmellipse.propagators.RMEProp">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">RMEProp</span><span class="p">(</span><span class="n">propagators</span><span class="o">.</span><span class="n">Propagator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Microwave Uncertainty Framework uncertainty propagators.Propagator.</span>
+
+<span class="sd">    Stores perturbations to data sets and samples of a Monte Carlo distribution</span>
+<span class="sd">    along a dimension called &#39;umech_id&#39; for the cov and mc</span>
+<span class="sd">    attributes respectively.</span>
+
+<span class="sd">    This class is used to represent data sets with uncertainty, and the provided</span>
+<span class="sd">    propagators.Propagator wrapper and combine function are used to propagate those</span>
+<span class="sd">    uncertainties through arbitrary functions using first order linear</span>
+<span class="sd">    sensitivity analysis, or monte carlo simulations. </span>
+
+<span class="sd">    The class structure and algorithms are designed to support vectorized</span>
+<span class="sd">    operations, and label based indexing with numpy/xarray libraries in the </span>
+<span class="sd">    functions being propagated, enabling larger data sets/large numbers of</span>
+<span class="sd">    uncertainties to be propagated efficiently without parallelization.</span>
+
+<span class="sd">    The class also supports the automatic handling of data sets with a common</span>
+<span class="sd">    grid/dimensions, like frequency points.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_active</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">montecarlo_sims</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                 <span class="n">sensitivity</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">handle_common_grid_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">common_grid</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;frequency&#39;</span><span class="p">,</span>
+                 <span class="n">common_coords</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+                 <span class="n">interp_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+                 <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">vectorize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                 <span class="n">set_active</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                 <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a RMEMeas propagators.Propagator initialized with the defined settings.</span>
+<span class="sd">        Keyword arguments are initialized into a settings dictionary that </span>
+<span class="sd">        can be modified on runtime.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        montecarlo_sims : int, optional</span>
+<span class="sd">            How many Monte Carlo trials to run. 0 turns off. The default is 0.</span>
+<span class="sd">        sensitivity : bool, optional</span>
+<span class="sd">            If true, performs a sensitivity analysis, linear first order</span>
+<span class="sd">            via finite differences. The default is False.</span>
+<span class="sd">        handle_common_grid_method : str, optional</span>
+<span class="sd">            How to select common dimensions on RMEMeas inputs, done automatically</span>
+<span class="sd">            by propagated functions. See</span>
+<span class="sd">            RMEMeas.handle_common_grid for more info. None turns off.</span>
+<span class="sd">        common_grid : str, optional</span>
+<span class="sd">            Name of the common dimension to handle. The default is &#39;frequency&#39;.</span>
+<span class="sd">        common_coords : dict, optional</span>
+<span class="sd">            Coordinates to pair RMEMeas inputs down to. Used for certain</span>
+<span class="sd">            handle_common_grid_method values.See</span>
+<span class="sd">            RMEMeas.handle_common_grid The default is {}.</span>
+<span class="sd">        verbose : bool, optional</span>
+<span class="sd">            IF true, propagators.Propagator prints information about operations</span>
+<span class="sd">            as they happen. The default is False.</span>
+<span class="sd">        vectorize: bool, optional;</span>
+<span class="sd">            IF true, propagators.Propagator will loop over uncertainty mechanisms and</span>
+<span class="sd">            repeatedly call the propagating function. The default is False.</span>
+<span class="sd">        set_active : bool, optional</span>
+<span class="sd">            Sets this as the active propagators.Propagator, used for some magic</span>
+<span class="sd">            methods that need to infer what propagators.Propagator to use.</span>
+<span class="sd">            The default is True.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">montecarlo_sims</span><span class="o">=</span><span class="n">montecarlo_sims</span><span class="p">,</span>
+                        <span class="n">sensitivity</span><span class="o">=</span><span class="n">sensitivity</span><span class="p">,</span>
+                        <span class="n">handle_common_grid_method</span><span class="o">=</span><span class="n">handle_common_grid_method</span><span class="p">,</span>
+                        <span class="n">common_grid</span><span class="o">=</span><span class="n">common_grid</span><span class="p">,</span>
+                        <span class="n">common_coords</span><span class="o">=</span><span class="n">common_coords</span><span class="p">,</span>
+                        <span class="n">vectorize</span><span class="o">=</span><span class="n">vectorize</span><span class="p">,</span>
+                        <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
+                        <span class="n">interp_kwargs</span> <span class="o">=</span> <span class="n">interp_kwargs</span>
+                        <span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;dict: Stores the current settings of the propagator.&quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">set_active</span><span class="p">:</span>
+            <span class="n">RMEProp</span><span class="o">.</span><span class="n">_active</span> <span class="o">=</span> <span class="bp">self</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_unique_umech_id</span><span class="p">(</span>
+            <span class="o">*</span><span class="n">process_args</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">type</span><span class="p">],</span>
+            <span class="o">**</span><span class="n">process_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">type</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get a list of all the unique umech_id in process_args,kwargs.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        *process_args : tuple[type]</span>
+<span class="sd">            tuple of any function arguments.</span>
+<span class="sd">        **process_kwargs : dict[type]</span>
+<span class="sd">            dictionary of any function key worded arguments.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            List of unique parameters.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">args_param_lists</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">umech_id</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">process_args</span><span class="p">]</span>
+        <span class="n">kwargs_param_lists</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">umech_id</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">process_kwargs</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+        <span class="n">param_lists</span> <span class="o">=</span> <span class="n">args_param_lists</span> <span class="o">+</span> <span class="n">kwargs_param_lists</span>
+
+        <span class="c1"># get a set of all the parameter locations</span>
+        <span class="n">param_set</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">pl</span> <span class="ow">in</span> <span class="n">param_lists</span><span class="p">:</span>
+            <span class="n">param_set</span> <span class="o">+=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pl</span><span class="p">)</span>
+        <span class="n">param_set</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">param_set</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">param_set</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_expand_umech_id_and_fill_nominal</span><span class="p">(</span>
+            <span class="n">m</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span>
+            <span class="n">new_params</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+            <span class="n">xarray_skip_checks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">include_nominal_index</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="n">nominal_fill_value</span><span class="p">:</span> <span class="nb">type</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Expand the parameter locations in m to match param_set.</span>
+
+<span class="sd">        Parameter locations in new_params that don&#39;t exist in m are filled with</span>
+<span class="sd">        nominal values.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        m : type</span>
+<span class="sd">            can be anything. None RMEMeas objects are passed through without</span>
+<span class="sd">            operation, RMEMeas objects are operated on.</span>
+<span class="sd">        new_params: list[str]</span>
+<span class="sd">            new parameter locations to expand to.</span>
+<span class="sd">        xarray_skip_checks: bool, optional</span>
+<span class="sd">            If true, assumes input is an xarray with &#39;umech_id&#39;</span>
+<span class="sd">            dimensions and immediately runs the function on it.</span>
+<span class="sd">        include_nominal_index: bool, optional</span>
+<span class="sd">            If true, includes &#39;nominal&#39; as the first index  of the output</span>
+<span class="sd">            xarray.</span>
+<span class="sd">        nominal_fill_value: type, optional</span>
+<span class="sd">            if provided, will be used as the fill value when dimensions are</span>
+<span class="sd">            expanded. If not provided, will use the first index of the array</span>
+<span class="sd">            as the fill value. </span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        data : TYPE</span>
+<span class="sd">            m with expanded parameter locations, filled with the nominal value</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># xarray based RMEMeas objects get handled</span>
+        <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="ow">or</span> <span class="n">xarray_skip_checks</span><span class="p">:</span>
+            <span class="n">param_set</span> <span class="o">=</span> <span class="n">new_params</span>
+            <span class="c1"># list of parameter locations</span>
+            <span class="k">if</span> <span class="n">include_nominal_index</span><span class="p">:</span>
+                <span class="n">new_paramlocs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;nominal&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">param_set</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_paramlocs</span> <span class="o">=</span> <span class="n">param_set</span>
+
+            <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+                <span class="n">temp</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">cov</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">temp</span> <span class="o">=</span> <span class="n">m</span>
+
+            <span class="k">if</span> <span class="n">nominal_fill_value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">nominal_fill_value</span> <span class="o">=</span> <span class="n">temp</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+            <span class="c1"># make a copy of nominal equal to length of parameter set</span>
+
+            <span class="n">data</span> <span class="o">=</span> <span class="n">nominal_fill_value</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">({</span><span class="s1">&#39;umech_id&#39;</span><span class="p">:</span> <span class="n">new_paramlocs</span><span class="p">})</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="c1"># assign umech_id locations to original cov data</span>
+            <span class="n">intersections</span><span class="p">,</span> <span class="n">comm1</span><span class="p">,</span> <span class="n">comm2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">intersect1d</span><span class="p">(</span><span class="n">new_paramlocs</span><span class="p">,</span>
+                                                         <span class="n">temp</span><span class="o">.</span><span class="n">umech_id</span><span class="p">,</span>
+                                                         <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                                         <span class="n">return_indices</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="n">data</span><span class="p">[</span><span class="n">comm1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span><span class="p">[</span><span class="n">comm2</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+
+            <span class="k">return</span> <span class="n">data</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">m</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_sample_distribution</span><span class="p">(</span><span class="n">montecarlo_trials</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                             <span class="n">m</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sample the Monte Carlo distribution of an object.</span>
+
+<span class="sd">        If m is an RMEMeas object, it samples the mc value and returns</span>
+<span class="sd">        it the new, resampled xarray object</span>
+
+<span class="sd">        If it is not an RMEMeas object, it just returns whatever was passed.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        montecarlo_trials : int</span>
+<span class="sd">            Number of samples.</span>
+<span class="sd">        m : object</span>
+<span class="sd">            Thing to sample the distribution of.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        object</span>
+<span class="sd">            xarray if m is an RMEMeas, type of m otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># of</span>
+        <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="ow">and</span> <span class="n">m</span><span class="o">.</span><span class="n">mc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># otherwise randomly sample the distribution</span>
+            <span class="n">distlength</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">mc</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="s1">&#39;umech_id&#39;</span><span class="p">])</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">distlength</span><span class="p">,</span> <span class="p">(</span><span class="n">montecarlo_trials</span><span class="p">))</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">mc</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="n">index</span><span class="p">)</span>
+            <span class="c1"># reset sampling index</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">({</span><span class="s1">&#39;umech_id&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">))})</span>
+            <span class="k">return</span> <span class="n">d</span>
+        <span class="c1"># if its got no MC data, just sample the nominal over and over again</span>
+        <span class="k">elif</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="ow">and</span> <span class="n">m</span><span class="o">.</span><span class="n">mc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">montecarlo_trials</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">dtype</span> <span class="o">=</span> <span class="nb">int</span><span class="p">))</span>
+            <span class="c1"># reset sampling index</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">({</span><span class="s1">&#39;umech_id&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">montecarlo_trials</span><span class="o">+</span><span class="mi">1</span><span class="p">)})</span>
+            <span class="k">return</span> <span class="n">d</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">m</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_linear</span><span class="p">(</span>
+            <span class="n">process_fcn</span><span class="p">:</span> <span class="nb">callable</span><span class="p">,</span>
+            <span class="n">process_args</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">type</span><span class="p">,</span> <span class="s1">&#39;uobjs.RMEMeas&#39;</span><span class="p">],</span>
+            <span class="n">process_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">type</span><span class="p">,</span> <span class="s1">&#39;uobjs.RMEMeas&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">sensitivity_analysis</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">vectorize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;uobjs.UObj&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform a linear sensitivity analysis on the process fcn.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        process_fcn : callable</span>
+<span class="sd">            Function being propagated.</span>
+<span class="sd">        process_args : tuple[type, RMEMeas]</span>
+<span class="sd">            Positional arguments to process_fcn.</span>
+<span class="sd">        process_kwargs : dict[type, RMEMeas], optional</span>
+<span class="sd">            Key word arguments to process_fcn. The default is None.</span>
+<span class="sd">        sensitivity_analysis : bool, optional</span>
+<span class="sd">            Whether or not to do a sensitivity analysis. The default is False.</span>
+<span class="sd">        vectorize: bool, optional</span>
+<span class="sd">            If true, vectorizes the function by passing all arguments at once.</span>
+<span class="sd">        verbose : str, optional</span>
+<span class="sd">            Print propagation information. The default is False.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xr.DataArray</span>
+<span class="sd">            New covariance data.</span>
+<span class="sd">        list</span>
+<span class="sd">            list of unique uncertainty mechanisms.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cov_output</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">param_set</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="k">if</span> <span class="n">process_kwargs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">process_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="k">if</span> <span class="n">sensitivity_analysis</span><span class="p">:</span>
+            <span class="c1"># get list of lists of all the umech_id</span>
+            <span class="n">param_set</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_get_unique_umech_id</span><span class="p">(</span><span class="o">*</span><span class="n">process_args</span><span class="p">,</span> <span class="o">**</span><span class="n">process_kwargs</span><span class="p">)</span>
+
+            <span class="c1"># expand RMEMeas arguments in the positional and keyword arguments</span>
+            <span class="c1"># to a complete parameter locations grid, fill parameter locations</span>
+            <span class="c1"># that don&#39;t exist in m with the nominal value.</span>
+            <span class="n">cov_args</span> <span class="o">=</span> <span class="p">[</span><span class="n">RMEProp</span><span class="o">.</span><span class="n">_expand_umech_id_and_fill_nominal</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">param_set</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">process_args</span><span class="p">]</span>
+            <span class="n">cov_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_expand_umech_id_and_fill_nominal</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">param_set</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">process_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+            <span class="c1"># pass through the vectorized function</span>
+            <span class="k">if</span> <span class="n">vectorize</span><span class="p">:</span>
+                <span class="n">cov_output</span> <span class="o">=</span> <span class="n">process_fcn</span><span class="p">(</span><span class="o">*</span><span class="n">cov_args</span><span class="p">,</span> <span class="o">**</span><span class="n">cov_kwargs</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">covargsi</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nominal&#39;</span><span class="p">])</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">cov_args</span><span class="p">]</span>
+                <span class="n">covkwi</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nominal&#39;</span><span class="p">])</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">cov_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                <span class="n">cov_output</span> <span class="o">=</span> <span class="n">process_fcn</span><span class="p">(</span><span class="o">*</span><span class="n">covargsi</span><span class="p">,</span> <span class="o">**</span><span class="n">covkwi</span><span class="p">)</span>
+                <span class="c1"># print(cov_output)</span>
+                <span class="c1"># if the output looks like an RMEMeas cov attr (xaray with umech_id attribute)</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">cov_output</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">param_set</span><span class="p">):</span>
+                        <span class="n">covargsi</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="n">p</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">cov_args</span><span class="p">]</span>
+                        <span class="n">covkwi</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="n">p</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">cov_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                        <span class="n">cov_output</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">cov_output</span><span class="p">,</span> <span class="n">process_fcn</span><span class="p">(</span><span class="o">*</span><span class="n">covargsi</span><span class="p">,</span> <span class="o">**</span><span class="n">covkwi</span><span class="p">)],</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span>
+                    <span class="n">cov_output</span> <span class="o">=</span> <span class="n">cov_output</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nominal&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">param_set</span><span class="p">)</span>
+                <span class="c1"># if the output is a tuple, and contains RMEMeas objects</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cov_output</span><span class="p">,</span><span class="nb">tuple</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">([</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">co</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">co</span> <span class="ow">in</span> <span class="n">cov_output</span><span class="p">]):</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">param_set</span><span class="p">):</span>
+                        <span class="n">covargsi</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="n">p</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">cov_args</span><span class="p">]</span>
+                        <span class="n">covkwi</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="n">p</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">cov_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                        <span class="n">proc_out</span> <span class="o">=</span> <span class="n">process_fcn</span><span class="p">(</span><span class="o">*</span><span class="n">covargsi</span><span class="p">,</span> <span class="o">**</span><span class="n">covkwi</span><span class="p">)</span>
+                        <span class="n">cov_output</span> <span class="o">=</span> <span class="p">[</span><span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">co</span><span class="p">,</span> <span class="n">po</span><span class="p">],</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">po</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">co</span> <span class="k">for</span> <span class="n">co</span><span class="p">,</span><span class="n">po</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">cov_output</span><span class="p">,</span> <span class="n">proc_out</span><span class="p">)]</span>
+                    <span class="n">cov_output</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">cov_output</span><span class="p">)</span>
+
+            <span class="c1"># new_nom = new_cov[0, ...]</span>
+        <span class="k">elif</span> <span class="n">vectorize</span><span class="p">:</span>
+            <span class="n">cov_args</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">cov</span><span class="p">[[</span><span class="mi">0</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">else</span> <span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">process_args</span><span class="p">]</span>
+            <span class="n">cov_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">cov</span><span class="p">[[</span><span class="mi">0</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">else</span> <span class="n">m</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">process_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+            <span class="n">cov_output</span> <span class="o">=</span> <span class="n">process_fcn</span><span class="p">(</span><span class="o">*</span><span class="n">cov_args</span><span class="p">,</span> <span class="o">**</span><span class="n">cov_kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cov_args</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">cov</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">else</span> <span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">process_args</span><span class="p">]</span>
+            <span class="n">cov_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">cov</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">else</span> <span class="n">m</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">process_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+            <span class="n">cov_output</span> <span class="o">=</span> <span class="n">process_fcn</span><span class="p">(</span><span class="o">*</span><span class="n">cov_args</span><span class="p">,</span> <span class="o">**</span><span class="n">cov_kwargs</span><span class="p">)</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">exp_nom</span><span class="p">(</span><span class="n">c</span><span class="p">):</span> <span class="k">return</span> <span class="n">c</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="s1">&#39;umech_id&#39;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nominal&#39;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">cov_output</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">tuple</span><span class="p">:</span>
+                <span class="n">cov_output</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="n">exp_nom</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="ow">is</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="k">else</span> <span class="n">c</span>
+                              <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cov_output</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">cov_output</span><span class="p">)</span> <span class="ow">is</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
+                <span class="n">cov_output</span> <span class="o">=</span> <span class="n">exp_nom</span><span class="p">(</span><span class="n">cov_output</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cov_output</span><span class="p">,</span> <span class="n">param_set</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_montecarlo</span><span class="p">(</span>
+            <span class="n">process_fcn</span><span class="p">:</span> <span class="nb">callable</span><span class="p">,</span>
+            <span class="n">process_args</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">type</span><span class="p">,</span> <span class="s1">&#39;uobjs.RMEMeas&#39;</span><span class="p">],</span>
+            <span class="n">process_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">type</span><span class="p">,</span> <span class="s1">&#39; uobjs.RMEMeas&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">montecarlo_trials</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">vectorize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;uobjs.UObj&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform a montecarlo analysis on the process function.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        name : str</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">        process_fcn : callable</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">        process_args : tuple[type, RMEMeas]</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">        process_kwargs : dict[type, RMEMeas], optional</span>
+<span class="sd">            DESCRIPTION. The default is None.</span>
+<span class="sd">        montecarlo_trials : int, optional</span>
+<span class="sd">            DESCRIPTION. The default is 0.</span>
+<span class="sd">        vectorize: bool, optional</span>
+<span class="sd">            If true, vectorizes the function by passing all arguments at once.</span>
+<span class="sd">        verbose : str, optional</span>
+<span class="sd">            DESCRIPTION. The default is False.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        Exception</span>
+<span class="sd">            DESCRIPTION.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xr.DataArray</span>
+<span class="sd">            New montecarlo dataset.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mc_output</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">RMEMeas_present</span> <span class="o">=</span> <span class="nb">any</span><span class="p">([</span><span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">o</span><span class="p">)</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">process_args</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">process_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">())])</span>
+        <span class="c1"># if doing montecarlo AND a RMEMeas is present, run the algo</span>
+        
+        <span class="k">if</span> <span class="n">process_kwargs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">process_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="k">if</span> <span class="n">montecarlo_trials</span> <span class="ow">and</span> <span class="n">RMEMeas_present</span><span class="p">:</span>
+
+            <span class="n">mc_args</span> <span class="o">=</span> <span class="p">[</span><span class="n">RMEProp</span><span class="o">.</span><span class="n">_sample_distribution</span><span class="p">(</span><span class="n">montecarlo_trials</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">process_args</span><span class="p">]</span>
+            <span class="n">mc_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_sample_distribution</span><span class="p">(</span><span class="n">montecarlo_trials</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">process_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+            <span class="c1"># if they aren&#39;t, just pass them through</span>
+
+            <span class="k">if</span> <span class="n">vectorize</span><span class="p">:</span>
+                <span class="n">mc_output</span> <span class="o">=</span> <span class="n">process_fcn</span><span class="p">(</span><span class="o">*</span><span class="n">mc_args</span><span class="p">,</span> <span class="o">**</span><span class="n">mc_kwargs</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mcargsi</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">mc_args</span><span class="p">]</span>
+                <span class="n">mckwi</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">mc_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                <span class="n">mc_output</span> <span class="o">=</span> <span class="n">process_fcn</span><span class="p">(</span><span class="o">*</span><span class="n">mcargsi</span><span class="p">,</span> <span class="o">**</span><span class="n">mckwi</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">mc_output</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">montecarlo_trials</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                        <span class="n">mcargsi</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">mc_args</span><span class="p">]</span>
+                        <span class="n">mckwi</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">mc_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                        <span class="n">out</span> <span class="o">=</span> <span class="n">process_fcn</span><span class="p">(</span><span class="o">*</span><span class="n">mcargsi</span><span class="p">,</span> <span class="o">**</span><span class="n">mckwi</span><span class="p">)</span>
+                        <span class="n">mc_output</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">mc_output</span><span class="p">,</span> <span class="n">out</span><span class="p">],</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mc_output</span><span class="p">,</span><span class="nb">tuple</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">([</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">co</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">co</span> <span class="ow">in</span> <span class="n">mc_output</span><span class="p">]):</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">montecarlo_trials</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                        <span class="n">mcargsi</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">mc_args</span><span class="p">]</span>
+                        <span class="n">mckwi</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">umech_id</span><span class="o">=</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">mc_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                        <span class="n">proc_out</span> <span class="o">=</span> <span class="n">process_fcn</span><span class="p">(</span><span class="o">*</span><span class="n">mcargsi</span><span class="p">,</span> <span class="o">**</span><span class="n">mckwi</span><span class="p">)</span>
+                        <span class="n">mc_output</span> <span class="o">=</span> <span class="p">[</span><span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">co</span><span class="p">,</span> <span class="n">po</span><span class="p">],</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">po</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">co</span> <span class="k">for</span> <span class="n">co</span><span class="p">,</span><span class="n">po</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mc_output</span><span class="p">,</span> <span class="n">proc_out</span><span class="p">)]</span>
+                    <span class="n">mc_output</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">mc_output</span><span class="p">)</span>
+                    
+                <span class="c1">#                 # if the output is an RMEMeas object</span>
+                <span class="c1"># if uobjs.RMEMeas._if_quacks(cov_output):</span>
+                <span class="c1">#     for i, p in enumerate(param_set):</span>
+                <span class="c1">#         covargsi = [a.sel(umech_id=p) if hasattr(a, &#39;umech_id&#39;) else a for a in cov_args]</span>
+                <span class="c1">#         covkwi = {k: a.sel(umech_id=p) if hasattr(a, &#39;umech_id&#39;) else a for a, k in cov_kwargs.items()}</span>
+                <span class="c1">#         cov_output = xr.concat([cov_output, process_fcn(*covargsi, **covkwi)], &#39;umech_id&#39;)</span>
+                <span class="c1">#     cov_output = cov_output.assign_coords(umech_id=[&#39;nominal&#39;] + param_set)</span>
+                <span class="c1"># # if the output is a tuple, and contains RMEMeas objects</span>
+                <span class="c1"># elif isinstance(cov_output,tuple) and any([uobjs.RMEMeas._if_quacks(co) for co in cov_output]):</span>
+                <span class="c1">#     for i, p in enumerate(param_set):</span>
+                <span class="c1">#         covargsi = [a.sel(umech_id=p) if hasattr(a, &#39;umech_id&#39;) else a for a in cov_args]</span>
+                <span class="c1">#         covkwi = {k: a.sel(umech_id=p) if hasattr(a, &#39;umech_id&#39;) else a for a, k in cov_kwargs.items()}</span>
+                <span class="c1">#         proc_out = process_fcn(*covargsi, **covkwi)</span>
+                <span class="c1">#         cov_output = [xr.concat([co, po], &#39;umech_id&#39;) if uobjs.RMEMeas._if_quacks(po) else co for co,po in zip(cov_output, proc_out)]</span>
+                <span class="c1">#     cov_output = tuple(cov_output)</span>
+
+        <span class="c1"># otherwise just run the function</span>
+        <span class="k">elif</span> <span class="n">montecarlo_trials</span><span class="p">:</span>
+            <span class="n">mc_args</span> <span class="o">=</span> <span class="n">process_args</span>
+            <span class="n">mc_kwargs</span> <span class="o">=</span> <span class="n">process_kwargs</span>
+
+            <span class="c1"># pass through the vectorized function</span>
+            <span class="n">mc_output</span> <span class="o">=</span> <span class="n">process_fcn</span><span class="p">(</span><span class="o">*</span><span class="n">mc_args</span><span class="p">,</span> <span class="o">**</span><span class="n">mc_kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">mc_output</span>
+
+        <span class="c1">#</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_repack_linear_and_mc_outputs</span><span class="p">(</span>
+            <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">param_set</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+            <span class="n">cov_output</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span>
+            <span class="n">mc_output</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span>
+            <span class="n">covcats</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">covdofs</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">montecarlo_trials</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">sensitivity</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Pack the output of run_linear and run_montecarlo back into RMEMeas objs.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        name : str</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">        param_set : list</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">        cov_output : xr.DataArray</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">        mc_output : xr.DataArray</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">        covcats: dict[set[str]], optional</span>
+<span class="sd">            Description. THe default is None.</span>
+<span class="sd">        covdofs: xr.DataArray, optional</span>
+<span class="sd">            Description, the default is None</span>
+<span class="sd">        montecarlo_trials : int, optional</span>
+<span class="sd">            DESCRIPTION. The default is 0.</span>
+<span class="sd">        sensitivity : bool, optional</span>
+<span class="sd">            DESCRIPTION. The default is False.</span>
+<span class="sd">        verbose : str, optional</span>
+<span class="sd">            DESCRIPTION. The default is False.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        RMEMeas</span>
+<span class="sd">            RMEMeas object with propagated covariance and montecarlo data.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># lambda function so I don&#39;t have to write things out twice</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">handle_output</span><span class="p">(</span><span class="n">cov</span><span class="p">,</span> <span class="n">mc</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">cov</span><span class="p">,</span> <span class="s1">&#39;umech_id&#39;</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">cov</span>
+
+            <span class="c1"># if it doesn&#39;t have a umech_id attributes</span>
+            <span class="c1"># its not a RMEMeas so bounce it out</span>
+            <span class="k">return</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">cov</span><span class="o">=</span><span class="n">cov</span><span class="p">,</span> <span class="n">mc</span><span class="o">=</span><span class="n">mc</span><span class="p">,</span> <span class="n">covcats</span><span class="o">=</span><span class="n">covcats</span><span class="p">,</span> <span class="n">covdofs</span><span class="o">=</span><span class="n">covdofs</span><span class="p">)</span>
+
+        <span class="c1"># handle everything in a tuple, for multi output functions</span>
+        <span class="c1"># single outputs handle and return</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">cov_output</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">tuple</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">montecarlo_trials</span><span class="p">:</span>
+                <span class="n">mc_output</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">cov_output</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="nb">tuple</span><span class="p">([</span><span class="n">handle_output</span><span class="p">(</span><span class="n">cov</span><span class="p">,</span> <span class="n">mc</span><span class="p">)</span> <span class="k">for</span> <span class="n">cov</span><span class="p">,</span> <span class="n">mc</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">cov_output</span><span class="p">,</span> <span class="n">mc_output</span><span class="p">)])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">handle_output</span><span class="p">(</span><span class="n">cov_output</span><span class="p">,</span> <span class="n">mc_output</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_new_categories</span><span class="p">(</span>
+        <span class="n">param_set</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">process_args</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+        <span class="n">process_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+        <span class="n">sensitivity</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Intersect covcats of process arguments, and combine them accordingly.</span>
+
+<span class="sd">        Raises warnings if two uncertainty mechanisms have the same name but different category info.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        param_set : str</span>
+<span class="sd">            list of unique umech_id.</span>
+<span class="sd">        process_args : list</span>
+<span class="sd">            positional arguments to process.</span>
+<span class="sd">        process_kwargs : dict</span>
+<span class="sd">            keyword arguments to process.</span>
+<span class="sd">        sensitivity : bool, optional</span>
+<span class="sd">            If sensitivity is active, by default False</span>
+<span class="sd">        verbose : bool, optional</span>
+<span class="sd">            If verbose, by default False</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xr.DataArray</span>
+<span class="sd">            _description_</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">sensitivity</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="c1"># build list of all the covariance categories</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">process_args</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">and</span> <span class="n">a</span><span class="o">.</span><span class="n">covcats</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">names</span> <span class="o">+=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">process_kwargs</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">and</span> <span class="n">a</span><span class="o">.</span><span class="n">covcats</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">cats</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">covcats</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">process_args</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">and</span> <span class="n">a</span><span class="o">.</span><span class="n">covcats</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">cats</span> <span class="o">+=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">covcats</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">process_kwargs</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">and</span> <span class="n">a</span><span class="o">.</span><span class="n">covcats</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cats</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">cats</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="o">*</span><span class="n">cats</span><span class="p">,</span> <span class="n">join</span><span class="o">=</span><span class="s1">&#39;outer&#39;</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="n">newcats</span> <span class="o">=</span> <span class="n">cats</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>
+            <span class="c1"># copy over indexes that are empty in the new one from the old ones</span>
+            <span class="c1"># that are aligned</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="n">warn_collisions</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">c</span><span class="p">,</span><span class="n">name</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">cats</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span><span class="n">names</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+                <span class="n">ind</span><span class="o">=</span> <span class="n">newcats</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span>
+                <span class="n">ind_c</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span>
+
+                <span class="n">combined_ind</span> <span class="o">=</span> <span class="n">ind</span> <span class="o">|</span> <span class="n">ind_c</span>
+                <span class="n">ind_equal</span> <span class="o">=</span> <span class="n">newcats</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="n">c</span><span class="o">.</span><span class="n">values</span>
+                <span class="n">mismatch_ind</span> <span class="o">=</span> <span class="n">combined_ind</span> <span class="o">|</span> <span class="n">ind_equal</span>
+
+
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mismatch_ind</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mismatch_ind</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">mismatch_ind</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                            <span class="c1"># this is bad, we are going to loop over the bad ones and send a warning with info</span>
+                            <span class="c1"># this warning could give better info</span>
+                            <span class="n">warn_collisions</span> <span class="o">=</span> <span class="kc">True</span>
+                            <span class="n">mechanism_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="o">~</span><span class="n">mismatch_ind</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                            <span class="n">newcats_bad</span> <span class="o">=</span> <span class="n">newcats</span><span class="p">[</span><span class="n">mechanism_index</span><span class="p">]</span>
+                            <span class="n">cats_bad</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="n">mechanism_index</span><span class="p">]</span>
+                            
+                            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">newcats_bad</span><span class="p">)):</span>
+                                <span class="n">badind</span> <span class="o">=</span> <span class="n">newcats_bad</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">!=</span><span class="n">cats_bad</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;CATEGORY MISMATCH on &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">newcats_bad</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">badind</span><span class="p">]</span><span class="o">.</span><span class="n">umech_id</span><span class="o">.</span><span class="n">values</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+                                <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39;meas name: &#39;</span><span class="o">+</span> <span class="n">names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">newcats_bad</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">badind</span><span class="p">]</span><span class="o">.</span><span class="n">drop_vars</span><span class="p">(</span><span class="s2">&quot;umech_id&quot;</span><span class="p">))</span><span class="o">+</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                                <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39;meas name: &#39;</span><span class="o">+</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">cats_bad</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">badind</span><span class="p">]</span><span class="o">.</span><span class="n">drop_vars</span><span class="p">(</span><span class="s2">&quot;umech_id&quot;</span><span class="p">))</span><span class="o">+</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                            
+
+                <span class="n">newcats</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">+=</span> <span class="n">c</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>
+            <span class="c1"># loop over and assign</span>
+            <span class="c1"># since mechnisms with the same name are supposed to be identical,</span>
+            <span class="c1"># don&#39;t bother combining the two</span>
+            <span class="k">if</span> <span class="n">warn_collisions</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span><span class="n">stacklevel</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">newcats</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_new_covdofs</span><span class="p">(</span>
+        <span class="n">param_set</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+        <span class="n">process_args</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+        <span class="n">process_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+        <span class="n">sensitivity</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="c1"># make a dof array with dimensions(measurements,paramlocs)</span>
+        <span class="c1"># if a measurement doesn&#39;t have a parameeter location, fill it with -1,</span>
+
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">xarray_skip_checks</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">include_nominal_index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">nominal_fill_value</span><span class="o">=</span><span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">arr1</span> <span class="o">=</span> <span class="p">[</span><span class="n">RMEProp</span><span class="o">.</span><span class="n">_expand_umech_id_and_fill_nominal</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">covdofs</span><span class="p">,</span> <span class="n">param_set</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">process_args</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">covdofs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">arr2</span> <span class="o">=</span> <span class="p">[</span><span class="n">RMEProp</span><span class="o">.</span><span class="n">_expand_umech_id_and_fill_nominal</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">covdofs</span><span class="p">,</span> <span class="n">param_set</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">process_kwargs</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">covdofs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">arr1</span> <span class="o">+</span> <span class="n">arr2</span><span class="p">)</span>
+
+        <span class="c1"># pool dofs across the measurements dimensins</span>
+        <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="c1"># only one measurement, dont need to check for matching DOFS</span>
+        <span class="k">elif</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="c1"># multiple measurmeents, check that matching mechanisms have the same DOF</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">pass</span>
+            <span class="c1"># if not all([all(arr[arr[:,i]&gt;0,i] == arr[arr[:,i]&gt;0,i][0]) for i in range(arr.shape[1])]):</span>
+            <span class="c1">#     raise Exception(&#39;Encountered DOFS of identical uncertaintiy mechanisms that dont match.&#39;)</span>
+
+        <span class="n">arr</span><span class="p">[</span><span class="n">arr</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="n">covdofs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">covdofs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+            <span class="n">covdofs</span><span class="p">,</span>
+            <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;umech_id&#39;</span><span class="p">),</span>
+            <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;umech_id&#39;</span><span class="p">:</span> <span class="n">param_set</span><span class="p">})</span>
+
+        <span class="k">return</span> <span class="n">covdofs</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_propagation_algrothm</span><span class="p">(</span>
+        <span class="n">process</span><span class="p">:</span> <span class="nb">callable</span><span class="p">,</span>
+        <span class="n">process_args</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">type</span><span class="p">],</span>
+        <span class="n">process_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">type</span><span class="p">],</span>
+        <span class="n">settings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="s1">&#39;uobjs.RMEMeas&#39;</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run the propagation algorithm.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        process : callable</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">        process_args : tuple[type]</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">        process_kwargs : dict[type]</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">        settings : dict</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">         : TYPE</span>
+<span class="sd">            DESCRIPTION.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        (RMEMeas,dict)</span>
+<span class="sd">            RMEMeas object and dictionary of metadata about propagation.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fun</span> <span class="o">=</span> <span class="n">process</span>
+        <span class="n">meta</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]:</span>
+            <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="n">meta</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># run linear sensitivity analysis</span>
+        <span class="n">cov_out</span><span class="p">,</span> <span class="n">param_set</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_run_linear</span><span class="p">(</span>
+            <span class="n">fun</span><span class="p">,</span>
+            <span class="nb">list</span><span class="p">(</span><span class="n">process_args</span><span class="p">),</span>
+            <span class="n">process_kwargs</span><span class="p">,</span>
+            <span class="n">sensitivity_analysis</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;sensitivity&#39;</span><span class="p">],</span>
+            <span class="n">vectorize</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;vectorize&#39;</span><span class="p">],</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]:</span>
+            <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;linear_runtime&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+            <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="c1"># run montecarlo sensitivty analysis</span>
+        <span class="n">mc_out</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_run_montecarlo</span><span class="p">(</span>
+            <span class="n">fun</span><span class="p">,</span>
+            <span class="nb">list</span><span class="p">(</span><span class="n">process_args</span><span class="p">),</span>
+            <span class="n">process_kwargs</span><span class="p">,</span>
+            <span class="n">montecarlo_trials</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;montecarlo_sims&#39;</span><span class="p">],</span>
+            <span class="n">vectorize</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;vectorize&#39;</span><span class="p">],</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]:</span>
+            <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;mc_runtime&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+            <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="c1"># re categorize</span>
+        <span class="n">covcats</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">covdofs</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">settings</span><span class="p">[</span><span class="s1">&#39;sensitivity&#39;</span><span class="p">]:</span>
+            <span class="n">covcats</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_get_new_categories</span><span class="p">(</span>
+                <span class="n">param_set</span><span class="p">,</span>
+                <span class="nb">list</span><span class="p">(</span><span class="n">process_args</span><span class="p">),</span>
+                <span class="n">process_kwargs</span><span class="p">,</span>
+                <span class="n">sensitivity</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;sensitivity&#39;</span><span class="p">],</span>
+                <span class="n">verbose</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="c1"># if None, then covcats didn&#39;t find any RMEObjects</span>
+            <span class="k">if</span> <span class="n">covcats</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">covcats</span> <span class="o">=</span> <span class="n">covcats</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">param_set</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+
+                <span class="c1"># put cov dofs onto a new grid</span>
+                <span class="n">covdofs</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_get_new_covdofs</span><span class="p">(</span>
+                    <span class="n">param_set</span><span class="p">,</span>
+                    <span class="nb">list</span><span class="p">(</span><span class="n">process_args</span><span class="p">),</span>
+                    <span class="n">process_kwargs</span><span class="p">,</span>
+                    <span class="n">sensitivity</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;sensitivity&#39;</span><span class="p">],</span>
+                    <span class="n">verbose</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]</span>
+                <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]:</span>
+            <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;recategorize_runtime&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+            <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="c1"># repack the outputs of linear and montecarlo</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_repack_linear_and_mc_outputs</span><span class="p">(</span>
+            <span class="n">fun</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="n">param_set</span><span class="p">,</span>
+            <span class="n">cov_out</span><span class="p">,</span>
+            <span class="n">mc_out</span><span class="p">,</span>
+            <span class="n">covcats</span><span class="o">=</span><span class="n">covcats</span><span class="p">,</span>
+            <span class="n">covdofs</span><span class="o">=</span><span class="n">covdofs</span><span class="p">,</span>
+            <span class="n">montecarlo_trials</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;montecarlo_sims&#39;</span><span class="p">],</span>
+            <span class="n">sensitivity</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;sensitivity&#39;</span><span class="p">],</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]:</span>
+            <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;repack_runtime&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+            <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;montecarlo trials&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">settings</span><span class="p">[</span><span class="s1">&#39;montecarlo_sims&#39;</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;n_params&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">param_set</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;n_params&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">return</span> <span class="n">out</span><span class="p">,</span> <span class="n">meta</span>
+
+<div class="viewcode-block" id="RMEProp.handle_common_grid">
+<a class="viewcode-back" href="../../../autoapi/rmellipse/propagators/index.html#rmellipse.propagators.RMEProp.handle_common_grid">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">handle_common_grid</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">process_args</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span>
+            <span class="n">process_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+            <span class="n">dim</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">handle_method</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Handle common grids on RMEMeas objects in process_args or process_kwargs.</span>
+
+<span class="sd">        This function is called automatically by propagate to align and select</span>
+<span class="sd">        common grid elements of RMEMeas objects so they are suitable for</span>
+<span class="sd">        arithemetic and linear algebra.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        process_args : tuple</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">        process_kwargs : dict</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">        dim : str</span>
+<span class="sd">            Name of the dimensions being handled.</span>
+<span class="sd">        handle_method : str</span>
+<span class="sd">            Name of the handle method. Valid options are:</span>
+<span class="sd">            &quot;common&quot;,&quot;interp_smallest&quot;,&quot;interp_common&quot;</span>
+<span class="sd">            &quot;common&quot; will only use values along dim that are shared among ALL</span>
+<span class="sd">            the inputs.</span>
+
+<span class="sd">            &quot;interp_common&quot; will interpolate (1D) to the the provided frequency list</span>
+<span class="sd">            in the common_coords dictionary of the propagators.Propagators settings. The</span>
+<span class="sd">            common_coords settings is expected to be a dictionary of key value</span>
+<span class="sd">            pairs with {dim:array} where dim is the name of the dimension and</span>
+<span class="sd">            array is the 1d set of indexes.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        Exception</span>
+<span class="sd">            If a handle common grid method is provided that has not been defined.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            Modified positional arguments with common grid handled.</span>
+<span class="sd">        dict</span>
+<span class="sd">            Modified key worded arguments with common grid handled.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">handle_method</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">process_args</span><span class="p">,</span> <span class="n">process_kwargs</span>
+
+        <span class="n">acceptable</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;common&quot;</span><span class="p">,</span> <span class="s2">&quot;interp_smallest&quot;</span><span class="p">,</span> <span class="s2">&quot;interp_common&quot;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">handle_method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">acceptable</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;handling method &quot;&#39;</span> <span class="o">+</span> <span class="n">handle_method</span> <span class="o">+</span> <span class="s1">&#39;&quot; not implemented. Accepable methods are &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">acceptable</span><span class="p">))</span>
+        <span class="n">new_args</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">new_kwargs</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">process_args</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">list</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">process_args</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">tuple</span><span class="p">:</span>
+            <span class="n">process_args</span> <span class="o">=</span> <span class="p">[</span><span class="n">process_args</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">handle_method</span> <span class="o">==</span> <span class="s2">&quot;interp_common&quot;</span><span class="p">:</span>
+            <span class="c1"># just to make it readable,</span>
+            <span class="c1"># this calls the RMEMeas.interp function, which</span>
+            <span class="c1"># is a fast method</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">interp</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;common_coords&#39;</span><span class="p">],</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;interp_kwargs&#39;</span><span class="p">])</span>
+
+            <span class="n">new_args</span> <span class="o">=</span> <span class="p">[</span><span class="n">interp</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">nom</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">process_args</span><span class="p">]</span>
+            <span class="n">new_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">interp</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">nom</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">process_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+        <span class="k">if</span> <span class="n">handle_method</span> <span class="o">==</span> <span class="s1">&#39;common&#39;</span><span class="p">:</span>
+            <span class="n">ils</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">cov</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">process_args</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">nom</span><span class="p">,</span> <span class="n">dim</span><span class="p">)]</span>
+            <span class="n">ils</span> <span class="o">+=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">cov</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">process_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">nom</span><span class="p">,</span> <span class="n">dim</span><span class="p">)]</span>
+
+            <span class="c1">#this only keeps coordinates on dim for each </span>
+            <span class="c1"># RME object that are shared between all of them</span>
+            <span class="n">new_ind</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="o">*</span><span class="n">ils</span><span class="p">,</span> <span class="n">join</span> <span class="o">=</span> <span class="s2">&quot;inner&quot;</span><span class="p">)</span>
+            
+            <span class="c1"># convenience method to make the comprhension easier to read</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">sel</span><span class="p">(</span><span class="n">x</span><span class="p">):</span> 
+                <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">dim</span><span class="p">:</span> <span class="n">new_ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]})</span>
+
+            <span class="n">new_args</span> <span class="o">=</span> <span class="p">[</span><span class="n">sel</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">nom</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">process_args</span><span class="p">]</span>
+            <span class="n">new_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">sel</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="k">if</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="o">.</span><span class="n">_if_quacks</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">nom</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span> <span class="k">else</span> <span class="n">a</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">process_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+        <span class="k">return</span> <span class="n">new_args</span><span class="p">,</span> <span class="n">new_kwargs</span></div>
+
+
+<div class="viewcode-block" id="RMEProp.propagate">
+<a class="viewcode-back" href="../../../autoapi/rmellipse/propagators/index.html#rmellipse.propagators.RMEProp.propagate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">propagate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fun</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Decorate to make function automatically pass itself through propagate.</span>
+
+<span class="sd">        Assumes that all the RMEMeas arguments are passed as positional arguments.</span>
+<span class="sd">        Any positional arguments that are not RMEMeas instances are turned</span>
+<span class="sd">        into RMEMeas objects without any covariance or nominal data, and named</span>
+<span class="sd">        &#39;auto_arg&#39;. The  __name__ property of the function is assigned as the name</span>
+<span class="sd">        of the output RMEMeas object.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        RMEMeas</span>
+<span class="sd">            RMEMeas object of output.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nd">@wraps</span><span class="p">(</span><span class="n">fun</span><span class="p">)</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">fun_with_propagation</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]:</span>
+                <span class="n">title</span> <span class="o">=</span> <span class="s1">&#39;Propagating: &#39;</span> <span class="o">+</span> <span class="n">fun</span><span class="o">.</span><span class="vm">__name__</span>
+                <span class="n">underline</span> <span class="o">=</span> <span class="s1">&#39;-&#39;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">underline</span><span class="p">)</span>
+                <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+            <span class="c1"># add input info to workflow function</span>
+            <span class="c1"># add propagators.Propagator function</span>
+            <span class="c1"># add propagatur state</span>
+            <span class="c1"># whatever</span>
+
+            <span class="c1"># handle a common grid</span>
+            <span class="n">args_hg</span><span class="p">,</span> <span class="n">kwargs_hg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handle_common_grid</span><span class="p">(</span>
+                <span class="n">args</span><span class="p">,</span>
+                <span class="n">kwargs</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;common_grid&#39;</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;handle_common_grid_method&#39;</span><span class="p">]</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]:</span>
+                <span class="n">grid_runtime</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+
+                <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+            <span class="n">out</span><span class="p">,</span> <span class="n">meta</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_run_propagation_algrothm</span><span class="p">(</span><span class="n">fun</span><span class="p">,</span> <span class="n">args_hg</span><span class="p">,</span> <span class="n">kwargs_hg</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;grid handling runtime&#39;</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">grid_runtime</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; sec&#39;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;    linear mechanisms&#39;</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;n_params&#39;</span><span class="p">]))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;       linear runtime&#39;</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;linear_runtime&#39;</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39; sec&#39;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;    montecarlo trials&#39;</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;montecarlo trials&#39;</span><span class="p">]))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;           mc runtime&#39;</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;mc_runtime&#39;</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39; sec&#39;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; recategorize runtime&#39;</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;recategorize_runtime&#39;</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39; sec&#39;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;       repack runtime&#39;</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;repack_runtime&#39;</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39; sec&#39;</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">out</span>
+        <span class="k">return</span> <span class="n">fun_with_propagation</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_montecarlo_combine</span><span class="p">(</span>
+            <span class="n">measurements</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span>
+            <span class="n">err</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+            <span class="n">montecarlo_trials</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="p">):</span>
+        <span class="n">mc_avg</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">montecarlo_trials</span><span class="p">:</span>
+            <span class="n">resampled</span> <span class="o">=</span> <span class="p">[</span><span class="n">RMEProp</span><span class="o">.</span><span class="n">_sample_distribution</span><span class="p">(</span><span class="n">montecarlo_trials</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">measurements</span><span class="p">]</span>
+            <span class="n">stacked</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">resampled</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="s1">&#39;measurements&#39;</span><span class="p">)</span>
+            <span class="n">mc_avg</span> <span class="o">=</span> <span class="n">stacked</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="s1">&#39;measurements&#39;</span><span class="p">)</span>
+
+            <span class="c1">#</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">montecarlo_trials</span><span class="p">))</span>
+            <span class="n">monte_typea</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">weights</span><span class="p">[:,</span> <span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">montecarlo_trials</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">monte_typea</span> <span class="o">=</span> <span class="n">monte_typea</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">mc_avg</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="n">mc_avg</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="o">...</span><span class="p">]</span> <span class="o">+=</span> <span class="n">monte_typea</span>
+        <span class="k">return</span> <span class="n">mc_avg</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_generate_error_vectors</span><span class="p">(</span>
+        <span class="n">measurements</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span>
+        <span class="n">error_of_mean</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">n_single_values</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">sensitivity</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">combine_basename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;combine&#39;</span>
+    <span class="p">):</span>
+
+        <span class="c1"># average across measurements</span>
+        <span class="c1"># measdim = &#39;measdim&#39;</span>
+
+        <span class="c1"># # this is just to make sure that the dimension name is unique</span>
+        <span class="c1"># while measdim in measurements[0].dims:</span>
+        <span class="c1">#     measdim += &#39;0&#39;</span>
+        <span class="c1"># avg = xr.concat([m.nom.copy() for m in measurements], dim=measdim)</span>
+        <span class="c1"># avg = avg.mean(dim=measdim)</span>
+
+        <span class="c1"># # pca the different nominal values nominals</span>
+        <span class="c1"># # doing this with the underlying numpy values</span>
+
+        <span class="c1"># construct an array where rows represent measurmeents, column different data points</span>
+        <span class="n">nom_shape</span> <span class="o">=</span> <span class="n">measurements</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">shape</span>  <span class="c1"># shape not including uncertainty mechanisms</span>
+        <span class="n">nominals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">m</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">measurements</span><span class="p">])</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">nominals</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># do pca</span>
+        <span class="n">u</span><span class="p">,</span> <span class="n">sv</span><span class="p">,</span> <span class="n">vt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">nominals</span> <span class="o">-</span> <span class="n">mu</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># create error vectors</span>
+        <span class="n">n_or_one</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">error_of_mean</span><span class="p">:</span>
+            <span class="n">n_or_one</span> <span class="o">=</span> <span class="n">nominals</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">sv</span><span class="p">))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">n_or_one</span> <span class="o">*</span> <span class="p">(</span><span class="n">nominals</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span> <span class="o">@</span> <span class="n">vt</span>
+
+        <span class="c1"># decide how many single values to add as uncertainty mechanisms</span>
+        <span class="k">if</span> <span class="n">n_single_values</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">n_single_values</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">n_single_values</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;n_single_values must be &gt; 0&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">n_single_values</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">n_sv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">sv</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">sv</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">n_single_values</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">n_sv</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_single_values</span><span class="p">)</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="n">err</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">n_sv</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">type_a</span> <span class="o">=</span> <span class="p">(</span><span class="n">err</span> <span class="o">+</span> <span class="n">mu</span><span class="p">)</span>
+
+        <span class="c1"># reshape to match original dimensions</span>
+        <span class="n">type_a</span> <span class="o">=</span> <span class="n">type_a</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="n">type_a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">nom_shape</span><span class="p">))</span>
+
+        <span class="c1"># make new data array out of error mechanisms</span>
+        <span class="n">new_params</span> <span class="o">=</span> <span class="p">[</span><span class="n">combine_basename</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">type_a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
+        <span class="n">coords</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">measurements</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span>
+        <span class="n">coords</span><span class="p">[</span><span class="s1">&#39;umech_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_params</span>
+        <span class="n">type_a</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+            <span class="n">type_a</span><span class="p">,</span>
+            <span class="n">coords</span><span class="o">=</span><span class="n">coords</span><span class="p">,</span>
+            <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;umech_id&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">measurements</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">err</span><span class="p">,</span> <span class="n">type_a</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_linear_combine</span><span class="p">(</span>
+            <span class="n">measurements</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span>
+            <span class="n">type_a</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span>
+            <span class="n">sensitivity</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run the linear combine algorithm.</span>
+
+<span class="sd">        Algorithm is base on PCA.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        measurements : tuple</span>
+<span class="sd">            Tuple of measurments being combined.</span>
+<span class="sd">        sensitivity : bool, optional</span>
+<span class="sd">            Whether or not sensitivity is being run. The default is False.</span>
+<span class="sd">        type_a: xr.DataArray,</span>
+<span class="sd">            DataArray of Type A uncertainties to be added to  covariance data.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        Exception</span>
+<span class="sd">            For bad parameters.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        avgcov : RMEMeas</span>
+<span class="sd">            Covariance data on combined measurment.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># allign uncertainty mechanisms</span>
+        <span class="c1"># avgcov = None</span>
+        <span class="c1"># if sensitivity:</span>
+        <span class="n">param_set</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_get_unique_umech_id</span><span class="p">(</span><span class="o">*</span><span class="n">measurements</span><span class="p">)</span>
+        <span class="n">measurements</span> <span class="o">=</span> <span class="p">[</span><span class="n">RMEProp</span><span class="o">.</span><span class="n">_expand_umech_id_and_fill_nominal</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">param_set</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">measurements</span><span class="p">]</span>
+        <span class="c1"># average across measurements</span>
+        <span class="n">measdim</span> <span class="o">=</span> <span class="s1">&#39;measdim&#39;</span>
+
+        <span class="c1"># this is just to make sure that the dimension name is unique</span>
+        <span class="k">while</span> <span class="n">measdim</span> <span class="ow">in</span> <span class="n">measurements</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
+            <span class="n">measdim</span> <span class="o">+=</span> <span class="s1">&#39;0&#39;</span>
+        <span class="n">avg</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">m</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">measurements</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="n">measdim</span><span class="p">)</span>
+        <span class="n">avg</span> <span class="o">=</span> <span class="n">avg</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">measdim</span><span class="p">)</span>
+
+        <span class="c1"># concat type a data onto the average</span>
+        <span class="n">avgcov</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">avg</span><span class="p">,</span> <span class="n">type_a</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="s1">&#39;umech_id&#39;</span><span class="p">)</span>
+        <span class="n">avgcov</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">measurements</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span>
+
+        <span class="k">return</span> <span class="n">avgcov</span>
+
+<div class="viewcode-block" id="RMEProp.combine">
+<a class="viewcode-back" href="../../../autoapi/rmellipse/propagators/index.html#rmellipse.propagators.RMEProp.combine">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">combine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                <span class="o">*</span><span class="n">measurements</span><span class="p">:</span> <span class="s1">&#39;uobjs.RMEMeas&#39;</span><span class="p">,</span>
+                <span class="n">error_of_mean</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="n">n_single_values</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">combine_basename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;combined&#39;</span><span class="p">,</span>
+                <span class="n">add_uuid</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="n">combine_categories</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;A&#39;</span><span class="p">})</span> <span class="o">-&gt;</span> <span class="s1">&#39;uobjs.RMEMeas&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Combine repeated measurements with uncertainty into a single measurement.</span>
+
+<span class="sd">        Additional uncertainty mechanisms are created with the &#39;combine_basename&#39;</span>
+<span class="sd">        as the name of the mechanisms + an iterated integer. Principal component</span>
+<span class="sd">        analysis is used to create the additional mechanisms.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        *measurements : RMEMeas</span>
+<span class="sd">            DESCRIPTION.</span>
+<span class="sd">        error_of_mean : bool, optional</span>
+<span class="sd">            If true, uses the error of the mean when creating the new uncertainty</span>
+<span class="sd">            mechanisms. The default is False.</span>
+<span class="sd">        n_single_values : Union[float,int], optional</span>
+<span class="sd">            Describes how many of the singular values to keep as</span>
+<span class="sd">            error mechanisms when performing the PCA.If n_single_values&lt;1,</span>
+<span class="sd">            will provide the min number of values to describe n_single_values</span>
+<span class="sd">            ratio of the total variance described by the SVD. If</span>
+<span class="sd">            n_single_values&gt; 1, will utilize the integer n_single_values number</span>
+<span class="sd">            of singular values. If None, will use all the singular values</span>
+<span class="sd">            available. Useful for reducing the size of data sets when</span>
+<span class="sd">            large numbers of repeated measurements are used.The default is None.</span>
+<span class="sd">        combine_basename : dict[str], optional</span>
+<span class="sd">            Base name usd when creating new uncertainty mechanisms. </span>
+<span class="sd">            Uncertainty mechanisms are named with &lt;basename&gt;+_+&lt;int&gt;, int is</span>
+<span class="sd">            iterated for each new mechanism. The default is &#39;combined&#39;.</span>
+<span class="sd">        add_uid: str, optional</span>
+<span class="sd">            If true, adds a UID to the combine_basename to make it unique. The</span>
+<span class="sd">            default is True.</span>
+
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        out : RMEMeas</span>
+<span class="sd">            Returns a RMEMeas object with combined uncertainties.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">measurements</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">measurements</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">measurements</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Expected at least 1 RMEMeas object&#39;</span><span class="p">)</span>
+
+        <span class="n">uid</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">add_uuid</span><span class="p">:</span>
+            <span class="n">uid</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+        <span class="n">combine_basename</span> <span class="o">+=</span> <span class="n">uid</span>
+
+        <span class="c1"># put on a common grid</span>
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">measurements_hg</span><span class="p">,</span> <span class="n">empty_kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handle_common_grid</span><span class="p">(</span>
+            <span class="n">measurements</span><span class="p">,</span>
+            <span class="p">{},</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;common_grid&#39;</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;handle_common_grid_method&#39;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="n">grid_runtime</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="c1"># make kwarg dictionary</span>
+        <span class="n">generate_error_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;error_of_mean&#39;</span><span class="p">:</span> <span class="n">error_of_mean</span><span class="p">,</span>
+            <span class="s1">&#39;n_single_values&#39;</span><span class="p">:</span> <span class="n">n_single_values</span><span class="p">,</span>
+            <span class="s1">&#39;sensitivity&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;sensitivity&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;combine_basename&#39;</span><span class="p">:</span> <span class="n">combine_basename</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="c1"># get PCA vectors and Type A uncertainties</span>
+        <span class="n">err</span><span class="p">,</span> <span class="n">typeA</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_generate_error_vectors</span><span class="p">(</span>
+            <span class="n">measurements_hg</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">generate_error_kwargs</span>
+        <span class="p">)</span>
+
+        <span class="n">avgcov</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_linear_combine</span><span class="p">(</span>
+            <span class="n">measurements_hg</span><span class="p">,</span>
+            <span class="n">typeA</span><span class="p">,</span>
+            <span class="n">sensitivity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;sensitivity&#39;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="n">linear_runtime</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="n">avgmc</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_montecarlo_combine</span><span class="p">(</span>
+            <span class="n">measurements_hg</span><span class="p">,</span>
+            <span class="n">err</span><span class="p">,</span>
+            <span class="n">montecarlo_trials</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;montecarlo_sims&#39;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="n">mc_runtime</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="n">covcats</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">newcovdofs</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;sensitivity&#39;</span><span class="p">]:</span>
+            <span class="n">param_set</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_get_unique_umech_id</span><span class="p">(</span><span class="o">*</span><span class="n">measurements_hg</span><span class="p">)</span>
+
+            <span class="c1"># get unique categories from the RMEMeas obect</span>
+            <span class="n">covcats</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_get_new_categories</span><span class="p">(</span>
+                <span class="n">param_set</span><span class="p">,</span>
+                <span class="n">measurements_hg</span><span class="p">,</span>
+                <span class="p">{},</span>
+                <span class="n">sensitivity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;sensitivity&#39;</span><span class="p">],</span>
+                <span class="n">verbose</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="c1"># assign the categories provided, tag with combine id</span>
+            <span class="c1"># tag all the new type a mechanisms with a uuid</span>
+            <span class="n">combine_categories</span><span class="p">[</span><span class="s1">&#39;combine_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+            <span class="n">new_mechs</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">typeA</span><span class="o">.</span><span class="n">umech_id</span><span class="o">.</span><span class="n">values</span><span class="p">]</span>
+            <span class="n">new_categories</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">combine_categories</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">new_mechs</span><span class="p">}</span>
+
+            <span class="c1"># add extra rows to categories for each new mechanism</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">def</span><span class="w"> </span><span class="nf">empty_row</span><span class="p">(</span><span class="n">n</span><span class="p">):</span> <span class="k">return</span> <span class="n">xr</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">covcats</span><span class="p">[[</span><span class="mi">0</span><span class="p">],</span> <span class="o">...</span><span class="p">],</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">({</span><span class="s1">&#39;umech_id&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">n</span><span class="p">]})</span>
+                <span class="n">new_rows</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">empty_row</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">new_mechs</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="s1">&#39;umech_id&#39;</span><span class="p">)</span>
+                <span class="n">covcats</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">covcats</span><span class="p">,</span> <span class="n">new_rows</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="s1">&#39;umech_id&#39;</span><span class="p">)</span>
+                <span class="c1"># add extra column for any new categories</span>
+                <span class="k">def</span><span class="w"> </span><span class="nf">empty_col</span><span class="p">(</span><span class="n">c</span><span class="p">):</span> <span class="k">return</span> <span class="n">xr</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">covcats</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">({</span><span class="s1">&#39;categories&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">c</span><span class="p">]})</span>
+                <span class="n">new_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">empty_col</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">combine_categories</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">covcats</span><span class="o">.</span><span class="n">categories</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_cols</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">new_cols</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">new_cols</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="s1">&#39;categories&#39;</span><span class="p">)</span>
+                    <span class="n">covcats</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">covcats</span><span class="p">,</span> <span class="n">new_cols</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="s1">&#39;categories&#39;</span><span class="p">)</span>
+                <span class="c1"># put on to the same alignment as the paramset</span>
+                <span class="n">covcats</span> <span class="o">=</span> <span class="n">covcats</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">param_set</span> <span class="o">+</span> <span class="n">new_mechs</span><span class="p">]</span>
+
+                <span class="c1"># add the new things</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">combine_categories</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">covcats</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">new_mechs</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+            <span class="c1"># no zeroth index on covcats means that it was empty to begin with,</span>
+            <span class="c1"># combining mechanisms that didn&#39;t have any uncertainty mechanisms</span>
+            <span class="c1"># initializing a covcats</span>
+            <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+                <span class="n">dims</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;umech_id&#39;</span><span class="p">,</span> <span class="s1">&#39;categories&#39;</span><span class="p">)</span>
+                <span class="n">coords</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;umech_id&#39;</span><span class="p">:</span> <span class="n">new_mechs</span><span class="p">,</span>
+                          <span class="s1">&#39;categories&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">combine_categories</span><span class="o">.</span><span class="n">keys</span><span class="p">())}</span>
+                <span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">new_mechs</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">combine_categories</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
+                <span class="n">covcats</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">vals</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="n">dims</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="n">coords</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">combine_categories</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">covcats</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">new_mechs</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+            <span class="c1"># add dof to new umech_id</span>
+            <span class="n">covdofs</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="o">.</span><span class="n">_get_new_covdofs</span><span class="p">(</span>
+                <span class="n">param_set</span><span class="p">,</span>
+                <span class="n">measurements_hg</span><span class="p">,</span>
+                <span class="p">{},</span>
+                <span class="n">sensitivity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;sensitivity&#39;</span><span class="p">],</span>
+                <span class="n">verbose</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">combdof</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">measurements_hg</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="n">nmechs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_mechs</span><span class="p">)</span>
+            <span class="n">newcovdofs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nmechs</span><span class="p">)</span> <span class="o">*</span> <span class="n">combdof</span><span class="p">,</span>
+                <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;umech_id&#39;</span><span class="p">),</span>
+                <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;umech_id&#39;</span><span class="p">:</span> <span class="n">new_mechs</span><span class="p">}</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">covdofs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">newcovdofs</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">covdofs</span><span class="p">,</span> <span class="n">newcovdofs</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="s1">&#39;umech_id&#39;</span><span class="p">)</span>
+
+        <span class="n">out</span> <span class="o">=</span> <span class="n">uobjs</span><span class="o">.</span><span class="n">RMEMeas</span><span class="p">(</span>
+            <span class="n">measurements_hg</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">avgcov</span><span class="p">,</span>
+            <span class="n">avgmc</span><span class="p">,</span>
+            <span class="n">covcats</span><span class="o">=</span><span class="n">covcats</span><span class="p">,</span>
+            <span class="n">covdofs</span><span class="o">=</span><span class="n">newcovdofs</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;grid handling runtime&#39;</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">grid_runtime</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; sec&#39;</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;    linear mechanisms&#39;</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">avgcov</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;    linear mechanisms&#39;</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;       linear runtime&#39;</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">linear_runtime</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; sec&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;           mc runtime&#39;</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">mc_runtime</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; sec&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">out</span></div>
+</div>
+
+</pre></div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../../../index.html">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../auto_examples/index.html">rmellipse Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../for_contributors/index.html">For Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+<h3>Versions</h3>
+<ul>
+  <li><a href="../../../../v0.3.4/index.html">v0.3.4</a></li>
+  <li><a href="_rmeprop.html">stable</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">rmellipse.propagators._rmeprop</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2024, National Institute of Standards and Technology.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.0.
+    </div>
+  </body>
+</html>

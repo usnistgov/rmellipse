@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Reading/Writing RMEMeas Objects &#8212; Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=fd3f3429" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../../_static/documentation_options.js?v=888cb622"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Common Grid Handling" href="plot_e04_common_grid_handling.html" />
+    <link rel="prev" title="Basics of RME Propagation" href="plot_e01_basic_uncertainty_analysis.html" />
+<link rel="stylesheet" href="https://pages.nist.gov/nist-header-footer/css/nist-combined.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" type="text/javascript"></script>
+  <script src="https://pages.nist.gov/nist-header-footer/js/nist-header-footer.js" type="text/javascript" defer="defer"></script>
+
+
+<script type="text/javascript" src="https://pages.nist.gov/leaveNotice/js/jquery.leaveNotice-nist.min.js"></script>
+<script>
+$(document).ready(function(){
+  // Mark external (non-nist.gov) A tags with class "external"
+  //If the adress start with https and ends with nist.gov
+  var re_nist = new RegExp('^https?:\/\/((^\/)*\.)*nist\\.gov(\/|$)');
+  //Regex to find address that start with https
+  var re_absolute_address = new RegExp('^((https?:)?\/\/)');
+  $("a").each(function(){
+    var url=$(this).attr('href');
+    if(re_nist.test(url) || !re_absolute_address.test(url)){
+      $(this).addClass('local');
+    }else{
+      //This a href appears to be external, so tag it
+      $(this).addClass('external');
+    }
+  });
+  // Add leaveNotice to external A elements
+  $('a.external').leaveNotice();
+});
+</script>
+<link rel="stylesheet" type="text/css" href="https://pages.nist.gov/leaveNotice/css/jquery.leaveNotice.css" />
+
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="plot_e04_common_grid_handling.html" title="Common Grid Handling"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="plot_e01_basic_uncertainty_analysis.html" title="Basics of RME Propagation"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >rmellipse Gallery</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">Fundementals</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Reading/Writing RMEMeas Objects</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+
+
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-rme-gettingstarted-plot-e03-reading-writing-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="reading-writing-rmemeas-objects">
+<span id="sphx-glr-auto-examples-rme-gettingstarted-plot-e03-reading-writing-py"></span><h1>Reading/Writing RMEMeas Objects<a class="headerlink" href="#reading-writing-rmemeas-objects" title="Link to this heading">¶</a></h1>
+<p>This is a basic example demonstrating how to read and write a RMEMeas object.</p>
+<section id="creating-an-object">
+<h2>Creating an Object<a class="headerlink" href="#creating-an-object" title="Link to this heading">¶</a></h2>
+<p>First lets create an object that we want to save.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">rmellipse.uobjects</span><span class="w"> </span><span class="kn">import</span> <span class="n">RMEMeas</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">nom</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">2</span><span class="p">)),</span>
+                   <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;d1&#39;</span><span class="p">,</span> <span class="s1">&#39;d2&#39;</span><span class="p">),</span>
+                   <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;d1&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
+                           <span class="s1">&#39;d2&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="p">)})</span>
+
+<span class="n">meas</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_nom</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;meas&#39;</span><span class="p">,</span> <span class="n">nom</span><span class="o">=</span><span class="n">nom</span><span class="p">)</span>
+
+<span class="n">meas</span><span class="o">.</span><span class="n">add_umech</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;mymechanisms&#39;</span><span class="p">,</span>
+    <span class="n">value</span><span class="o">=</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.01</span><span class="p">,</span>
+    <span class="n">dof</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
+    <span class="n">category</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;Origin&#39;</span><span class="p">:</span> <span class="s1">&#39;Data Sheet&#39;</span><span class="p">},</span>
+    <span class="n">add_uid</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">meas</span><span class="o">.</span><span class="n">add_mc_sample</span><span class="p">(</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="o">*</span><span class="n">meas</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.01</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="hdf5-saving">
+<h2>HDF5 Saving<a class="headerlink" href="#hdf5-saving" title="Link to this heading">¶</a></h2>
+<p>Saving to HDF5 is the recommended format for saving RMEMeas objects.
+Compared to xml, it’s much faster and preserves category and degree
+of freedom information about the object. In addition, the HDF5 format doesn’t
+require you to define a data format with to_csv and from_csv functions.</p>
+<p>To save, open an HDF5 file or group and pass that to the
+<a class="reference internal" href="../../autoapi/rmellipse/uobjects/index.html#rmellipse.uobjects.RMEMeas.to_h5" title="rmellipse.uobjects.RMEMeas.to_h5"><code class="xref py py-func docutils literal notranslate"><span class="pre">rmellipse.uobjects.RMEMeas.to_h5()</span></code></a> function. The RMEMeas object
+will be stored in the group you provide it under a group with it’s name.
+The override argument tells the function to delete any pre-existing
+groups with that RMEMeas objects name then try to save it, to avoid
+permission errors.</p>
+<p>We recommend downloading the HDF5 viewer software. You can inspect your
+HDF5 object, and you will see that under the ‘myval’ group this creates, you
+will see the cov,mc,covdofs, and covcats attributes stored. Each one is an
+HDF5 representation of an xarray DataArray and together completely describe
+your RMEMeas object.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+<span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="s1">&#39;meas.hdf5&#39;</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">meas</span><span class="o">.</span><span class="n">to_h5</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">override</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="n">meas</span><span class="o">.</span><span class="n">name</span><span class="p">])</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;HDF5 group &quot;/meas&quot; (4 members)&gt;
+</pre></div>
+</div>
+</section>
+<section id="hdf5-reading">
+<h2>HDF5 Reading<a class="headerlink" href="#hdf5-reading" title="Link to this heading">¶</a></h2>
+<p>You can open the HDF5 file you made in read mode,
+then pass in the group with it’s name to
+<a class="reference internal" href="../../autoapi/rmellipse/uobjects/index.html#rmellipse.uobjects.RMEMeas.from_h5" title="rmellipse.uobjects.RMEMeas.from_h5"><code class="xref py py-func docutils literal notranslate"><span class="pre">rmellipse.uobjects.RMEMeas.from_h5()</span></code></a> in order to read it.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="s1">&#39;meas.hdf5&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">meas</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_h5</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;meas&#39;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>meas with nominal:
+&lt;xarray.DataArray (d1: 10, d2: 2)&gt; Size: 160B
+array([[0., 0.],
+       [0., 0.],
+       [0., 0.],
+       [0., 0.],
+       [0., 0.],
+       [0., 0.],
+       [0., 0.],
+       [0., 0.],
+       [0., 0.],
+       [0., 0.]])
+Coordinates:
+  * d1       (d1) int64 80B 0 1 2 3 4 5 6 7 8 9
+  * d2       (d2) int64 16B 0 1
+Attributes:
+    __class__.__module__:  xarray.core.dataarray
+    __class__.__name__:    DataArray
+    is_big_object:         True
+    save_type:             DATAARRAY_SAVEABLE
+</pre></div>
+</div>
+</section>
+<section id="xml-saving">
+<h2>XML Saving<a class="headerlink" href="#xml-saving" title="Link to this heading">¶</a></h2>
+<p>XML format is a legacy format inherited from the original drag and
+drop menu Microwave Uncertainty Framework. It is included for backwards compatibility purposes, but it is
+not the recommended way to save if you can help it. Specifically be aware
+that saving data to XML you will lose degrees of freedom and category information
+about
+your linear uncertainty mechanisms. The default degrees of freedom for linear uncertainties
+is infinite, and the default category for uncertainties is type B. So
+if you save to XML then read it back in, all your mechanisms will default
+to both of those properties. To preserve categories and degrees of freedom
+you assigned, use HDF5. Additionally, it is much slower than the
+HDF5 format.</p>
+<p>To save to XML you need to define a read/write functions.</p>
+<p>First we turn our object into the s1p_ri format using the
+<code class="xref py py-func docutils literal notranslate"><span class="pre">rmellipse.dataformats.as_format()</span></code></p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">rmellipse.propagators</span><span class="w"> </span><span class="kn">import</span> <span class="n">RMEProp</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">to_txt</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">from_txt</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">values</span>
+
+<span class="n">m1</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_nom</span><span class="p">(</span><span class="s1">&#39;mymeas&#39;</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">))))</span>
+<span class="n">m1</span><span class="o">.</span><span class="n">add_umech</span><span class="p">(</span><span class="s1">&#39;my umech&#39;</span><span class="p">,</span> <span class="n">m1</span><span class="o">.</span><span class="n">nom</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">+</span><span class="mf">0.1</span><span class="p">)</span>
+
+<span class="n">m1</span><span class="o">.</span><span class="n">to_xml</span><span class="p">(</span>
+    <span class="s1">&#39;.&#39;</span><span class="p">,</span>
+    <span class="n">to_txt</span><span class="p">,</span>
+    <span class="n">data_extension</span><span class="o">=</span><span class="s1">&#39;.csv&#39;</span><span class="p">,</span>
+    <span class="n">header_extension</span><span class="o">=</span><span class="s1">&#39;.meas&#39;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Once we have our measurement in a format with read/write functions defined
+we can use the <a class="reference internal" href="../../autoapi/rmellipse/uobjects/index.html#rmellipse.uobjects.RMEMeas.to_xml" title="rmellipse.uobjects.RMEMeas.to_xml"><code class="xref py py-func docutils literal notranslate"><span class="pre">rmellipse.uobjects.RMEMeas.to_xml()</span></code></a> and
+<a class="reference internal" href="../../autoapi/rmellipse/uobjects/index.html#rmellipse.uobjects.RMEMeas.from_xml" title="rmellipse.uobjects.RMEMeas.from_xml"><code class="xref py py-func docutils literal notranslate"><span class="pre">rmellipse.uobjects.RMEMeas.from_xml()</span></code></a> functions.</p>
+<p><a class="reference internal" href="../../autoapi/rmellipse/uobjects/index.html#rmellipse.uobjects.RMEMeas.to_xml" title="rmellipse.uobjects.RMEMeas.to_xml"><code class="xref py py-func docutils literal notranslate"><span class="pre">rmellipse.uobjects.RMEMeas.to_xml()</span></code></a> is expecting a target directory
+to save the measurement
+in. It will save a header ‘.meas’ file and a ‘…_Support’
+in that directory with the covariance and Monte Carlo data next to it. Both will be
+named using the RMEMeas object’s name attribute. When a RMEMeas object is
+passed
+through a function, it’s name attribute is changed to the name of that
+function.
+So, be sure to change the name attribute to something useful if the function
+name
+is not specific enough.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">m2</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_xml</span><span class="p">(</span>
+    <span class="s1">&#39;mymeas.meas&#39;</span><span class="p">,</span>
+    <span class="n">from_csv</span><span class="o">=</span><span class="n">from_txt</span>
+<span class="p">)</span>
+<span class="k">assert</span> <span class="p">(</span><span class="n">m2</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="n">m1</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.285 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-rme-gettingstarted-plot-e03-reading-writing-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/94d16bda2d22fcd3c2da282036305c6a/plot_e03_reading_writing.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">plot_e03_reading_writing.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/181ac1ad764d179ab946789aaa2f5388/plot_e03_reading_writing.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">plot_e03_reading_writing.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/aed904a170beaeaa2ffaaf4438fd3e07/plot_e03_reading_writing.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">plot_e03_reading_writing.zip</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+</section>
+
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">rmellipse Gallery</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#examples">Examples</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#fundementals">Fundementals</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../Examples/index.html">Examples</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Fundementals</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../for_contributors/index.html">For Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/auto_examples/RME_gettingstarted/plot_e03_reading_writing.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+<h3>Versions</h3>
+<ul>
+  <li><a href="../../../v0.3.4/index.html">v0.3.4</a></li>
+  <li><a href="plot_e03_reading_writing.html">stable</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="plot_e04_common_grid_handling.html" title="Common Grid Handling"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="plot_e01_basic_uncertainty_analysis.html" title="Basics of RME Propagation"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >rmellipse Gallery</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" >Fundementals</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Reading/Writing RMEMeas Objects</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2024, National Institute of Standards and Technology.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.0.
+    </div>
+  </body>
+</html>

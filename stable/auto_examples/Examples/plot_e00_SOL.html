@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>SOL Calibration &#8212; Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=fd3f3429" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../../_static/documentation_options.js?v=888cb622"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Fundementals" href="../RME_gettingstarted/index.html" />
+    <link rel="prev" title="Examples" href="index.html" />
+<link rel="stylesheet" href="https://pages.nist.gov/nist-header-footer/css/nist-combined.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" type="text/javascript"></script>
+  <script src="https://pages.nist.gov/nist-header-footer/js/nist-header-footer.js" type="text/javascript" defer="defer"></script>
+
+
+<script type="text/javascript" src="https://pages.nist.gov/leaveNotice/js/jquery.leaveNotice-nist.min.js"></script>
+<script>
+$(document).ready(function(){
+  // Mark external (non-nist.gov) A tags with class "external"
+  //If the adress start with https and ends with nist.gov
+  var re_nist = new RegExp('^https?:\/\/((^\/)*\.)*nist\\.gov(\/|$)');
+  //Regex to find address that start with https
+  var re_absolute_address = new RegExp('^((https?:)?\/\/)');
+  $("a").each(function(){
+    var url=$(this).attr('href');
+    if(re_nist.test(url) || !re_absolute_address.test(url)){
+      $(this).addClass('local');
+    }else{
+      //This a href appears to be external, so tag it
+      $(this).addClass('external');
+    }
+  });
+  // Add leaveNotice to external A elements
+  $('a.external').leaveNotice();
+});
+</script>
+<link rel="stylesheet" type="text/css" href="https://pages.nist.gov/leaveNotice/css/jquery.leaveNotice.css" />
+
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../RME_gettingstarted/index.html" title="Fundementals"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Examples"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >rmellipse Gallery</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">Examples</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">SOL Calibration</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+
+
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-examples-plot-e00-sol-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="sol-calibration">
+<span id="sphx-glr-auto-examples-examples-plot-e00-sol-py"></span><h1>SOL Calibration<a class="headerlink" href="#sol-calibration" title="Link to this heading">¶</a></h1>
+<p>This example  a performs a short,  open, and load (SOL) calibration with a linear
+sensitivity analysis.</p>
+<p>In this scenario, we have some raw S-parameter measurements stored in
+tab separated text files of our calibration standards
+and of our DUT - which is a load. We also have some
+data-defined models of our calibration standards stored in the HDF5 format. These models contain some
+linear uncertainty mechanisms which carry some category information describing their origin.
+This tutorial will walk through defining file reader functions, analysis functions,
+and performing the analysis with and without uncertainties.</p>
+<p>The data for this example is stored in th ‘sol_demo_data’ folder of the source code repository hosted
+on github. The data set is intended to act as an example use case of the software library only.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">rmellipse.uobjects</span><span class="w"> </span><span class="kn">import</span> <span class="n">RMEMeas</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rmellipse.propagators</span><span class="w"> </span><span class="kn">import</span> <span class="n">RMEProp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+</pre></div>
+</div>
+<section id="demo-data">
+<h2>Demo Data<a class="headerlink" href="#demo-data" title="Link to this heading">¶</a></h2>
+<p>The sample data are store inside the <cite>rmellipse.sol_demo</cite> submodule, and the paths
+to the files can be imported as well.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># text files paths as Path objects</span>
+<span class="c1"># replace these with the correct data paths</span>
+<span class="c1"># after downloading the sample data</span>
+<span class="n">short_raw_path</span> <span class="o">=</span> <span class="n">sample_data_dir</span> <span class="o">/</span> <span class="s1">&#39;Short.s1p&#39;</span>
+<span class="n">open_raw_path</span> <span class="o">=</span> <span class="n">sample_data_dir</span> <span class="o">/</span> <span class="s1">&#39;Open.s1p&#39;</span>
+<span class="n">load_raw_path</span> <span class="o">=</span> <span class="n">sample_data_dir</span> <span class="o">/</span> <span class="s1">&#39;Load.s1p&#39;</span>
+<span class="n">dut_raw_path</span> <span class="o">=</span> <span class="n">sample_data_dir</span> <span class="o">/</span> <span class="s1">&#39;Dut.s1p&#39;</span>
+
+<span class="c1"># HDF5 file containing the standard models</span>
+<span class="n">defs_path</span> <span class="o">=</span> <span class="n">sample_data_dir</span><span class="o">/</span><span class="s1">&#39;definitions.hdf5&#39;</span>
+</pre></div>
+</div>
+</section>
+<section id="writing-functions">
+<h2>Writing Functions<a class="headerlink" href="#writing-functions" title="Link to this heading">¶</a></h2>
+<p>The first thing we need to do is write some functions. These include
+the text file reader and analysis functions
+to calculate our error box and correct our raw data.</p>
+<section id="text-file-reader">
+<h3>Text File Reader<a class="headerlink" href="#text-file-reader" title="Link to this heading">¶</a></h3>
+<p>First we define a function that can read our text files into a DataArray. We assign
+a dimension called Frequency (GHz), where we store the frequencies corresponding to each
+S-parameter. We also store our data as a complex-valued array.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">from_s1p</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
+    <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">delimiter</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="c1"># define a coordinate set</span>
+    <span class="n">coords</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">:</span> <span class="n">arr</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="c1"># convert to 1 port complex data</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">1.0</span><span class="n">j</span><span class="o">*</span><span class="n">arr</span><span class="p">[:,</span><span class="mi">2</span><span class="p">]</span>
+    <span class="c1"># create an xarray data set</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+        <span class="n">values</span><span class="p">,</span>
+        <span class="n">coords</span> <span class="o">=</span> <span class="n">coords</span><span class="p">,</span>
+        <span class="n">dims</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+</pre></div>
+</div>
+<p>Lets confirm this works by  reading in our raw measurements</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">raw_dut</span> <span class="o">=</span> <span class="n">from_s1p</span><span class="p">(</span><span class="n">dut_raw_path</span><span class="p">)</span>
+<span class="n">raw_short</span> <span class="o">=</span> <span class="n">from_s1p</span><span class="p">(</span><span class="n">short_raw_path</span><span class="p">)</span>
+<span class="n">raw_open</span> <span class="o">=</span> <span class="n">from_s1p</span><span class="p">(</span><span class="n">open_raw_path</span><span class="p">)</span>
+<span class="n">raw_load</span> <span class="o">=</span> <span class="n">from_s1p</span><span class="p">(</span><span class="n">load_raw_path</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="calculating-the-error-box">
+<h3>Calculating the Error Box<a class="headerlink" href="#calculating-the-error-box" title="Link to this heading">¶</a></h3>
+<p>We want two analysis functions. The first takes in our definitions and raw measurements, and
+calculates the error-box terms of the 1-port calibration. Importantly, all the
+import objects that might be <code class="docutils literal notranslate"><span class="pre">RMEMeas</span></code> objects are exposed as input arguments.
+The <code class="docutils literal notranslate"><span class="pre">**</span></code> packs any keyword arguments ino a dictionary. This function matches any
+inputs by matching device_names, and assuming keywords are formatted
+by ‘def_&lt;device_name&gt;’ and ‘meas_&lt;device_name&gt;’ only. Also, note that the function
+signature says that the function is expecting xr.DataArray objects. This is what will be
+passed in when the function is wrapped in a propagator.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">SOL_cal</span><span class="p">(</span><span class="o">**</span><span class="n">stds</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
+    <span class="c1"># get list of standards and definitions, ordered to correspond</span>
+    <span class="n">defs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">ms</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">stds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="s1">&#39;def&#39;</span> <span class="ow">in</span> <span class="n">k</span><span class="p">:</span>
+            <span class="n">def_key</span> <span class="o">=</span> <span class="n">k</span>
+            <span class="n">m_key</span> <span class="o">=</span> <span class="n">def_key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;def_&#39;</span><span class="p">,</span> <span class="s1">&#39;raw_&#39;</span><span class="p">)</span>
+            <span class="n">defs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stds</span><span class="p">[</span><span class="n">def_key</span><span class="p">])</span>
+            <span class="n">ms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stds</span><span class="p">[</span><span class="n">m_key</span><span class="p">])</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">defs</span><span class="p">)</span>
+    <span class="n">frequencies</span> <span class="o">=</span> <span class="n">ms</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">]</span>
+
+    <span class="c1"># output has the same shape as the inputs except an</span>
+    <span class="c1"># additional dimensions to hold the error terms</span>
+    <span class="n">output_shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">ms</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="o">+</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+    <span class="n">output_dims</span> <span class="o">=</span>  <span class="nb">list</span><span class="p">(</span><span class="n">ms</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;errterm&#39;</span><span class="p">]</span>
+    <span class="n">output_coords</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">ms</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span>
+    <span class="n">output_coords</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;errterm&#39;</span><span class="p">:[</span><span class="s1">&#39;e00&#39;</span><span class="p">,</span><span class="s1">&#39;e11&#39;</span><span class="p">,</span><span class="s1">&#39;delta&#39;</span><span class="p">]})</span>
+
+    <span class="c1"># pre allocate output xarray</span>
+    <span class="c1"># 3 output has 3</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">output_shape</span><span class="p">,</span> <span class="nb">complex</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+        <span class="n">result</span><span class="p">,</span>
+        <span class="n">dims</span> <span class="o">=</span> <span class="n">output_dims</span><span class="p">,</span>
+        <span class="n">coords</span> <span class="o">=</span> <span class="n">output_coords</span>
+        <span class="p">)</span>
+
+    <span class="c1"># pre allocated temporary arrays</span>
+    <span class="c1"># that will be used to solve the set of equations</span>
+    <span class="n">mshape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">shape</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">N</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+    <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">mshape</span><span class="p">,</span> <span class="nb">complex</span><span class="p">)</span>
+
+    <span class="n">yshape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">shape</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">N</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">yshape</span><span class="p">,</span> <span class="nb">complex</span><span class="p">)</span>
+
+    <span class="c1"># I am going to work with the underlying numpy arrays</span>
+    <span class="c1"># here because it is convenient for linear algebra</span>
+    <span class="c1"># for each device add a row to the regressor matrix</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+        <span class="n">S11_meas</span> <span class="o">=</span> <span class="n">ms</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">S11_def</span> <span class="o">=</span> <span class="n">defs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">M</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">M</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">S11_meas</span> <span class="o">*</span> <span class="n">S11_def</span>
+        <span class="n">M</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">S11_def</span>
+        <span class="n">y</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">S11_meas</span>
+
+    <span class="c1"># this transposes M along last 2 dimensions</span>
+    <span class="n">n_dims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">transpose_dims</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_dims</span><span class="p">)</span>
+    <span class="n">transpose_dims</span><span class="p">[[</span><span class="n">n_dims</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_dims</span> <span class="o">-</span> <span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="n">transpose_dims</span><span class="p">[[</span><span class="n">n_dims</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="n">n_dims</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]]</span>
+    <span class="n">Mt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">transpose_dims</span><span class="p">)</span>
+
+    <span class="c1"># do least squares</span>
+    <span class="n">coeff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">Mt</span> <span class="o">@</span> <span class="n">M</span><span class="p">)</span> <span class="o">@</span> <span class="n">Mt</span> <span class="o">@</span> <span class="n">y</span>
+
+    <span class="c1"># reassign values to output</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s1">&#39;e00&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">coeff</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s1">&#39;e11&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">coeff</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s1">&#39;delta&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">coeff</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+</pre></div>
+</div>
+<p>Lets use the function without any uncertainty propagation
+to verify it works. I will do this by reading in the definitions
+and grabbing just a view into the underlying nominal DataArray.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">defs_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">def_short</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_h5</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;Short&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">nom</span>
+    <span class="n">def_open</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_h5</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;Open&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">nom</span>
+    <span class="n">def_load</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_h5</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;Load&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">nom</span>
+
+<span class="n">flist</span> <span class="o">=</span> <span class="n">raw_short</span><span class="p">[</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">]</span>
+<span class="n">errbox</span> <span class="o">=</span> <span class="n">SOL_cal</span><span class="p">(</span>
+    <span class="n">def_short</span> <span class="o">=</span> <span class="n">def_short</span><span class="p">,</span>
+    <span class="n">def_open</span> <span class="o">=</span> <span class="n">def_open</span><span class="p">,</span>
+    <span class="n">def_load</span> <span class="o">=</span> <span class="n">def_load</span><span class="p">,</span>
+    <span class="n">raw_short</span> <span class="o">=</span> <span class="n">raw_short</span><span class="p">,</span>
+    <span class="n">raw_open</span>  <span class="o">=</span> <span class="n">raw_open</span><span class="p">,</span>
+    <span class="n">raw_load</span> <span class="o">=</span> <span class="n">raw_load</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">errbox</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;xarray.DataArray (Frequency (GHz): 341, errterm: 3)&gt; Size: 16kB
+array([[-0.01893933-0.03268189j, -0.05556275+0.11455476j,
+         0.00717613-0.79476367j],
+       [ 0.00823574-0.01836123j,  0.04484499+0.0895194j ,
+        -0.71682196-0.43896957j],
+       [ 0.03634635-0.02636921j,  0.06262164-0.00655716j,
+        -0.69776178+0.44672811j],
+       ...,
+       [-0.09579545-0.01372783j, -0.09339595+0.03935082j,
+         0.41148441+0.6320167j ],
+       [-0.09774565+0.04137535j,  0.02886021-0.02463072j,
+         0.73391962+0.00871807j],
+       [-0.06464375+0.08107921j, -0.09782635-0.1258208j ,
+         0.43446894-0.5824696j ]], shape=(341, 3))
+Coordinates:
+  * Frequency (GHz)  (Frequency (GHz)) float64 3kB 18.0 18.02 ... 26.48 26.5
+  * errterm          (errterm) &lt;U5 60B &#39;e00&#39; &#39;e11&#39; &#39;delta&#39;
+</pre></div>
+</div>
+</section>
+<section id="correcting-raw-data">
+<h3>Correcting Raw Data<a class="headerlink" href="#correcting-raw-data" title="Link to this heading">¶</a></h3>
+<p>Finally, lets write a function that takes in our error box
+and corrects a raw measurement.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">SOL_correct</span><span class="p">(</span><span class="n">errorbox</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
+    <span class="n">S11</span> <span class="o">=</span> <span class="n">device</span>
+    <span class="n">e00</span> <span class="o">=</span> <span class="n">errorbox</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">errterm</span><span class="o">=</span><span class="s2">&quot;e00&quot;</span><span class="p">)</span>
+    <span class="n">e11</span> <span class="o">=</span> <span class="n">errorbox</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">errterm</span><span class="o">=</span><span class="s2">&quot;e11&quot;</span><span class="p">)</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">errorbox</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">errterm</span><span class="o">=</span><span class="s2">&quot;delta&quot;</span><span class="p">)</span>
+
+    <span class="n">corrected</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">e00</span> <span class="o">+</span> <span class="n">S11</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="o">-</span><span class="n">delta</span> <span class="o">+</span> <span class="n">e11</span> <span class="o">*</span> <span class="n">S11</span><span class="p">)</span>
+
+    <span class="c1"># return the corrected result</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">r</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">corrected</span>
+    <span class="k">return</span> <span class="n">r</span>
+</pre></div>
+</div>
+<p>And lets use it to correct our raw device.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">dut</span> <span class="o">=</span> <span class="n">SOL_correct</span><span class="p">(</span><span class="n">errbox</span><span class="p">,</span> <span class="n">raw_dut</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can plot this to check that it matches our expectations. This DUT is a load
+so we expect a magnitude close to 0.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s1">&#39;DUT Corrected Data&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">dut</span><span class="p">[</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dut</span><span class="p">))</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Linear Magnitude&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">dut</span><span class="p">[</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">angle</span><span class="p">(</span><span class="n">dut</span><span class="p">,</span> <span class="n">deg</span> <span class="o">=</span> <span class="kc">True</span><span class="p">))</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Phase (deg)&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<img src="../../_images/sphx_glr_plot_e00_SOL_001.png" srcset="../../_images/sphx_glr_plot_e00_SOL_001.png" alt="DUT Corrected Data" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Text(26.722222222222214, 0.5, &#39;Phase (deg)&#39;)
+</pre></div>
+</div>
+</section>
+</section>
+<section id="linear-uncertainty-analysis">
+<h2>Linear Uncertainty Analysis<a class="headerlink" href="#linear-uncertainty-analysis" title="Link to this heading">¶</a></h2>
+<p>In this step, we will add the ability to propagate uncertainties associated with
+the calibration standard definitions.</p>
+<section id="import-and-wrap-functions">
+<h3>Import and Wrap Functions<a class="headerlink" href="#import-and-wrap-functions" title="Link to this heading">¶</a></h3>
+<p>The first step is to define a propagator and wrap our analysis
+functions in it. We are going to turn on the sensitivity analysis only.
+When we wrap our functions in the propagator, any RMEMeas objects passed
+through the function will be run through the linear sensitivity analysis.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">rmellipse.uobjects</span><span class="w"> </span><span class="kn">import</span> <span class="n">RMEMeas</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rmellipse.propagators</span><span class="w"> </span><span class="kn">import</span> <span class="n">RMEProp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">myprop</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="p">(</span>
+    <span class="n">sensitivity</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span>
+
+<span class="n">SOL_cal</span> <span class="o">=</span> <span class="n">myprop</span><span class="o">.</span><span class="n">propagate</span><span class="p">(</span><span class="n">SOL_cal</span><span class="p">)</span>
+<span class="n">SOL_correct</span> <span class="o">=</span> <span class="n">myprop</span><span class="o">.</span><span class="n">propagate</span><span class="p">(</span><span class="n">SOL_correct</span><span class="p">)</span>
+
+<span class="c1"># turn xarray&#39;s into uncertainty objects with RMEMeas</span>
+<span class="n">raw_dut</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_nom</span><span class="p">(</span><span class="s1">&#39;DUT&#39;</span><span class="p">,</span><span class="n">raw_dut</span><span class="p">)</span>
+<span class="n">raw_short</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_nom</span><span class="p">(</span><span class="s1">&#39;DUT&#39;</span><span class="p">,</span><span class="n">raw_short</span><span class="p">)</span>
+<span class="n">raw_open</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_nom</span><span class="p">(</span><span class="s1">&#39;DUT&#39;</span><span class="p">,</span><span class="n">raw_open</span><span class="p">)</span>
+<span class="n">raw_load</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_nom</span><span class="p">(</span><span class="s1">&#39;DUT&#39;</span><span class="p">,</span><span class="n">raw_load</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Lets also grab our definitions with the full uncertainty information</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">defs_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">def_short</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_h5</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;Short&#39;</span><span class="p">])</span>
+    <span class="n">def_open</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_h5</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;Open&#39;</span><span class="p">])</span>
+    <span class="n">def_load</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_h5</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;Load&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</section>
+<section id="propagate-functions">
+<h3>Propagate Functions<a class="headerlink" href="#propagate-functions" title="Link to this heading">¶</a></h3>
+<p>Now we can use our analysis functions that were wrapped
+in the propagator to do our analysis.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">errbox</span> <span class="o">=</span> <span class="n">SOL_cal</span><span class="p">(</span>
+    <span class="n">def_short</span> <span class="o">=</span> <span class="n">def_short</span><span class="p">,</span>
+    <span class="n">def_open</span> <span class="o">=</span> <span class="n">def_open</span><span class="p">,</span>
+    <span class="n">def_load</span> <span class="o">=</span> <span class="n">def_load</span><span class="p">,</span>
+    <span class="n">raw_short</span> <span class="o">=</span> <span class="n">raw_short</span><span class="p">,</span>
+    <span class="n">raw_open</span>  <span class="o">=</span> <span class="n">raw_open</span><span class="p">,</span>
+    <span class="n">raw_load</span> <span class="o">=</span> <span class="n">raw_load</span>
+<span class="p">)</span>
+
+<span class="n">dut</span> <span class="o">=</span> <span class="n">SOL_correct</span><span class="p">(</span><span class="n">errbox</span><span class="p">,</span> <span class="n">raw_dut</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="plot-results">
+<h2>Plot Results<a class="headerlink" href="#plot-results" title="Link to this heading">¶</a></h2>
+<p>Lets plot our corrected device like last time, and
+lets instead inspect the uncertainty measurements.
+We would like to look at the magnitude and phase,
+so lets define some functions to propagate those conversions.</p>
+<section id="nominal-values">
+<h3>Nominal Values<a class="headerlink" href="#nominal-values" title="Link to this heading">¶</a></h3>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="nd">@myprop</span><span class="o">.</span><span class="n">propagate</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">calc_mag</span><span class="p">(</span><span class="n">arr</span><span class="p">):</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">dtype</span> <span class="o">=</span> <span class="nb">float</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+<span class="nd">@myprop</span><span class="o">.</span><span class="n">propagate</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">calc_phase</span><span class="p">(</span><span class="n">arr</span><span class="p">):</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">dtype</span> <span class="o">=</span> <span class="nb">float</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">angle</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">deg</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+<span class="n">mag</span> <span class="o">=</span> <span class="n">calc_mag</span><span class="p">(</span><span class="n">dut</span><span class="p">)</span>
+<span class="n">phase</span> <span class="o">=</span> <span class="n">calc_phase</span><span class="p">(</span><span class="n">dut</span><span class="p">)</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="n">k</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">mag_lower</span> <span class="o">=</span> <span class="n">mag</span><span class="o">.</span><span class="n">uncbounds</span><span class="p">(</span><span class="n">k</span> <span class="o">=</span> <span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">cov</span>
+<span class="n">mag_upper</span> <span class="o">=</span> <span class="n">mag</span><span class="o">.</span><span class="n">uncbounds</span><span class="p">(</span><span class="n">k</span> <span class="o">=</span> <span class="o">-</span><span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">cov</span>
+<span class="n">phs_lower</span> <span class="o">=</span> <span class="n">phase</span><span class="o">.</span><span class="n">uncbounds</span><span class="p">(</span><span class="n">k</span> <span class="o">=</span> <span class="n">k</span><span class="p">,</span> <span class="n">deg</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">cov</span>
+<span class="n">phs_upper</span> <span class="o">=</span> <span class="n">phase</span><span class="o">.</span><span class="n">uncbounds</span><span class="p">(</span><span class="n">k</span> <span class="o">=</span> <span class="o">-</span><span class="n">k</span><span class="p">,</span> <span class="n">deg</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">cov</span>
+
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span>
+    <span class="n">dut</span><span class="o">.</span><span class="n">nom</span><span class="p">[</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">],</span>
+    <span class="n">y1</span> <span class="o">=</span> <span class="n">mag_lower</span><span class="p">,</span>
+    <span class="n">y2</span> <span class="o">=</span> <span class="n">mag_upper</span><span class="p">,</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;k = </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1"> Uncertainty&#39;</span>
+    <span class="p">)</span>
+
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span>
+    <span class="n">dut</span><span class="o">.</span><span class="n">nom</span><span class="p">[</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">],</span>
+    <span class="n">y1</span> <span class="o">=</span> <span class="n">phs_lower</span><span class="p">,</span>
+    <span class="n">y2</span> <span class="o">=</span> <span class="n">phs_upper</span><span class="p">,</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;k = </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1"> Uncertainty&#39;</span>
+    <span class="p">)</span>
+
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">mag</span><span class="o">.</span><span class="n">nom</span><span class="p">[</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">],</span>
+    <span class="n">mag</span><span class="o">.</span><span class="n">nom</span><span class="p">,</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="s1">&#39;nominal&#39;</span>
+    <span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Linear Magnitude&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">nom</span><span class="p">[</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">],</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">nom</span><span class="p">,</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="s1">&#39;nominal&#39;</span>
+    <span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Phase (deg)&#39;</span><span class="p">)</span>
+
+<span class="n">handles</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_legend_handles_labels</span><span class="p">()</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">handles</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper center&#39;</span><span class="p">,</span> <span class="n">ncols</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+<img src="../../_images/sphx_glr_plot_e00_SOL_002.png" srcset="../../_images/sphx_glr_plot_e00_SOL_002.png" alt="plot e00 SOL" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.legend.Legend object at 0x000001DD97C68D70&gt;
+</pre></div>
+</div>
+</section>
+<section id="uncertainties-only">
+<h3>Uncertainties Only<a class="headerlink" href="#uncertainties-only" title="Link to this heading">¶</a></h3>
+<p>Lets look at the k=2 uncertainties
+only. Notice how the phase uncertainty increases
+as the magnitude approaches zero. This is natural, as
+phase is not well defined if your magnitude is on the origin.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">mag</span><span class="o">.</span><span class="n">nom</span><span class="p">[</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">],</span>
+    <span class="n">mag</span><span class="o">.</span><span class="n">stdunc</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">cov</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Lin Magn k=</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1"> Uncertainty&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">nom</span><span class="p">[</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">],</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">stdunc</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">cov</span><span class="p">,</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="s1">&#39;nominal&#39;</span>
+    <span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Phase k=</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1"> Uncertainty (deg)&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<img src="../../_images/sphx_glr_plot_e00_SOL_003.png" srcset="../../_images/sphx_glr_plot_e00_SOL_003.png" alt="plot e00 SOL" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Text(47.097222222222214, 0.5, &#39;Phase k=2 Uncertainty (deg)&#39;)
+</pre></div>
+</div>
+</section>
+<section id="categorizing-uncertainties">
+<h3>Categorizing Uncertainties<a class="headerlink" href="#categorizing-uncertainties" title="Link to this heading">¶</a></h3>
+<p>The definitions we use have some string metadata attached
+to each uncertainty mechanisms. This metadata is stored in
+<cite>dut.covcats</cite>. Each linear uncertainty mechanism has been
+given an <cite>“Origin”</cite> designation we can use to group each
+mechanisms that belongs to a common source. By calling
+<cite>RMEMeas</cite> each mechanism that belongs to the same Origin
+is collected into a single larger, independent mechanism.
+By doing this, we see our uncertainties are dominated
+by the VNA drift, cable bend variations, connection
+repeatability, and the physical dimensions of our
+the primary standards used to define the calibration
+kit.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">grouped_mag</span> <span class="o">=</span> <span class="n">mag</span><span class="o">.</span><span class="n">categorize_by</span><span class="p">(</span><span class="s1">&#39;Origin&#39;</span><span class="p">)</span>
+<span class="n">grouped_phase</span> <span class="o">=</span> <span class="n">phase</span><span class="o">.</span><span class="n">categorize_by</span><span class="p">(</span><span class="s1">&#39;Origin&#39;</span><span class="p">)</span>
+<span class="n">total_mag_variance</span> <span class="o">=</span> <span class="n">grouped_mag</span><span class="o">.</span><span class="n">stdunc</span><span class="p">()</span><span class="o">.</span><span class="n">cov</span><span class="o">**</span><span class="mi">2</span>
+<span class="n">total_phase_variance</span> <span class="o">=</span> <span class="n">grouped_phase</span><span class="o">.</span><span class="n">stdunc</span><span class="p">()</span><span class="o">.</span><span class="n">cov</span><span class="o">**</span><span class="mi">2</span>
+<span class="n">mag_variance</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">phase_variance</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">fig</span><span class="p">,</span><span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">um</span> <span class="ow">in</span> <span class="n">grouped_mag</span><span class="o">.</span><span class="n">umech_id</span><span class="p">:</span>
+    <span class="n">mag_var_i</span> <span class="o">=</span> <span class="n">grouped_mag</span><span class="o">.</span><span class="n">usel</span><span class="p">(</span><span class="n">umech_id</span> <span class="o">=</span> <span class="p">[</span><span class="n">um</span><span class="p">])</span><span class="o">.</span><span class="n">stdunc</span><span class="p">()</span><span class="o">.</span><span class="n">cov</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">phase_var_i</span> <span class="o">=</span> <span class="n">grouped_phase</span><span class="o">.</span><span class="n">usel</span><span class="p">(</span><span class="n">umech_id</span> <span class="o">=</span> <span class="p">[</span><span class="n">um</span><span class="p">])</span><span class="o">.</span><span class="n">stdunc</span><span class="p">()</span><span class="o">.</span><span class="n">cov</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">mag_variance</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mag_var_i</span><span class="o">/</span><span class="n">total_mag_variance</span><span class="o">*</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">phase_variance</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">phase_var_i</span><span class="o">/</span><span class="n">total_phase_variance</span><span class="o">*</span><span class="mi">100</span><span class="p">)</span>
+
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">stackplot</span><span class="p">(</span><span class="n">dut</span><span class="o">.</span><span class="n">nom</span><span class="p">[</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">],</span> <span class="n">mag_variance</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">grouped_mag</span><span class="o">.</span><span class="n">umech_id</span><span class="p">)</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">stackplot</span><span class="p">(</span><span class="n">dut</span><span class="o">.</span><span class="n">nom</span><span class="p">[</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">],</span> <span class="n">mag_variance</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">grouped_phase</span><span class="o">.</span><span class="n">umech_id</span><span class="p">)</span>
+
+<span class="n">handles</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_legend_handles_labels</span><span class="p">()</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">handles</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper center&#39;</span><span class="p">,</span> <span class="n">ncols</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span>
+
+<span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Frequency (GHz)&#39;</span><span class="p">)</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Mag (</span><span class="si">% o</span><span class="s1">f Variation)&#39;</span><span class="p">)</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Phase (</span><span class="si">% o</span><span class="s1">f Variation)&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<img src="../../_images/sphx_glr_plot_e00_SOL_004.png" srcset="../../_images/sphx_glr_plot_e00_SOL_004.png" alt="plot e00 SOL" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Text(38.347222222222214, 0.5, &#39;Phase (% of Variation)&#39;)
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 4.859 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-examples-plot-e00-sol-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/b730b228729767f4ba846bccfa231b30/plot_e00_SOL.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">plot_e00_SOL.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/622764e9353a52b5d4b468599bc49da5/plot_e00_SOL.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">plot_e00_SOL.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/574cb0e646abc1f2718d27232c57b7ff/plot_e00_SOL.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">plot_e00_SOL.zip</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+</section>
+</section>
+
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">rmellipse Gallery</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#examples">Examples</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#fundementals">Fundementals</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../RME_gettingstarted/index.html">Fundementals</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../for_contributors/index.html">For Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/auto_examples/Examples/plot_e00_SOL.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+<h3>Versions</h3>
+<ul>
+  <li><a href="../../../v0.3.4/index.html">v0.3.4</a></li>
+  <li><a href="plot_e00_SOL.html">stable</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../RME_gettingstarted/index.html" title="Fundementals"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Examples"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >rmellipse Gallery</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" >Examples</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">SOL Calibration</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2024, National Institute of Standards and Technology.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.0.
+    </div>
+  </body>
+</html>

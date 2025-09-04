@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Using the Developer Tools &#8212; Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=fd3f3429" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../_static/documentation_options.js?v=888cb622"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="API Reference" href="../autoapi/index.html" />
+    <link rel="prev" title="For Contributors" href="index.html" />
+<link rel="stylesheet" href="https://pages.nist.gov/nist-header-footer/css/nist-combined.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" type="text/javascript"></script>
+  <script src="https://pages.nist.gov/nist-header-footer/js/nist-header-footer.js" type="text/javascript" defer="defer"></script>
+
+
+<script type="text/javascript" src="https://pages.nist.gov/leaveNotice/js/jquery.leaveNotice-nist.min.js"></script>
+<script>
+$(document).ready(function(){
+  // Mark external (non-nist.gov) A tags with class "external"
+  //If the adress start with https and ends with nist.gov
+  var re_nist = new RegExp('^https?:\/\/((^\/)*\.)*nist\\.gov(\/|$)');
+  //Regex to find address that start with https
+  var re_absolute_address = new RegExp('^((https?:)?\/\/)');
+  $("a").each(function(){
+    var url=$(this).attr('href');
+    if(re_nist.test(url) || !re_absolute_address.test(url)){
+      $(this).addClass('local');
+    }else{
+      //This a href appears to be external, so tag it
+      $(this).addClass('external');
+    }
+  });
+  // Add leaveNotice to external A elements
+  $('a.external').leaveNotice();
+});
+</script>
+<link rel="stylesheet" type="text/css" href="https://pages.nist.gov/leaveNotice/css/jquery.leaveNotice.css" />
+
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../autoapi/index.html" title="API Reference"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="For Contributors"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">For Contributors</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Using the Developer Tools</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+
+
+  <section id="using-the-developer-tools">
+<h1>Using the Developer Tools<a class="headerlink" href="#using-the-developer-tools" title="Link to this heading">¶</a></h1>
+<p>Clone the repo and run, from the root directory:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">uv sync</span>
+</pre></div>
+</div>
+<p>This will generate the virtual environment for the package.</p>
+<section id="local-tests">
+<h2>Local Tests<a class="headerlink" href="#local-tests" title="Link to this heading">¶</a></h2>
+<p>In git bash run:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">tools/test.sh</span>
+<span class="go">tools/test.sh open</span>
+</pre></div>
+</div>
+<p>The open command will launch a view of a webpage with
+missing code coverage highlighted.</p>
+</section>
+<section id="local-documentation">
+<h2>Local Documentation<a class="headerlink" href="#local-documentation" title="Link to this heading">¶</a></h2>
+<p>Clean the local documentation build (this needs to be run sometimes
+if you are modifying the documentation and it gets into a broken state). It will reset the build directories and the next call to
+build it will be completely from scratch.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">tools/docs.sh clean</span>
+</pre></div>
+</div>
+<p>To build the documentation.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">tools/docs.sh html</span>
+</pre></div>
+</div>
+<p>Serve the build files (this will freeze the console).
+Files are served on localhost on port 8000.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">tools/docs.sh serve</span>
+</pre></div>
+</div>
+<p>Open the webpage (in a seperate console).</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">tools/docs.sh open</span>
+</pre></div>
+</div>
+</section>
+<section id="code-profiling">
+<h2>Code Profiling<a class="headerlink" href="#code-profiling" title="Link to this heading">¶</a></h2>
+<p>You can profile test scripts. This will launch a localhost webpage
+on port 8080. Test scripts should go in the tests directory.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">tools/profile.sh tests/&lt;test_script_name.py&gt;</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../auto_examples/index.html">rmellipse Gallery</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">For Contributors</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Using the Developer Tools</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#local-tests">Local Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#local-documentation">Local Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#code-profiling">Code Profiling</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../autoapi/index.html">API Reference</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/for_contributors/dev_tools.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+<h3>Versions</h3>
+<ul>
+  <li><a href="dev_tools.html">v0.3.4</a></li>
+  <li><a href="../../stable/for_contributors/dev_tools.html">stable</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../autoapi/index.html" title="API Reference"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="For Contributors"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >For Contributors</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Using the Developer Tools</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2024, National Institute of Standards and Technology.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.0.
+    </div>
+  </body>
+</html>

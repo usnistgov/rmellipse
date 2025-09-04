@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Using Arbitrary Data Types &#8212; Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=fd3f3429" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../../_static/documentation_options.js?v=888cb622"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="For Contributors" href="../../for_contributors/index.html" />
+    <link rel="prev" title="Using Non-Vectorized Propagation" href="plot_e05_vectorizing.html" />
+<link rel="stylesheet" href="https://pages.nist.gov/nist-header-footer/css/nist-combined.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" type="text/javascript"></script>
+  <script src="https://pages.nist.gov/nist-header-footer/js/nist-header-footer.js" type="text/javascript" defer="defer"></script>
+
+
+<script type="text/javascript" src="https://pages.nist.gov/leaveNotice/js/jquery.leaveNotice-nist.min.js"></script>
+<script>
+$(document).ready(function(){
+  // Mark external (non-nist.gov) A tags with class "external"
+  //If the adress start with https and ends with nist.gov
+  var re_nist = new RegExp('^https?:\/\/((^\/)*\.)*nist\\.gov(\/|$)');
+  //Regex to find address that start with https
+  var re_absolute_address = new RegExp('^((https?:)?\/\/)');
+  $("a").each(function(){
+    var url=$(this).attr('href');
+    if(re_nist.test(url) || !re_absolute_address.test(url)){
+      $(this).addClass('local');
+    }else{
+      //This a href appears to be external, so tag it
+      $(this).addClass('external');
+    }
+  });
+  // Add leaveNotice to external A elements
+  $('a.external').leaveNotice();
+});
+</script>
+<link rel="stylesheet" type="text/css" href="https://pages.nist.gov/leaveNotice/css/jquery.leaveNotice.css" />
+
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../for_contributors/index.html" title="For Contributors"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="plot_e05_vectorizing.html" title="Using Non-Vectorized Propagation"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >rmellipse Gallery</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">Fundementals</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Using Arbitrary Data Types</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+
+
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-rme-gettingstarted-plot-e06-using-other-datatypes-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="using-arbitrary-data-types">
+<span id="sphx-glr-auto-examples-rme-gettingstarted-plot-e06-using-other-datatypes-py"></span><h1>Using Arbitrary Data Types<a class="headerlink" href="#using-arbitrary-data-types" title="Link to this heading">¶</a></h1>
+<p>The RME was built to work best with complex and float data-types inside
+xarray DataArrays. However, the propagation algorithms are agnostic
+to what’s inside the DataArray so the basic functionality of wrapping a function
+in a propagator will work regardless of what data type you put in them.</p>
+<p>Basic propagation will work with arbitrary data types. However,
+quality of life features like common grid handling, grouping by
+categories, combining repeated measurements, calculating standard uncertainty,
+and computing confidence intervals may not work depending on the
+data type you use. You may have to recreate that functionality manually, and we
+strongly recommend testing your data type with the propagator to ensure it
+functions as you expect.</p>
+<section id="setup">
+<h2>Setup<a class="headerlink" href="#setup" title="Link to this heading">¶</a></h2>
+<p>First lets create a custom class and use it to create a RMEMeas object.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rmellipse.uobjects</span><span class="w"> </span><span class="kn">import</span> <span class="n">RMEMeas</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rmellipse.propagators</span><span class="w"> </span><span class="kn">import</span> <span class="n">RMEProp</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">myclass</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="n">val</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;my val is &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">val</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">o</span><span class="p">):</span>
+        <span class="n">newval</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">+</span> <span class="n">o</span><span class="o">.</span><span class="n">val</span>
+        <span class="k">return</span> <span class="n">myclass</span><span class="p">(</span><span class="n">newval</span><span class="p">)</span>
+
+
+<span class="n">nominal</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">myclass</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+<span class="n">perturbed</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">myclass</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">myclass</span><span class="p">(</span><span class="mf">0.1</span><span class="p">))</span>
+
+<span class="n">meas</span> <span class="o">=</span> <span class="n">RMEMeas</span><span class="o">.</span><span class="n">from_nom</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">nominal</span><span class="p">)</span>
+<span class="n">meas</span><span class="o">.</span><span class="n">add_umech</span><span class="p">(</span><span class="s1">&#39;sample_meas&#39;</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">meas</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>test with nominal:
+&lt;xarray.DataArray ()&gt; Size: 8B
+array(my val is 2, dtype=object)
+</pre></div>
+</div>
+</section>
+<section id="propagation">
+<h2>Propagation<a class="headerlink" href="#propagation" title="Link to this heading">¶</a></h2>
+<p>Because our custom class can be added together, we can use a vectorized
+propagator with them.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">myprop</span> <span class="o">=</span> <span class="n">RMEProp</span><span class="p">(</span><span class="n">sensitivity</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">vectorize</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+<span class="nd">@myprop</span><span class="o">.</span><span class="n">propagate</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span>
+
+
+<span class="nb">print</span><span class="p">(</span><span class="n">add</span><span class="p">(</span><span class="n">meas</span><span class="p">,</span> <span class="n">meas</span><span class="p">))</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>add with nominal:
+&lt;xarray.DataArray ()&gt; Size: 8B
+array(my val is 4, dtype=object)
+</pre></div>
+</div>
+<p>Sometimes you may need to take the object out of the xarray so you can
+operate on it or pass it through other functions.
+In that case you just need to put it
+back into a DataArray with the parameter locations before you output it.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="nd">@myprop</span><span class="o">.</span><span class="n">propagate</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">add2</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="c1"># pre-allocate an output</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="c1"># take the custom classes out of the xarray object and operate on them</span>
+    <span class="n">new_vals</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span> <span class="o">+</span> <span class="n">y</span><span class="o">.</span><span class="n">values</span>
+    <span class="c1"># put them back in the DataArray we pre-allocated</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="n">new_vals</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="n">new_meas</span> <span class="o">=</span> <span class="n">add2</span><span class="p">(</span><span class="n">meas</span><span class="p">,</span> <span class="n">meas</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">new_meas</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>add2 with nominal:
+&lt;xarray.DataArray ()&gt; Size: 8B
+array(my val is 4, dtype=object)
+</pre></div>
+</div>
+<p>Next we can convert our data type to a float so we can
+use other built in features, like calculating standard uncertainty.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="nd">@myprop</span><span class="o">.</span><span class="n">propagate</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_float</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="n">xi</span><span class="o">.</span><span class="n">val</span> <span class="k">for</span> <span class="n">xi</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="n">new_meas</span> <span class="o">=</span> <span class="n">to_float</span><span class="p">(</span><span class="n">new_meas</span><span class="p">)</span>
+<span class="n">lin_unc</span><span class="p">,</span> <span class="n">mc_un</span> <span class="o">=</span> <span class="n">new_meas</span><span class="o">.</span><span class="n">stdunc</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">new_meas</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">lin_unc</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>to_float with nominal:
+&lt;xarray.DataArray ()&gt; Size: 8B
+array(4.)
+&lt;xarray.DataArray ()&gt; Size: 8B
+array(0.2)
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.086 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-rme-gettingstarted-plot-e06-using-other-datatypes-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/2a4fb23685c068411786316452f0beb7/plot_e06_using_other_datatypes.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">plot_e06_using_other_datatypes.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/8605c6dcfab7e0cd45bf3d0f8e73cbbf/plot_e06_using_other_datatypes.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">plot_e06_using_other_datatypes.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/0b83baaa04020fbd14750e8067b2af09/plot_e06_using_other_datatypes.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">plot_e06_using_other_datatypes.zip</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+</section>
+
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">rmellipse Gallery</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#examples">Examples</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#fundementals">Fundementals</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../Examples/index.html">Examples</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Fundementals</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../for_contributors/index.html">For Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/auto_examples/RME_gettingstarted/plot_e06_using_other_datatypes.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+<h3>Versions</h3>
+<ul>
+  <li><a href="../../../v0.3.4/index.html">v0.3.4</a></li>
+  <li><a href="plot_e06_using_other_datatypes.html">stable</a></li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../for_contributors/index.html" title="For Contributors"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="plot_e05_vectorizing.html" title="Using Non-Vectorized Propagation"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Rocky Mountain Ellipse 0.3.5.dev4+ga287edda7 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >rmellipse Gallery</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" >Fundementals</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Using Arbitrary Data Types</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2024, National Institute of Standards and Technology.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.0.
+    </div>
+  </body>
+</html>

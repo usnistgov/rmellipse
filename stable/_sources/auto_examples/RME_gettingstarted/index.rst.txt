@@ -1,0 +1,135 @@
+
+
+.. _sphx_glr_auto_examples_RME_gettingstarted:
+
+Fundementals
+------------
+
+Fundementals you should know to get started with Rocky Mountain Ellipse.
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This is a basic example demonstrating how to create and use RMEMeas objects. In this example we go over different ways to initialize one from scratch, how to create linear uncertainty mechanisms, and how to create probability distributions for Monte Carlo analysis. Indexing and interpolating are also briefly discussed.">
+
+.. only:: html
+
+  .. image:: /auto_examples/RME_gettingstarted/images/thumb/sphx_glr_plot_e00_creating_RMEMeas_objects_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_RME_gettingstarted_plot_e00_creating_RMEMeas_objects.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">RMEMeas Objects</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This is a basic example demonstrating how to propagate RMEMeas objects through functions.">
+
+.. only:: html
+
+  .. image:: /auto_examples/RME_gettingstarted/images/thumb/sphx_glr_plot_e01_basic_uncertainty_analysis_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_RME_gettingstarted_plot_e01_basic_uncertainty_analysis.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Basics of RME Propagation</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This is a basic example demonstrating how to read and write a RMEMeas object.">
+
+.. only:: html
+
+  .. image:: /auto_examples/RME_gettingstarted/images/thumb/sphx_glr_plot_e03_reading_writing_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_RME_gettingstarted_plot_e03_reading_writing.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Reading/Writing RMEMeas Objects</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="A common problem is when multiple inputs into a workflow share a common dimension like frequency, but those frequency grids aren&#x27;t aligned properly. This often results in having to manually trim down arrays based on a known frequency list.">
+
+.. only:: html
+
+  .. image:: /auto_examples/RME_gettingstarted/images/thumb/sphx_glr_plot_e04_common_grid_handling_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_RME_gettingstarted_plot_e04_common_grid_handling.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Common Grid Handling</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Here we go over how to use a propagator with the vectorized setting turned off.">
+
+.. only:: html
+
+  .. image:: /auto_examples/RME_gettingstarted/images/thumb/sphx_glr_plot_e05_vectorizing_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_RME_gettingstarted_plot_e05_vectorizing.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Using Non-Vectorized Propagation</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="The RME was built to work best with complex and float data-types inside xarray DataArrays. However, the propagation algorithms are agnostic to what&#x27;s inside the DataArray so the basic functionality of wrapping a function in a propagator will work regardless of what data type you put in them.">
+
+.. only:: html
+
+  .. image:: /auto_examples/RME_gettingstarted/images/thumb/sphx_glr_plot_e06_using_other_datatypes_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_RME_gettingstarted_plot_e06_using_other_datatypes.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Using Arbitrary Data Types</div>
+    </div>
+
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+
+
+.. toctree::
+   :hidden:
+
+   /auto_examples/RME_gettingstarted/plot_e00_creating_RMEMeas_objects
+   /auto_examples/RME_gettingstarted/plot_e01_basic_uncertainty_analysis
+   /auto_examples/RME_gettingstarted/plot_e03_reading_writing
+   /auto_examples/RME_gettingstarted/plot_e04_common_grid_handling
+   /auto_examples/RME_gettingstarted/plot_e05_vectorizing
+   /auto_examples/RME_gettingstarted/plot_e06_using_other_datatypes
+

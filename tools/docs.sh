@@ -25,7 +25,7 @@ elif [ $1 = "html-multiversioned" ]
 then
 	set -e
 	uv run sphinx-multiversion docs/source docs/build
-	cp docs/source/reroute_to_stable.html	stable/index.html
+	cp docs/source/reroute_to_stable.html	docs/build/index.html
 elif [ $1 = "html-multiversioned-ci" ]
 then
 	set -e

@@ -28,6 +28,7 @@ extensions = [
     "sphinx_click",
     "sphinx.ext.githubpages",
     "sphinx_multiversion",
+    "sphinx.ext.viewcode"
 ]
 
 # napoleon settings

@@ -82,10 +82,10 @@ def test_from_dist():
 def test_interp():
     # makes coordinate between 0 and 1
     m1 = make_example_meas(nom_shape=(3,3), rand_nom= True, rand_coords=True,N_mc_samples=10)
-    out_of_bounds_coords = np.array([-.5,0.5,1.5])
+    out_of_bounds_coords = np.array([-.5,0.5,1.5])   
     m1_oob = m1.interp(d1 = out_of_bounds_coords)
     assert all(m1_oob.cov.d1 == m1.cov.d1)
-
+    
 def test_validate_conventions():
     # this should fail because first label is wrong
     with pytest.raises(RMEMeasFormatError):
@@ -97,7 +97,7 @@ def test_validate_conventions():
             mc = None
         )
         bad_cov._validate_conventions()
-
+    
     # this should fail because umech_id is in the wrong spot
     with pytest.raises(RMEMeasFormatError):
         bad_cov = RMEMeas(
@@ -108,7 +108,7 @@ def test_validate_conventions():
             mc = None
         )
         bad_cov._validate_conventions()
-
+    
     # this should fail because covdofs plocs are named inproperly
     with pytest.raises(RMEMeasFormatError):
         bad_cov = RMEMeas(
@@ -120,7 +120,7 @@ def test_validate_conventions():
         )
 
         bad_cov._validate_conventions()
-
+    
     # this should fail because covdofs plocs don't match cov
     with pytest.raises(RMEMeasFormatError):
         bad_cov = RMEMeas(
@@ -132,7 +132,7 @@ def test_validate_conventions():
         )
 
         bad_cov._validate_conventions()
-
+    
     # this should fail because covdofs ploc dim is in the wrong spot
     with pytest.raises(RMEMeasFormatError):
         bad_cov = RMEMeas(
@@ -155,7 +155,7 @@ def test_validate_conventions():
             cov = None
         )
         bad_cov._validate_conventions()
-
+    
     # this should fail because umech_id doesn't exist in mc
     with pytest.raises(RMEMeasFormatError):
         bad_cov = RMEMeas(
@@ -166,7 +166,7 @@ def test_validate_conventions():
         )
         print(bad_cov)
         bad_cov._validate_conventions()
-
+    
     # this should fail because umech_id doesn't exist in cov
     with pytest.raises(RMEMeasFormatError):
         bad_cov = RMEMeas(
@@ -179,7 +179,7 @@ def test_validate_conventions():
         )
         print(bad_cov)
         bad_cov._validate_conventions()
-
+    
     # this should fail because first label is wrong
     with pytest.raises(RMEMeasFormatError):
         bad_cov = RMEMeas(
@@ -190,7 +190,7 @@ def test_validate_conventions():
             cov = None
         )
         bad_cov._validate_conventions()
-
+    
 
         # this should fail because covdofs plocs are named inproperly
     with pytest.raises(RMEMeasFormatError):
@@ -203,7 +203,7 @@ def test_validate_conventions():
         )
 
         bad_cov._validate_conventions()
-
+    
     # this should fail because covdofs plocs don't match cov
     with pytest.raises(RMEMeasFormatError):
         bad_cov = RMEMeas(
@@ -215,7 +215,7 @@ def test_validate_conventions():
         )
 
         bad_cov._validate_conventions()
-
+    
     # this should fail because plocs is in the wrong spot
     with pytest.raises(RMEMeasFormatError):
         bad_cov = RMEMeas(
@@ -227,7 +227,7 @@ def test_validate_conventions():
         )
 
         bad_cov._validate_conventions()
-
+    
 
 def test_overload():
     prop = RMEProp(sensitivity=True)
@@ -262,7 +262,7 @@ def test_overload():
 
     # __rsub__
     assert np.isclose((f1-m2).nom[0], f1-f2)
-
+    
     # __trudiv__
     assert np.isclose((m1/m2).nom[0], f1/f2)
 
@@ -449,7 +449,7 @@ def test_h5_group_to_dict():
     d = RMEMeas.dict_from_group(path)
     for (k,v),n in zip(d.items(), names):
         assert k == n
-
+    
     # should work with groups, and should ignore something thats
     # not a MUFmeas
         with h5py.File(path, 'w') as hf:
@@ -659,7 +659,5 @@ def test_grouping():
 
 if __name__ == '__main__':
     test_overload()
-    test_h5_encoding()
-    test_validate_conventions()
     a = np.array(1)
     print(a.size)

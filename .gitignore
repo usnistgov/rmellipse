@@ -2,7 +2,6 @@ __pycache__/
 rmellipse.egg-info/
 sample_data/
 scripts/dummy_datasets
-docs/pages
 docs/build/
 docs/source/auto_examples/
 docs/source/_autosummary/
@@ -11,12 +10,9 @@ docs/examples/RME_gettingstarted/my_s1p_Support
 docs/examples/RME_gettingstarted/meas.hdf5
 docs/examples/RME_gettingstarted/my_s1p.meas
 htmlcov/
-public/
 uv.lock
 ignore_me/
 .vscode/
-*.rme/
-
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -38,7 +34,6 @@ lib/
 lib64/
 parts/
 sdist/
-code-profiles/
 var/
 wheels/
 share/python-wheels/
@@ -46,7 +41,6 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-tests/report.xml
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

@@ -1,99 +1,58 @@
 # Rocky Mountain Ellipse
-Rocky Mountain Ellipse (RME) is a software package designed to provide an explicit digital record of the metrological traceability of a measurement result. In other words, RME will allows users to build a record that describes how a measurement result can be related to a reference through a documented unbroken chain of calibrations, each contributing to the [measurement uncertainty](https://jcgm.bipm.org/vim/en/2.41.html). To show the traceability of measurements, RME provides a flexible, explicit system to organize and annotate scientific data and data analysis workflows.Because measurement uncertainty is closely related to traceability, RME allows users to track how the uncertainty of a measurement results derives from other measurements by providing tools to facilitate measurement uncertainty propagation (linear finite-difference and Monte-Carlo) through arbitrary Python functions. The system is compatible with the BIPM Guide to the expression of uncertainty in measurement (GUM). RME is intended to be part of a [FAIR](https://www.go-fair.org/fair-principles/) software ecosystem that will facilitate re-use of code and data. This vision includes an online archive that could eventually store records of NIST’s entire traceability chain, and beyond. As part of that vision, this package focuses on the development of three core utilities:
+This package is a tool for tracable uncertainty analysis. It is backwards compatable with the
+[Microwave Uncertainty Framework](https://www.nist.gov/services-resources/software/wafer-calibration-software)
+and built using the [xarray](https://docs.xarray.dev/en/stable/) package.
 
 
-1. arrschema, a Python module for annotating multi-dimensional array like data-structures with JSON documents, and validating in-memory representations of those structures.
+### Recommendations
+It is recommended to download [HDFView](https://www.hdfgroup.org/downloads/hdfview/) if you haven't already.
 
-2. RMEMeas and RMEProp, Python classes for correlated uncertainty propagation using [XArray](https://docs.xarray.dev/en/stable/).
+It is also recommended to briefly familiarize yourself with the [xarray](https://docs.xarray.dev/en/stable/) package.
 
-3. A command line tool for producing, releasing, and managing datasets stored and obtained from a [CDCS](https://www.nist.gov/itl/ssd/information-systems-group/configurable-data-curation-system-cdcs)  based data archive.
-
-
-## Installation
-Install the most recent stable build with [uv](https://docs.astral.sh/uv/):
-
+### Installing with pip
 ```
-uv add git+https://github.com/usnistgov/rmellipse --branch stable
+pip install rmellipse
 ```
 
-Or with pip:
-
+### Installing from source with pip
+Clone this repo and switch to the cloned directory. In your virtual env,
+install in developer mode.
 ```
-pip install git+https://github.com/usnistgov/rmellipse@stable
-```
-
-## Developer Tools
-It is assumed you have the following programs installed on your computer.
-
-* [uv](https://docs.astral.sh/uv/) for package management
-* [git bash](https://git-scm.com/downloads) or similar terminal emulator to run shell scripts if you are on windows.
-
-Clone the repo and run, from the root directory:
-```
-uv sync
-```
-This will generate the virtual environment for the package.
-
-### Running Local Tests
-In a bash terminal, run:
-
-```
-tools/test.sh
-tools/test.sh open
-```
-This should execute all the defined tests with
-[pytest](https://docs.pytest.org/en/stable/). In addition, the
-open command will open a webpage with detailed reports about
-code coverage.
-
-### Building Local Documentation
-Clean the local documentation build (this needs to be run sometimes
-if you are modifying the documentation and it gets into a broken state). It will reset the build directories and the next call to
-build it will be completely from scratch.
-```
-tools/docs.sh clean
+pip install -e .
 ```
 
-To build a copy of the current state
-of the documentation with your changes run:
-```
-tools/docs.sh html
-```
-
-To build the full documentation with tagged
-versions and the most recent stable and development
-changes (this takes a while and is usually only run
-as part of the release jobs) run:
+Add additional dependencies for documentation and unit tests.
 
 ```
-tools/docs.sh html-multiversioned
+pip install -r dev_deps.txt
 ```
 
-To open the documentation (you may have to call open
-in a newe console) run
+## Building documentation locally
+In the command prompt, from the cloned directory.
 
 ```
-tools/docs.sh serve
-tools/docs.sh open
-```
+make_docs clean
+make_docs html
+``` 
 
-This will serve a local copy of the documentation on your local host,
-and the open command will launch your default web browser directly to that page.
-Currently, this web page is on port 8000.
+## Running tests locally
 
-### Code Profiling
-If you are writing a test script, you can run it in a code
-profile from the cloned directory. This will open a webpage
-to navigate the statistics of your tests script once it
-complete.
-
+With your virtual-enviornment activated run:
 ```
-tools/profile.sh <path/to/script.py>
+test
 ```
+This will generate a coverage report in the terminal, as well searchable html coverage report in
+[htmlcov/index.html](htmlcov/index.html) that highlights the
+lines of code in each file that weren't covered by the tests.
 
 ## Authors
 
 Contributors names and contact info
 
 Daniel C. Gray, Zenn C. Roberts, Aaron M. Hagerstrom
+
+## Version History
+
+* 0.1
+    * Initial development as an internal tool at NIST's RF Technology Division.
 

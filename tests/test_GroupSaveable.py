@@ -3,7 +3,6 @@ from pathlib import Path
 import pytest
 import h5py as h5
 import xarray as xr
-from rmellipse.uobjects import RMEMeas
 
 LOCAL = Path(__file__).parents[0]
 MUTABLE_DIR= LOCAL/'mutable'
@@ -34,17 +33,6 @@ class Saveable(GroupSaveable):
         self.add_child(key = 'kid', data = self.kid )
     def __eq__(self, other):
         return all([si == oi for si,oi in zip(self.vals,other.vals)])
-
-class Childless(GroupSaveable):
-    def __init__(self, parent = None, attrs = None):
-        if attrs is None: 
-            attrs = {'name':'i_am_bereft', 'is_big_object':False,'my_metadata':'filepathprobably'}
-        GroupSaveable.__init__(       
-            self,     
-            parent=None,
-            attrs=attrs
-        )
-
 
 class SaveableIsh(GroupSaveable):
     def __init__(self, name: str):
@@ -105,7 +93,7 @@ def test_datasets():
 
 def test_dicts():
     prims = [
-        {'1':1,'2':2},{1:1,2:2},{1:1,'1':2}
+        {'1':1,'2':2},{1:1,1:2},{1:1,'1':2}
     ]
     with h5.File(TEST_FILE,'w') as f:
         grp = f.require_group('dicts')
@@ -173,61 +161,7 @@ def test_slice():
             assert p == read
             del f['myobj']
 
-def test_rmemeas():
-    import rmellipse.uobjects as obj
-    a0 = obj.RMEMeas.from_dist('a',1,1)
-    with h5.File(TEST_FILE,'a') as f:
-        save_object(f,a0.name,a0)
-        a1 = load_object(f['a'], load_big_objects=True)
-    assert (a1.cov == a0.cov.data).all()
-    assert (a1.mc == a0.mc.data).all()
 
-def test_rmemeas_list():
-    import rmellipse.uobjects as obj
-    a0 = obj.RMEMeas.from_dist('a',1,1)
-    b0 = obj.RMEMeas.from_dist('a',1,1)
-
-    my_list = [a0, b0]
-    with h5.File(TEST_FILE,'a') as f:
-        save_object(f,'my_list',my_list)
-        ml1 = load_object(f['my_list'], load_big_objects=True)
-    
-    for ai,bi in zip(my_list, ml1):
-        print(bi.name, ai.name)
-        assert ai.name == bi.name
-        assert (ai.cov == bi.cov.data).all()
-        assert (ai.mc == bi.mc.data).all()
-
-def test_rmemeas_dict():
-    import rmellipse.uobjects as obj
-    a0 = obj.RMEMeas.from_dist('a',1,1)
-    b0 = obj.RMEMeas.from_dist('b',1,1)
-
-    my_dict = {a0.name: a0, b0.name: b0}
-    with h5.File(TEST_FILE,'a') as f:
-        save_object(f,'my_d',my_dict)
-        myd = load_object(f['my_d'], load_big_objects=True)
-        a1 = RMEMeas.from_h5(f['my_d']['a'])
-    
-    for ai,bi in zip(my_dict.values(), myd.values()):
-        print(bi.name, ai.name)
-        assert ai.name == bi.name
-        assert (ai.cov == bi.cov.data).all()
-        assert (ai.mc == bi.mc.data).all()
-    
-    for ai,bi in zip(my_dict.keys(), myd.keys()):
-        assert ai == bi
-
-def test_childless():
-    widow = Childless()
-    with h5.File(TEST_FILE,'a') as f:
-        save_object(f,'widow',widow)
-        load_object(f['widow'])
 
 if __name__ == '__main__':
-    with h5.File(TEST_FILE,'w') as f:
-        pass
-    test_rmemeas()
-    test_rmemeas_list()
-    test_rmemeas_dict()
-    test_childless()
+    test_class()

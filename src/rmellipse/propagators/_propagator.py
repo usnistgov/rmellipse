@@ -70,27 +70,3 @@ class Propagator(_abc.ABC):
         """
         # TODO: add a super method for spying
         # Wokflow needs to be global (accessed from here), maybe singleton
-        
-    @_abc.abstractmethod
-    def combine_across_dim(self, measurement, dim):
-        """
-        Combine realizations of the same measurement into a single measurement.
-
-        Adds uncertainty based on the inputs.
-
-        Parameters
-        ----------
-        function: Callable
-            any function that should be wrapped to be propagateable.
-            
-        measurement: TYPE
-            The measurement object.
-            
-        dim: string
-            Dimension to average across.
-
-        Returns
-        -------
-        combined measurement.
-
-        """

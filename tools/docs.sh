@@ -10,7 +10,7 @@ then
 	uv run -m http.server --bind 127.0.0.1 8000 -d docs/build
 elif [ $1 = "open" ]
 then
-	explorer "http://127.0.0.1:8000/stable"
+	explorer "http://127.0.0.1:8000"
 elif [ $1 = "clean" ]
 then
 	set -e

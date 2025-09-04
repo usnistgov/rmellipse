@@ -1,13 +1,13 @@
 """
 Module for creating and interacting with RMEMeas objects.
 
-RMEMeas objects are the
+RMEMeas objects are the 
 """
 # These need to be imported this way to delay access
 # to the underlying classes to avoid a circular import error
 import rmellipse.uobjects as uobj
 import rmellipse.propagators as propagators
-import warnings
+
 from rmellipse.utils import GroupSaveable, load_object
 import h5py
 import xarray as xr
@@ -29,7 +29,7 @@ _uncoutput = namedtuple('RMEUncTuple', 'cov mc')
 
 __all__ = ['RMEMeas', 'RMEMeasFormatError']
 
-UMECHID_DTYPE = np.dtype('U36')
+
 class RMEMeasFormatError(Exception):
     """Error in formatting of data inside RMEMeas
 
@@ -84,18 +84,16 @@ class RMEMeas(uobj.UObj, GroupSaveable):
     """
 
     def __init__(self,
-                 name: str = None,
+                 name: str = 'RMEMeas',
                  cov: xr.DataArray = None,
                  mc: xr.DataArray = None,
                  covdofs: xr.DataArray = None,
                  covcats: xr.DataArray = None,
-                 parent: GroupSaveable = None,
-                 attrs: dict = None
                  ):
         """
         Initialize a RMEMeas object.
 
-        Please refer to xarray's documentation for information about how to
+        Please refer to xarray's documentation for information about how to 
         use DataArrays, and how to define coordinates and dimensions.
 
         If covdofs is not provided, distributions of linear uncertainty
@@ -111,7 +109,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             are stored along the first dimension (axis 0) of the DataArray, where
             the first index of axis 0 is the nominal data set, and the rest of
             the indexes along that dimension are perturbed by one standard deviation
-            (i.e. 1 standard uncertainty).
+            (i.e. 1 standard uncertainty). 
 
             The first dimension must be called 'umech_id', and the
             first label of the 'parameter_dimensions' coordinate must be
@@ -134,7 +132,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             DataArray with the dimension called 'umech_id' and
             the coordinate set should be identical to the
             'umech_id' coordinate in cov. If covariance data
-            is provided and covdofs is not, one will be created that assumes
+            is provided and covdofs is not, one will be created that assumes 
             all linear mechanisms have infinite degrees of freedom (i.e.
             gaussian distributions). The default is None.
         covcats : xr.DataArray, optional
@@ -146,29 +144,19 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         """
         # init as a RMEMeas object
         uobj.UObj.__init__(self)
-        if name is None:
-            name = attrs['name']
-        if attrs is None:
-            attrs={'name': name, 'is_big_object': True}
-
-
 
         # initialize as a group saveable thing
         GroupSaveable.__init__(
             self,
             name=name,
-            parent=parent,
-            attrs=attrs
+            parent=None,
+            attrs={'name': name, 'is_big_object': True}
         )
 
         # assumes first dimension are uncertainty mechanisms
         self.name = name  # name of the mechanism
         self.cov = cov  # name of the covariance
         self.mc = mc  # name of the montecarlo data
-        self.covdofs = covdofs
-        self.covcats = covcats
-
-
 
         # if covariance data is provided but not DOF information is provide
         # default to inf degrees of freedom
@@ -187,25 +175,10 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             cats = ['Type']
             coords = {'umech_id': self.umech_id,
                       'categories': cats}
-            values = np.ones((len(self.umech_id), 1)).astype(UMECHID_DTYPE)
+            values = np.ones((len(self.umech_id), 1)).astype(str)
             values[...] = 'B'
             covcats = xr.DataArray(values, dims=dims, coords=coords)
         self.covcats = covcats
-
-
-        # enforce that the umech_id dimension
-        # is always the correct U36
-        for attr in ( self.covcats, self.covdofs, self.mc ,self.cov):
-            if attr is not None:
-                try:
-                    attr_dtype= attr.coords['umech_id'].dtype
-                except KeyError as e:
-                    raise RMEMeasFormatError(f'{attr} missing umech_id') from e
-                except AttributeError as e:
-                    raise RMEMeasFormatError(f'{attr} has no coordinates.') from e
-                if attr_dtype != UMECHID_DTYPE:
-                    attr.assign_coords({'umech_id':attr.coords['umech_id'].astype(UMECHID_DTYPE,copy = False)})
-        pass
 
         # enforce rule on name of uncertainty/montecarlo dimensions
         # self._validate_conventions()
@@ -282,22 +255,6 @@ class RMEMeas(uobj.UObj, GroupSaveable):
     def name(self, value):
         """Set the name of the RMEMeas object."""
         self.attrs['name'] = value
-
-    @property
-    def dims(self):
-        return self.nom.dims
-
-    @property
-    def shape(self):
-        return self.nom.shape
-
-    @property
-    def coords(self):
-        return self.nom.coords
-
-    @property
-    def dtype(self):
-        return self.nom.dtype
 
     def __str__(self):
         """Get the string representation of the RMEMeas object."""
@@ -393,13 +350,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
 
         """
         cov = nom.expand_dims({'umech_id': ['nominal']})
-        out = RMEMeas(name=name, cov=cov)
-        # these are special GROUP_SAVEABLE keys
-        ign = ['name', 'is_big_object', '__class__.__module__', '__class__.__name__', 'save_type', 'unique_id']
-        for k,v in cov.attrs.items():
-            if k not in ign:
-                out.attrs[k] = v
-        return out
+        return RMEMeas(name=name, cov=cov)
 
     @classmethod
     def from_dist(
@@ -589,11 +540,6 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             RMEMeas object.
 
         """
-        warnings.warn(
-            "from_h5() is deprecated and will be removed in 0.5.0, use rmellipse.utils.load_object instead.",
-            DeprecationWarning,
-            stacklevel=2 # Ensures the warning points to the caller's location
-        )
         class_name = group.attrs['__class__.__name__']
         if class_name == 'RMEMeas':
             umech_dim = 'umech_id'
@@ -694,11 +640,6 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         None.
 
         """
-        warnings.warn(
-        "to_h5() is deprecated and will be removed in 0.5.0, use rmellipse.utils.save_object instead.",
-        DeprecationWarning,
-        stacklevel=2 # Ensures the warning points to the caller's location
-        )
         try:
             oldname = self.name
             if name is not None:
@@ -981,7 +922,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             Name of new mechanism, must be unique.
         value : xr.DataArray
             Array of nominal+1 standard uncertainty of new mechanism.
-            If value has the same size as the nominal data, the function will insert a
+            If value has the same size as the nominal data, the function will insert a 
             new dimension at axis zero before concatenating to the covariance data.
         dof: float,optional
             Degrees of freedom associated with the uncertainty mechanism.
@@ -1091,7 +1032,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         Generate the lower, upper confidence intervals for a fractional percent confidence.
 
         Confidence intervals are generate using the linear sensitivity analysis
-        data (.cov) using a student-t distribution with means of .nominal, and
+        data (.cov) using a student-t distribution with means of .nominal, and 
         a scale of 1 standard uncertainty.
 
         Parameters
@@ -2010,7 +1951,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             To fit along existing dimensions of the calling object, coords can also be specified as a str or sequence of strs.
         func : callable
            User specified function in the form f(x, *params) which returns a numpy array of length len(x).
-           Params are the fittable parameters which are optimized by scipy curve_fit.
+           Params are the fittable parameters which are optimized by scipy curve_fit. 
            x can also be specified as a sequence containing multiple coordinates, e.g. f((x0, x1), *params).
         reduce_dims: str | Iterable | None, optional
             Additional dimension(s) over which to aggregate while fitting. For example, calling ds.curvefit(coords=’time’, reduce_dims=[‘lat’, ‘lon’], …)

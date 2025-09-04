@@ -1,6 +1,6 @@
 """
-SOL Calibration in Python
-=========================
+SOL Calibration
+===============
 
 This example  a performs a short,  open, and load (SOL) calibration with a linear
 sensitivity analysis.
@@ -10,7 +10,7 @@ tab separated text files of our calibration standards
 and of our DUT - which is a load. We also have some
 data-defined models of our calibration standards stored in the HDF5 format. These models contain some
 linear uncertainty mechanisms which carry some category information describing their origin.
-This tutorial will walk through defining file reader functions, analysis functions,
+This tutorial will walk through defining file reader functions, analysis functions, 
 and performing the analysis with and without uncertainties.
 
 The data for this example is stored in th 'sol_demo_data' folder of the source code repository hosted
@@ -71,7 +71,7 @@ def from_s1p(path) -> xr.DataArray:
     coords = {
         'Frequency (GHz)': arr[:,0]
         }
-    # convert to 1 port complex data
+    # convert to 1 port complex data 
     values = arr[:,1] + 1.0j*arr[:,2]
     # create an xarray data set
     out = xr.DataArray(
@@ -126,7 +126,7 @@ def SOL_cal(**stds: xr.DataArray) -> xr.DataArray:
     # 3 output has 3
     result = np.zeros(output_shape, complex)
     result = xr.DataArray(
-        result,
+        result, 
         dims = output_dims,
         coords = output_coords
         )
@@ -192,7 +192,7 @@ print(errbox)
 # Correcting Raw Data
 # ^^^^^^^^^^^^^^^^^^^
 #
-# Finally, lets write a function that takes in our error box
+# Finally, lets write a function that takes in our error box 
 # and corrects a raw measurement.
 
 def SOL_correct(errorbox: xr.DataArray, device: xr.DataArray) -> xr.DataArray:
@@ -327,8 +327,8 @@ phs_lower = phase.uncbounds(k = k, deg = True).cov
 phs_upper = phase.uncbounds(k = -k, deg = True).cov
 
 ax[0].fill_between(
-    dut.nom['Frequency (GHz)'],
-    y1 = mag_lower,
+    dut.nom['Frequency (GHz)'], 
+    y1 = mag_lower, 
     y2 = mag_upper,
     color = 'k',
     alpha = 0.5,
@@ -336,8 +336,8 @@ ax[0].fill_between(
     )
 
 ax[1].fill_between(
-    dut.nom['Frequency (GHz)'],
-    y1 = phs_lower,
+    dut.nom['Frequency (GHz)'], 
+    y1 = phs_lower, 
     y2 = phs_upper,
     alpha = 0.5,
     color = 'k',
@@ -352,7 +352,7 @@ ax[0].plot(
 ax[0].set_ylabel('Linear Magnitude')
 
 ax[1].plot(
-    phase.nom['Frequency (GHz)'],
+    phase.nom['Frequency (GHz)'], 
     phase.nom,
     label = 'nominal'
     )
@@ -379,7 +379,7 @@ ax[0].plot(
     )
 ax[0].set_ylabel(f'Lin Magn k={k} Uncertainty')
 ax[1].plot(
-    phase.nom['Frequency (GHz)'],
+    phase.nom['Frequency (GHz)'], 
     phase.stdunc(k=k).cov,
     label = 'nominal'
     )
@@ -407,7 +407,7 @@ ax[1].set_ylabel(f'Phase k={k} Uncertainty (deg)')
 grouped_mag = mag.categorize_by('Origin')
 grouped_phase = phase.categorize_by('Origin')
 total_mag_variance = grouped_mag.stdunc().cov**2
-total_phase_variance = grouped_phase.stdunc().cov**2
+total_phase_variance = grouped_phase.stdunc().cov**2   
 mag_variance = []
 phase_variance = []
 fig,axs = plt.subplots(2,1)

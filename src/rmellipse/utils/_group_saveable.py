@@ -374,54 +374,36 @@ def save_dataarray_saveable(
         # make a new group to store under
         new_parent = parent.require_group(name)
         # save values with dimensions as an attribute
-        _save_ndarry(new_parent, 'values', o)
+        try:
+            new_parent['values'] = o.values
+        except:
+            dt = h5py.special_dtype(vlen=str)
+            new_parent.create_dataset('values', o.values.shape, dtype=dt, data=o.values.astype('O'))
         for i, d in enumerate(o.dims):
             new_parent['values'].attrs['dim' + str(i)] = d
-        # save coordinates as datasets
+        # save coordinates as datesets
+
+        dt = h5py.special_dtype(vlen=str)
         for k, v in dict(o.coords).items():
-            _save_ndarry(new_parent, k, v)
-            # data = numpy.array(v)
-            # try:
-            #     new_parent.create_dataset(k, v.shape, dtype=data.dtype, data=data)
-            # except:
-            #     dt = h5py.vlen_dtype(data.dtype)
-            #     new_parent.create_dataset(k, v.shape, dtype=data.dtype, data=data)
+            data = numpy.array(v)
+            try:
+                new_parent.create_dataset(k, v.shape, dtype=data.dtype, data=data)
+            except:
+                new_parent.create_dataset(k, v.shape, dtype=dt, data=data.astype('O'))
 
     else:
         parent[name] = "None"
 
     dataset = parent[name]
-    # copy over metadata
-    for k,v in o.attrs.items():
-        dataset.attrs[k] = v
     dataset.attrs["save_type"] = "DATAARRAY_SAVEABLE"
     dataset.attrs['is_big_object'] = True
     dataset.attrs["__class__.__module__"] = o.__class__.__module__
     dataset.attrs["__class__.__name__"] = o.__class__.__name__
-
     try:
         dataset.attrs["dataformat"] = o.dataformat
     except:
         AttributeError
     return dataset
-
-def _save_ndarry(parent: GROUP, name: str, arr: numpy.ndarray) -> str:
-    # attempt to save as the natural type first
-    dtype = arr.dtype
-    try:
-        parent.create_dataset(name, arr.shape, dtype=arr.dtype, data=arr)
-    except TypeError:
-        # unicode string type,
-        # use the upper bound as a fixed length
-        if dtype.kind == 'U':
-            dt = h5py.string_dtype(length = int(str(dtype).split('U')[-1]))
-            parent.create_dataset(name, arr.shape, dtype=dt, data=arr.astype(dt))
-        # otherwise save as a variable length
-        else:
-            dt = h5py.special_dtype(vlen=str)
-            parent.create_dataset(name, arr.shape, dtype=dt, data=arr)
-    # save the datatype as a string
-    parent[name].attrs['dtype'] = str(dtype)
 
 
 def save_slice_saveable(group: GROUP, name: str, o: SLICE_SAVEABLE, verbose: bool = False) -> GROUP:
@@ -485,11 +467,7 @@ def save_function_saveable(group: GROUP, name: str, o: SLICE_SAVEABLE, verbose: 
     return subgroup
 
 
-def load_object(
-        saved_object: Union[GROUP, DATASET],
-        parent: GROUP_SAVEABLE = None,
-        load_big_objects: bool = False,
-        vlen_object_encoding: str = str) -> any:
+def load_object(saved_object: Union[GROUP, DATASET], parent: GROUP_SAVEABLE = None, load_big_objects: bool = False) -> any:
     """
     Construct Python object from group or dataset.
 
@@ -504,11 +482,6 @@ def load_object(
     load_big_objects : bool, optional
         If True, fully load all objects into memory. If False,
         only the attributes of big objects will be loaded. The default is False.
-
-    vlen_object_encoding : str, optional
-        Variable length byte objects (np.dtype('O')) are cast
-        into this type when they are read into numpy arrays. The
-        default is str.
 
     Returns
     -------
@@ -528,13 +501,13 @@ def load_object(
         o = o_class.load(saved_object, parent=parent, load_big_objects=load_big_objects)
 
     if save_type == "LIST_SAVEABLE":
-        o = load_list_saveable(saved_object, o_class, load_big_objects=load_big_objects)
+        o = load_list_saveable(saved_object, o_class)
 
     elif save_type == "DICT_SAVEABLE":
-        o = load_dict_saveable(saved_object, o_class, load_big_objects=load_big_objects)
+        o = load_dict_saveable(saved_object, o_class)
 
     elif save_type == "DATASET_SAVEABLE":
-        o = load_dataset_saveable(saved_object, o_class, vlen_object_encoding=vlen_object_encoding)
+        o = load_dataset_saveable(saved_object, o_class)
 
     elif save_type == "SLICE_SAVEABLE":
         o = load_slice_saveable(saved_object, o_class)
@@ -543,12 +516,12 @@ def load_object(
         o = load_function_saveable(saved_object, o_class)
 
     elif save_type == "DATAARRAY_SAVEABLE":
-        o = load_dataarray_saveable(saved_object, o_class, vlen_object_encoding=vlen_object_encoding)
+        o = load_dataarray_saveable(saved_object, o_class)
 
     return o
 
 
-def load_list_saveable(group: GROUP, group_class: type, load_big_objects: bool = False) -> LIST_SAVEABLE:
+def load_list_saveable(group: GROUP, group_class: type) -> LIST_SAVEABLE:
     """
     Initialize list-like Python object from group.
 
@@ -560,9 +533,6 @@ def load_list_saveable(group: GROUP, group_class: type, load_big_objects: bool =
     group_class : type
         Python class to instansiate.
 
-    load_big_objects : bool
-        If true, load big objects into structure.
-
     Returns
     -------
     new_list: LIST_SAVEABLE
@@ -571,14 +541,14 @@ def load_list_saveable(group: GROUP, group_class: type, load_big_objects: bool =
     """
     temp_list = []
     for i, key in enumerate(group.keys()):
-        o = load_object(group[str(i)],load_big_objects=load_big_objects)
+        o = load_object(group[str(i)])
         temp_list.append(o)
 
     new_list = group_class(temp_list)
     return new_list
 
 
-def load_dict_saveable(group: GROUP, group_class: type, load_big_objects: bool = False) -> DICT_SAVEABLE:
+def load_dict_saveable(group: GROUP, group_class: type) -> DICT_SAVEABLE:
     """
     Initialize dict-like Python object from group.
 
@@ -609,7 +579,7 @@ def load_dict_saveable(group: GROUP, group_class: type, load_big_objects: bool =
         temp_values = []
         for key in group.keys():
             temp_keys.append(key_class(key))
-            temp_values.append(load_object(group[key], load_big_objects = load_big_objects))
+            temp_values.append(load_object(group[key]))
         return_dict = group_class(zip(temp_keys, temp_values))
 
     else:
@@ -622,10 +592,7 @@ def load_dict_saveable(group: GROUP, group_class: type, load_big_objects: bool =
     return return_dict
 
 
-def load_dataset_saveable(
-        dataset: DATASET,
-        dataset_class: type,
-        vlen_object_encoding: type = str) -> DATASET_SAVEABLE:
+def load_dataset_saveable(dataset: DATASET, dataset_class: type) -> DATASET_SAVEABLE:
     """
     Initialize dataset-like Python object from group.
 
@@ -649,11 +616,13 @@ def load_dataset_saveable(
         o = dataset_class(numpy.array(dataset).astype(dataset_class))
 
     elif dataset_class is numpy.ndarray:
-        o = _load_ndarray(dataset, vlen_object_encoding=str)
+        o = numpy.array(dataset)
+        if o.dtype == numpy.dtype('O'):
+            o = o.astype(str)
     return o
 
 
-def load_dataarray_saveable(data_set, dataset_class: type, vlen_object_encoding:type=str) -> DATAARRAY_SAVEABLE:
+def load_dataarray_saveable(data_set, dataset_class: type) -> DATAARRAY_SAVEABLE:
     """
     Initialize dataset-like Python object from group.
 
@@ -673,7 +642,9 @@ def load_dataarray_saveable(data_set, dataset_class: type, vlen_object_encoding:
     """
     o = None
     if data_set is not NONETYPE:
-        vals = _load_ndarray(data_set['values'], vlen_object_encoding=vlen_object_encoding)
+        vals = numpy.array(data_set['values'])
+        if vals.dtype == numpy.dtype('O'):
+            vals = vals.astype(str)
         getting_dims = True
         dims = []
         i = 0
@@ -685,44 +656,14 @@ def load_dataarray_saveable(data_set, dataset_class: type, vlen_object_encoding:
                 getting_dims = False
         coords = {}
         for k in dims:
-            coords[k] = _load_ndarray(data_set[k], vlen_object_encoding=str)
+            coords[k] = numpy.array(data_set[k])
+            if coords[k].dtype == numpy.dtype('O'):
+                coords[k] = coords[k].astype(str)
         o = dataset_class(vals, dims=dims, coords=coords)
         for k in data_set.attrs:
             o.attrs[k] = data_set.attrs[k]
     return o
 
-def _load_ndarray(h5dataset, vlen_object_encoding: numpy.dtype = str) -> numpy.ndarray:
-    """
-    Load an ndarray with correct type handling.
-
-    vlen_object_encoding is used when encountering
-    'O' data types, which are any variable length amount
-    of bytes. Usually variable length strings (which is the default) but
-    can be supplied if they represent some other object.
-    """
-
-    data = numpy.array(h5dataset)
-    # if the dtype was defined
-    # use that
-    try:
-        recast_as_dtype = h5dataset.attrs['dtype']
-        recast = True
-    # otherwise use whatever encoding
-    # HDF5 hung onto
-    except KeyError:
-        dtype = data.dtype
-        # 'O' could be any variable length byte string
-        # typically strings, but the user needs to specify
-        # what this is supposed to be or it will be
-        # cast as a 'str' by default
-        if dtype == 'O':
-            recast_as_dtype = vlen_object_encoding
-            recast = True
-        else:
-            recast = False
-    if recast:
-        data = data.astype(recast_as_dtype)
-    return data
 
 def load_slice_saveable(group: GROUP, group_class: type) -> SLICE_SAVEABLE:
     """
@@ -902,7 +843,7 @@ class GroupSaveable(GROUP_SAVEABLE):
 
         kwargs["attrs"] = attrs
         for key in group.keys():  # if it is not data, it is a child
-            # print("in load", key)
+            print("in load", key)
             o = None
             saved_object = group[key]
             is_big_object = bool(saved_object.attrs["is_big_object"])
@@ -1031,8 +972,6 @@ class GroupSaveable(GROUP_SAVEABLE):
             # except TypeError as e:
             #     print(e)
 
-        #preallocate new object in case there are no children to save
-        new_object = None
         for key in self.children.keys():
             if verbose:
                 print("about to try to save", key, self)  # , self.children[key])

@@ -364,8 +364,8 @@ def test_combine():
         prop.combine(*measurements,n_single_values = -1, error_of_mean = True, combine_basename = basename)
     
     # testing that the algorithm can handle when one of the
-    # dimensions it creatas/then reduces across when concatenating
-    # already exists. The generate error vector functions
+    # dimensions it creatas/than reduces across when concatenating
+    # already exists. The generate error fector functions
     # creats a dim called 'measdim' to average across and
     # generate PCA error vectors. Just checking it 
     # can handle someone else using that dim name

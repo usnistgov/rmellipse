@@ -154,7 +154,7 @@ class RMEProp(propagators.Propagator):
         Parameters
         ----------
         m : type
-            can be anything. Non RMEMeas objects are passed through without
+            can be anything. None RMEMeas objects are passed through without
             operation, RMEMeas objects are operated on.
         new_params: list[str]
             new parameter locations to expand to.
@@ -324,12 +324,12 @@ class RMEProp(propagators.Propagator):
 
             # new_nom = new_cov[0, ...]
         elif vectorize:
-            cov_args = [m.cov.sel(umech_id = ['nominal']) if uobjs.RMEMeas._if_quacks(m) else m for m in process_args]
-            cov_kwargs = {k: m.cov.sel(umech_id = ['nominal']) if uobjs.RMEMeas._if_quacks(m) else m for k, m in process_kwargs.items()}
+            cov_args = [m.cov[[0], ...] if uobjs.RMEMeas._if_quacks(m) else m for m in process_args]
+            cov_kwargs = {k: m.cov[[0], ...] if uobjs.RMEMeas._if_quacks(m) else m for k, m in process_kwargs.items()}
             cov_output = process_fcn(*cov_args, **cov_kwargs)
         else:
-            cov_args = [m.cov.sel(umech_id = 'nominal') if uobjs.RMEMeas._if_quacks(m) else m for m in process_args]
-            cov_kwargs = {k: m.cov.sel(umech_id = 'nominal') if uobjs.RMEMeas._if_quacks(m) else m for k, m in process_kwargs.items()}
+            cov_args = [m.cov[0, ...] if uobjs.RMEMeas._if_quacks(m) else m for m in process_args]
+            cov_kwargs = {k: m.cov[0, ...] if uobjs.RMEMeas._if_quacks(m) else m for k, m in process_kwargs.items()}
             cov_output = process_fcn(*cov_args, **cov_kwargs)
             def exp_nom(c): return c.expand_dims('umech_id', axis=0).assign_coords(umech_id=['nominal'])
             if type(cov_output) is tuple:
@@ -853,6 +853,11 @@ class RMEProp(propagators.Propagator):
                 print(underline)
                 t0 = time.time()
 
+            # add input info to workflow function
+            # add propagators.Propagator function
+            # add propagatur state
+            # whatever
+
             # handle a common grid
             args_hg, kwargs_hg = self.handle_common_grid(
                 args,
@@ -884,21 +889,15 @@ class RMEProp(propagators.Propagator):
     def _montecarlo_combine(
             measurements: tuple,
             err: np.ndarray,
-            montecarlo_trials: int = 0,
-            combine_across_dim = False
+            montecarlo_trials: int = 0
     ):
         mc_avg = None
         if montecarlo_trials:
-            if combine_across_dim is False:
-                resampled = [RMEProp._sample_distribution(montecarlo_trials, m) for m in measurements]
-                stacked = xr.concat(resampled, dim='measurements')
-                mc_avg = stacked.mean(dim='measurements')
-    
-            else: # We assume measurements length is one
-                assert len(measurements) == 1
-                resampled = RMEProp._sample_distribution(montecarlo_trials, measurements[0])
-                mc_avg = stacked.mean(dim = combine_across_dim)
-                
+            resampled = [RMEProp._sample_distribution(montecarlo_trials, m) for m in measurements]
+            stacked = xr.concat(resampled, dim='measurements')
+            mc_avg = stacked.mean(dim='measurements')
+
+            #
             weights = np.random.normal(size=(err.shape[0], montecarlo_trials))
             monte_typea = np.array([np.dot(err.T, weights[:, i]) for i in range(montecarlo_trials)]).T
             monte_typea = monte_typea.reshape(mc_avg[1:, ...].shape)
@@ -911,11 +910,8 @@ class RMEProp(propagators.Propagator):
         error_of_mean: bool = False,
         n_single_values: Union[float, int] = None,
         sensitivity: bool = False,
-        combine_basename: str = 'combine',
-        generate_across_dim: bool | str = False
+        combine_basename: str = 'combine'
     ):
-        # generate_across_dim will assume measurements is length 1 if it is not False
-        # and will use the string to go across that dim as separate measurements instead
 
         # average across measurements
         # measdim = 'measdim'
@@ -930,41 +926,28 @@ class RMEProp(propagators.Propagator):
         # # doing this with the underlying numpy values
 
         # construct an array where rows represent measurmeents, column different data points
-        if generate_across_dim is not False:
-            assert len(measurements) == 1
-            nom_shape = measurements[0].nom.sel({generate_across_dim: measurements[0].nom[generate_across_dim][0]}).shape  # shape not including uncertainty mechanisms or flattening dim
-            nominals = np.array(measurements[0].nom.sel({generate_across_dim: measurements[0].nom[generate_across_dim].values}).values.flatten())
-            mu = np.mean(nominals, axis=0)
-        else:
-            nom_shape = measurements[0].nom.shape  # shape not including uncertainty mechanisms
-            nominals = np.array([m.nom.values.flatten() for m in measurements])
-            mu = np.mean(nominals, axis=0)
-        
-        unique, counts = np.unique(nom_shape, return_counts=True)
-        
-        if len(unique) == 1 and unique[0] == 1:
-            # do standard deviation
-            err = np.array([[np.std(nominals - mu, ddof = 1)]])
+        nom_shape = measurements[0].nom.shape  # shape not including uncertainty mechanisms
+        nominals = np.array([m.nom.values.flatten() for m in measurements])
+        mu = np.mean(nominals, axis=0)
 
-        else:
-            # do pca
-            u, sv, vt = np.linalg.svd(nominals - mu, full_matrices=False)
-    
-            # create error vectors
-            n_or_one = 1
-            if error_of_mean:
-                n_or_one = nominals.shape[0]
-            err = np.abs(np.diag(sv)) / np.sqrt(n_or_one * (nominals.shape[0] - 1)) @ vt
-    
-            # decide how many single values to add as uncertainty mechanisms
-            if n_single_values is not None and n_single_values != 1:
-                if n_single_values < 0:
-                    raise ValueError('n_single_values must be > 0')
-                if n_single_values < 1:
-                    n_sv = np.where(np.cumsum(sv) / np.sum(sv) > n_single_values)[0][0] + 1
-                else:
-                    n_sv = int(n_single_values)
-                err = err[0:n_sv, :]
+        # do pca
+        u, sv, vt = np.linalg.svd(nominals - mu, full_matrices=False)
+
+        # create error vectors
+        n_or_one = 1
+        if error_of_mean:
+            n_or_one = nominals.shape[0]
+        err = np.abs(np.diag(sv)) / np.sqrt(n_or_one * (nominals.shape[0] - 1)) @ vt
+
+        # decide how many single values to add as uncertainty mechanisms
+        if n_single_values is not None and n_single_values != 1:
+            if n_single_values < 0:
+                raise ValueError('n_single_values must be > 0')
+            if n_single_values < 1:
+                n_sv = np.where(np.cumsum(sv) / np.sum(sv) > n_single_values)[0][0] + 1
+            else:
+                n_sv = int(n_single_values)
+            err = err[0:n_sv, :]
         type_a = (err + mu)
 
         # reshape to match original dimensions
@@ -973,16 +956,11 @@ class RMEProp(propagators.Propagator):
         # make new data array out of error mechanisms
         new_params = [combine_basename + '_' + str(i) for i in range(type_a.shape[0])]
         coords = dict(measurements[0].nom.coords)
-        new_dims = ['umech_id'] + list(measurements[0].nom.dims)
-        if generate_across_dim is not False:
-            new_dims.remove(generate_across_dim)
-            coords.pop(generate_across_dim)
-            
         coords['umech_id'] = new_params
         type_a = xr.DataArray(
             type_a,
-            coords = coords,
-            dims = new_dims
+            coords=coords,
+            dims=['umech_id'] + list(measurements[0].nom.dims)
         )
 
         return err, type_a
@@ -992,7 +970,6 @@ class RMEProp(propagators.Propagator):
             measurements: tuple,
             type_a: xr.DataArray,
             sensitivity: bool = False,
-            combine_across_dim = False
     ):
         """
         Run the linear combine algorithm.
@@ -1007,10 +984,6 @@ class RMEProp(propagators.Propagator):
             Whether or not sensitivity is being run. The default is False.
         type_a: xr.DataArray,
             DataArray of Type A uncertainties to be added to  covariance data.
-        combine_across_dim: bool | str
-            If false it will assume measurements is a tuple and operate on each one.
-            If a string, it will assume measurements has length one, and it will operate across the
-            dimension specified.
 
         Raises
         ------
@@ -1026,26 +999,21 @@ class RMEProp(propagators.Propagator):
         # allign uncertainty mechanisms
         # avgcov = None
         # if sensitivity:
-        if combine_across_dim is False:
-            param_set = RMEProp._get_unique_umech_id(*measurements)
-            measurements = [RMEProp._expand_umech_id_and_fill_nominal(m, param_set) for m in measurements]
-            # average across measurements
-            measdim = 'measdim'
-    
-            # this is just to make sure that the dimension name is unique
-            while measdim in measurements[0].dims:
-                measdim += '0'
-            avg = xr.concat([m.copy() for m in measurements], dim=measdim)
-            avg = avg.mean(dim=measdim)
-    
-            # concat type a data onto the average
-            avgcov = xr.concat([avg, type_a], dim='umech_id')
-            avgcov.attrs = measurements[0].attrs
-    
-        else:
-            avg = measurements[0].cov.mean(dim = combine_across_dim)
-            avgcov = xr.concat([avg, type_a], dim = 'umech_id')
-            
+        param_set = RMEProp._get_unique_umech_id(*measurements)
+        measurements = [RMEProp._expand_umech_id_and_fill_nominal(m, param_set) for m in measurements]
+        # average across measurements
+        measdim = 'measdim'
+
+        # this is just to make sure that the dimension name is unique
+        while measdim in measurements[0].dims:
+            measdim += '0'
+        avg = xr.concat([m.copy() for m in measurements], dim=measdim)
+        avg = avg.mean(dim=measdim)
+
+        # concat type a data onto the average
+        avgcov = xr.concat([avg, type_a], dim='umech_id')
+        avgcov.attrs = measurements[0].attrs
+
         return avgcov
 
     def combine(self,
@@ -1055,7 +1023,6 @@ class RMEProp(propagators.Propagator):
                 combine_basename: str = 'combined',
                 add_uuid: bool = True,
                 combine_categories: dict[str] = {'Type': 'A'}) -> 'uobjs.RMEMeas':
-        
         """
         Combine repeated measurements with uncertainty into a single measurement.
 
@@ -1225,182 +1192,6 @@ class RMEProp(propagators.Propagator):
 
         if self.settings['verbose']:
             print('grid handling runtime' + ':' + str(grid_runtime) + ' sec')
-            try:
-                print('    linear mechanisms' + ':' + str(avgcov.shape[0]))
-            except:
-                print('    linear mechanisms' + ':' + str(0))
-            print('       linear runtime' + ':' + str(linear_runtime) + ' sec')
-            print('           mc runtime' + ':' + str(mc_runtime) + ' sec')
-
-        return out
-    
-    def combine_across_dim(self,
-                measurement: 'uobjs.RMEMeas',
-                dim: str,
-                error_of_mean: bool = False,
-                n_single_values: Union[float, int] = None,
-                combine_basename: str = 'combined',
-                add_uuid: bool = True,
-                combine_categories: dict[str] = {'Type': 'A'}) -> 'uobjs.RMEMeas':
-        
-        """
-        Combine repeated measurements that are within a single RMEMeas object
-        across a dimension with uncertainty into a single measurement.
-
-        Additional uncertainty mechanisms are created with the 'combine_basename'
-        as the name of the mechanisms + an iterated integer. Principal component
-        analysis is used to create the additional mechanisms.
-
-        Parameters
-        ----------
-        *measurements : RMEMeas
-            DESCRIPTION.
-        error_of_mean : bool, optional
-            If true, uses the error of the mean when creating the new uncertainty
-            mechanisms. The default is False.
-        n_single_values : Union[float,int], optional
-            Describes how many of the singular values to keep as
-            error mechanisms when performing the PCA.If n_single_values<1,
-            will provide the min number of values to describe n_single_values
-            ratio of the total variance described by the SVD. If
-            n_single_values> 1, will utilize the integer n_single_values number
-            of singular values. If None, will use all the singular values
-            available. Useful for reducing the size of data sets when
-            large numbers of repeated measurements are used.The default is None.
-        combine_basename : dict[str], optional
-            Base name usd when creating new uncertainty mechanisms. 
-            Uncertainty mechanisms are named with <basename>+_+<int>, int is
-            iterated for each new mechanism. The default is 'combined'.
-        add_uid: str, optional
-            If true, adds a UID to the combine_basename to make it unique. The
-            default is True.
-
-
-        Returns
-        -------
-        out : RMEMeas
-            Returns a RMEMeas object with combined uncertainties.
-
-        """
-        uid = ''
-        if add_uuid:
-            uid = str(uuid.uuid4())
-        combine_basename += uid
-
-        t0 = time.time()
-
-        # make kwarg dictionary
-        generate_error_kwargs = {
-            'error_of_mean': error_of_mean,
-            'n_single_values': n_single_values,
-            'sensitivity': self.settings['sensitivity'],
-            'combine_basename': combine_basename,
-            'generate_across_dim': dim
-        }
-
-        # get PCA vectors and Type A uncertainties
-        err, typeA = RMEProp._generate_error_vectors(
-            ((measurement,)),
-            **generate_error_kwargs
-        )
-
-        avgcov = RMEProp._linear_combine(
-            ((measurement,)),
-            typeA,
-            sensitivity=self.settings['sensitivity'],
-            combine_across_dim=dim
-        )
-
-        linear_runtime = time.time() - t0
-        t0 = time.time()
-
-        avgmc = RMEProp._montecarlo_combine(
-            measurement,
-            err,
-            montecarlo_trials=self.settings['montecarlo_sims'],
-        )
-
-        mc_runtime = time.time() - t0
-        t0 = time.time()
-
-        covcats = None
-        newcovdofs = None
-        if self.settings['sensitivity']:
-            param_set = RMEProp._get_unique_umech_id(measurement)
-
-            # get unique categories from the RMEMeas obect
-            print('Before')
-            covcats = RMEProp._get_new_categories(
-                param_set,
-                [measurement],
-                {},
-                sensitivity=self.settings['sensitivity'],
-                verbose=self.settings['verbose']
-            )
-            print('After')
-            # assign the categories provided, tag with combine id
-            # tag all the new type a mechanisms with a uuid
-            combine_categories['combine_id'] = str(uuid.uuid4())
-            new_mechs = [str(k) for k in typeA.umech_id.values]
-            new_categories = {k: combine_categories for k in new_mechs}
-
-            # add extra rows to categories for each new mechanism
-            try:
-                def empty_row(n): return xr.full_like(covcats[[0], ...], '').assign_coords({'umech_id': [n]})
-                new_rows = xr.concat([empty_row(n) for n in new_mechs], dim='umech_id')
-                covcats = xr.concat([covcats, new_rows], dim='umech_id')
-                # add extra column for any new categories
-                def empty_col(c): return xr.full_like(covcats[:, [0]], '').assign_coords({'categories': [c]})
-                new_cols = [empty_col(c) for c in combine_categories if c not in covcats.categories]
-                if len(new_cols) > 0:
-                    new_cols = xr.concat(new_cols, dim='categories')
-                    covcats = xr.concat([covcats, new_cols], dim='categories')
-                # put on to the same alignment as the paramset
-                covcats = covcats.loc[param_set + new_mechs]
-
-                # add the new things
-                for k, v in combine_categories.items():
-                    covcats.loc[new_mechs, k] = v
-            # no zeroth index on covcats means that it was empty to begin with,
-            # combining mechanisms that didn't have any uncertainty mechanisms
-            # initializing a covcats
-            except IndexError:
-                dims = ('umech_id', 'categories')
-                coords = {'umech_id': new_mechs,
-                          'categories': list(combine_categories.keys())}
-                vals = np.zeros((len(new_mechs), len(combine_categories)), dtype=object)
-                covcats = xr.DataArray(vals, dims=dims, coords=coords)
-                for k, v in combine_categories.items():
-                    covcats.loc[new_mechs, k] = v
-
-            # add dof to new umech_id
-            covdofs = RMEProp._get_new_covdofs(
-                param_set,
-                [measurement],
-                {},
-                sensitivity=self.settings['sensitivity'],
-                verbose=self.settings['verbose']
-            )
-            combdof = len(measurement.nom[dim]) - 1
-            nmechs = len(new_mechs)
-            newcovdofs = xr.DataArray(
-                np.ones(nmechs) * combdof,
-                dims=('umech_id'),
-                coords={'umech_id': new_mechs}
-            )
-
-            if covdofs is not None:
-                newcovdofs = xr.concat([covdofs, newcovdofs], dim='umech_id')
-
-        out = uobjs.RMEMeas(
-            measurement.name,
-            avgcov,
-            avgmc,
-            covcats=covcats,
-            covdofs=newcovdofs
-        )
-
-        if self.settings['verbose']:
             try:
                 print('    linear mechanisms' + ':' + str(avgcov.shape[0]))
             except:

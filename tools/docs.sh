@@ -10,7 +10,7 @@ then
 	uv run -m http.server --bind 127.0.0.1 8000 -d docs/build
 elif [ $1 = "open" ]
 then
-	explorer "http://127.0.0.1:8000/stable"
+	explorer "http://127.0.0.1:8000"
 elif [ $1 = "clean" ]
 then
 	set -e
@@ -25,7 +25,7 @@ elif [ $1 = "html-multiversioned" ]
 then
 	set -e
 	uv run sphinx-multiversion docs/source docs/build
-	cp docs/source/reroute_to_stable.html	stable/index.html
+	cp docs/source/reroute_to_stable.html	docs/build/index.html
 elif [ $1 = "html-multiversioned-ci" ]
 then
 	set -e

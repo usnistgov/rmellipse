@@ -27,7 +27,6 @@ extensions = [
 	'sphinx_click',
 	'sphinx.ext.githubpages',
 	'sphinx_multiversion',
-	'sphinxcontrib.spelling',
 ]
 
 # napoleon settings

@@ -11,6 +11,17 @@ namespaces = false
 [tool.setuptools.package-data]
 myModule = ["*.s2p","*.hdf5"]
 
+[tool.ruff.lint]
+ignore = ["F401","E501","F403","F841","E741"]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "tab"
+docstring-code-format = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
 [tool.uv.workspace]
 members = [
     "tests/workflow-hello",
@@ -65,4 +76,6 @@ dev = [
     "sphinx-click>=6.0.0",
     "snakeviz>=2.2.2",
     "sphinx-multiversion>=0.2.4",
+    "pre-commit>=4.3.0",
+    "ruff>=0.13.2"
 ]

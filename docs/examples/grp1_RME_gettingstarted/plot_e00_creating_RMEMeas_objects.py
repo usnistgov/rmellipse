@@ -21,13 +21,12 @@ briefly discussed.
 # your object. The name is used when saving to formats like xml and hdf5.
 from rmellipse.uobjects import RMEMeas
 import xarray as xr
+import numpy as np
+
 nom = xr.DataArray(
-    [[1, 2, 3],[4, 5, 6]],
-    dims=('d1','d2'),
-    coords={
-        'd1': [0.1, 0.2],
-        'd2': ['a', 'b', 'c']
-        }
+	[[1, 2, 3], [4, 5, 6]],
+	dims=('d1', 'd2'),
+	coords={'d1': [0.1, 0.2], 'd2': ['a', 'b', 'c']},
 )
 
 meas = RMEMeas.from_nom(name='myval', nom=nom)
@@ -54,14 +53,12 @@ print(meas.nom)
 # from similar sources.
 
 
-import numpy as np
-
 meas.add_umech(
-    name='My Uncertainty Mechanism',
-    value=meas.nom + np.ones(meas.nom.shape) * 0.01,
-    dof=np.inf,
-    category={'Type': 'B', 'Origin': 'Data Sheet'},
-    add_uid=True
+	name='My Uncertainty Mechanism',
+	value=meas.nom + np.ones(meas.nom.shape) * 0.01,
+	dof=np.inf,
+	category={'Type': 'B', 'Origin': 'Data Sheet'},
+	add_uid=True,
 )
 print(meas.stdunc(k=1).cov)
 
@@ -88,7 +85,7 @@ print(meas.confint(0.95))
 # with the same dimensions and coordinates as the nominal.
 
 for i in range(100):
-    meas.add_mc_sample(meas.nom + np.random.normal(*meas.nom.shape) * 0.01)
+	meas.add_mc_sample(meas.nom + np.random.normal(*meas.nom.shape) * 0.01)
 
 print(meas.stdunc(k=1).mc)
 
@@ -145,10 +142,7 @@ print(meas.sel(d1=0.1, d2='a'), '\n')
 
 # This example throws away the montecarlo samples and looks only at a single
 # linear uncertainty mechanism.
-mech = meas.usel(
-    umech_id=meas.umech_id[0],
-    mcsamples=[]
-)
+mech = meas.usel(umech_id=meas.umech_id[0], mcsamples=[])
 
 linunc, mcunc = mech.stdunc(k=1)
 print(linunc)
@@ -157,10 +151,7 @@ print(linunc)
 # We can also look a one or more of the Monte Carlo samples
 # by throwing away the covariance data and just keeping one of the Monte Carlo
 # samples.
-sample = meas.usel(
-    umech_id=[],
-    mcsamples=[1]
-)
+sample = meas.usel(umech_id=[], mcsamples=[1])
 
 print(sample.mc[1, ...])
 
@@ -176,10 +167,7 @@ print(sample.mc[1, ...])
 # the nominal. This effectively means it no longer has any associated
 # uncertainties.
 
-nominal_only = meas.usel(
-    umech_id=[],
-    mcsamples=[]
-)
+nominal_only = meas.usel(umech_id=[], mcsamples=[])
 
 print(nominal_only.nom)
 print(nominal_only.stdunc())
@@ -192,9 +180,9 @@ print(nominal_only.stdunc())
 # Values can be reassigned through propagation.
 
 try:
-    meas[0] = 1
+	meas[0] = 1
 except TypeError as e:
-    print(e)
+	print(e)
 
 # %%
 # Interpolating
@@ -202,4 +190,4 @@ except TypeError as e:
 #
 # RMEMeas supports interpolation by wrapping xarray's built in `interp` function.
 
-print(meas.interp(d1 = [0.125, 0.15, 0.175]))
+print(meas.interp(d1=[0.125, 0.15, 0.175]))

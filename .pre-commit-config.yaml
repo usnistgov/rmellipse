@@ -1,0 +1,22 @@
+repos:
+  # RUFF formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.13.2
+    hooks:
+      # Run the linter.
+      - id: ruff-check
+        types_or: [ python, pyi ]
+        args: [ --fix ]
+      # Run the formatter.
+      - id: ruff-format
+        types_or: [ python, pyi ]
+
+  # Update development requirements
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    # uv version.
+    rev: 0.8.22
+    hooks:
+      - id: uv-export
+        name: dev dependencies
+        args: [--only-group, dev, --output-file, dev_deps.txt]

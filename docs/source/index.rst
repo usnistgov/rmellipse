@@ -23,11 +23,12 @@ Table of Contents
 =================
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 4
 
+   arrayschema/index.rst
    auto_examples/index.rst
-   cli/index.rst
    for_contributors/index.rst
+   cli/index.rst
 
 Indices and tables
 ==================

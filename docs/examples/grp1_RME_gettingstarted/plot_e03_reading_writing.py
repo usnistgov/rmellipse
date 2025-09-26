@@ -12,27 +12,29 @@ This is a basic example demonstrating how to read and write a RMEMeas object.
 # First lets create an object that we want to save.
 
 from rmellipse.uobjects import RMEMeas
-
+from rmellipse.utils import load_object, save_object
 import xarray as xr
 import numpy as np
+import h5py
 
-nom = xr.DataArray(np.zeros((10, 2)),
-                   dims=('d1', 'd2'),
-                   coords={'d1': np.arange(10),
-                           'd2': np.arange(2)})
+nom = xr.DataArray(
+	np.zeros((10, 2)),
+	dims=('d1', 'd2'),
+	coords={'d1': np.arange(10), 'd2': np.arange(2)},
+)
 
 meas = RMEMeas.from_nom(name='meas', nom=nom)
 
 meas.add_umech(
-    name='mymechanisms',
-    value=meas.nom + np.ones(meas.nom.shape) * 0.01,
-    dof=np.inf,
-    category={'Type': 'B', 'Origin': 'Data Sheet'},
-    add_uid=True
+	name='mymechanisms',
+	value=meas.nom + np.ones(meas.nom.shape) * 0.01,
+	dof=np.inf,
+	category={'Type': 'B', 'Origin': 'Data Sheet'},
+	add_uid=True,
 )
 
 for i in range(100):
-    meas.add_mc_sample(meas.nom + np.random.rand(*meas.nom.shape) * 0.01)
+	meas.add_mc_sample(meas.nom + np.random.rand(*meas.nom.shape) * 0.01)
 
 # %%
 # HDF5 Saving
@@ -44,7 +46,7 @@ for i in range(100):
 # require you to define a data format with to_csv and from_csv functions.
 #
 # To save, open an HDF5 file or group and pass that to the
-# :func:`rmellipse.uobjects.RMEMeas.to_h5` function. The RMEMeas object
+# :func:`rmellipse.utils.save_object`` function. The RMEMeas object
 # will be stored in the group you provide it under a group with it's name.
 # The override argument tells the function to delete any pre-existing
 # groups with that RMEMeas objects name then try to save it, to avoid
@@ -55,10 +57,18 @@ for i in range(100):
 # will see the cov,mc,covdofs, and covcats attributes stored. Each one is an
 # HDF5 representation of an xarray DataArray and together completely describe
 # your RMEMeas object.
-import h5py
+
 with h5py.File('meas.hdf5', 'a') as f:
-    meas.to_h5(f, override=True)
-    print(f[meas.name])
+	# save object will throw an error if the group
+	# or dataset name already exists. So you need
+	# handle that manually if you want to overwrite
+	# existing data
+	try:
+		save_object(f, meas.name, meas)
+	except ValueError:
+		del f[meas.name]
+		save_object(f, meas.name, meas)
+	print(f[meas.name])
 
 # %%
 # HDF5 Reading
@@ -66,10 +76,10 @@ with h5py.File('meas.hdf5', 'a') as f:
 #
 # You can open the HDF5 file you made in read mode,
 # then pass in the group with it's name to
-# :func:`rmellipse.uobjects.RMEMeas.from_h5` in order to read it.
+# :func:`rmellipse.utils.load_object` in order to read it.
 with h5py.File('meas.hdf5', 'r') as f:
-    meas = RMEMeas.from_h5(f['meas'])
-    print(meas)
+	meas = load_object(f[meas.name], load_big_objects=True)
+	print(meas)
 
 
 # %%
@@ -92,24 +102,21 @@ with h5py.File('meas.hdf5', 'r') as f:
 #
 # First we turn our object into the s1p_ri format using the
 # :func:`rmellipse.dataformats.as_format`
-from rmellipse.propagators import RMEProp
+
 
 def to_txt(data, path):
-        np.savetxt(path, data.values, delimiter=',')
+	np.savetxt(path, data.values, delimiter=',')
+
 
 def from_txt(path):
-    values = xr.DataArray(np.loadtxt(path, float, delimiter=','))
-    return values
+	values = xr.DataArray(np.loadtxt(path, float, delimiter=','))
+	return values
 
-m1 = RMEMeas.from_nom('mymeas', xr.DataArray(np.zeros((2,2))))
-m1.add_umech('my umech', m1.nom.copy()+0.1)
 
-m1.to_xml(
-    '.',
-    to_txt,
-    data_extension='.csv',
-    header_extension='.meas'
-)
+m1 = RMEMeas.from_nom('mymeas', xr.DataArray(np.zeros((2, 2))))
+m1.add_umech('my umech', m1.nom.copy() + 0.1)
+
+m1.to_xml('.', to_txt, data_extension='.csv', header_extension='.meas')
 # %%%
 # Once we have our measurement in a format with read/write functions defined
 # we can use the :func:`rmellipse.uobjects.RMEMeas.to_xml` and
@@ -127,8 +134,5 @@ m1.to_xml(
 # name
 # is not specific enough.
 
-m2 = RMEMeas.from_xml(
-    'mymeas.meas',
-    from_csv=from_txt
-)
+m2 = RMEMeas.from_xml('mymeas.meas', from_csv=from_txt)
 assert (m2.cov.values == m1.cov.values).all()

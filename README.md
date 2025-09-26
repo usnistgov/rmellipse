@@ -34,6 +34,11 @@ uv sync
 ```
 This will generate the virtual environment for the package.
 
+Install git pre-commit:
+```
+uv run pre-commit install
+```
+
 ### Running Local Tests
 In a bash terminal, run:
 

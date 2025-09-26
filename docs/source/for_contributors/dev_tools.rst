@@ -7,7 +7,12 @@ Clone the repo and run, from the root directory:
 
     uv sync
 
-This will generate the virtual environment for the package.
+This will generate the virtual environment for the package. Then
+set up your pre-commits.
+
+.. code-block:: console
+
+    uv run pre-commit install
 
 Local Tests
 ------------
@@ -21,6 +26,13 @@ In git bash run:
 
 The open command will launch a view of a webpage with
 missing code coverage highlighted.
+
+You should also run the code linters periodically to keep your
+code-style consistent.
+
+.. code-block:: console
+
+    tools/lint.sh
 
 Local Documentation
 -------------------
@@ -64,3 +76,4 @@ on port 8080. Test scripts should go in the tests directory.
 .. code-block:: console
 
     tools/profile.sh tests/<test_script_name.py>
+

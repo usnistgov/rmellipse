@@ -5,9 +5,8 @@
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-from pathlib import Path
 from importlib.metadata import version as get_version
-import os
+
 # The full version, including alpha/beta/rc tags
 
 project = 'Rocky Mountain Ellipse'
@@ -22,12 +21,12 @@ release = get_version('rmellipse')
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'autoapi.extension',
-    'sphinx_gallery.gen_gallery',
-    'numpydoc',
-    "sphinx_click",
-    "sphinx.ext.githubpages",
-    "sphinx_multiversion",
+	'autoapi.extension',
+	'sphinx_gallery.gen_gallery',
+	'numpydoc',
+	'sphinx_click',
+	'sphinx.ext.githubpages',
+	'sphinx_multiversion',
 ]
 
 # napoleon settings
@@ -39,44 +38,43 @@ templates_path = ['_templates']
 
 autoapi_dirs = ['../../src']
 autoapi_ignore = [
-    '*migrations*',
-    '*_archive*',
-
+	'*migrations*',
+	'*_archive*',
 ]
 # numpydoc_validation_checks = {"all","GL08"}
-numpydoc_validation_exclude = set([
-    r'\.undocumented_method$',
-    r'\.__repr__$',
-    r'\.__call_$',
-])
+numpydoc_validation_exclude = set(
+	[
+		r'\.undocumented_method$',
+		r'\.__repr__$',
+		r'\.__call_$',
+	]
+)
 autoapi_python_class_content = 'both'
 
 autoapi_options = [
-    'members',
-    'undoc-members',
-    # 'private-members',
-    'show-inheritance',
-    'show-module-summary',
-    # 'special-members',
-    'imported-members'
+	'members',
+	'undoc-members',
+	# 'private-members',
+	'show-inheritance',
+	'show-module-summary',
+	# 'special-members',
+	'imported-members',
 ]
 
 # -- SPHINX GALLERY OPTIONS --
 sphinx_gallery_conf = {
-    'examples_dirs': '../examples',   # path to your example scripts
-    'gallery_dirs': 'auto_examples',  # path to where to save gallery generated output
-    'within_subsection_order': 'FileNameSortKey',
-    'ignore_pattern': '/_*',
-    'run_stale_examples': True
+	'examples_dirs': '../examples',  # path to your example scripts
+	'gallery_dirs': 'auto_examples',  # path to where to save gallery generated output
+	'within_subsection_order': 'FileNameSortKey',
+	'ignore_pattern': '/_*',
+	'run_stale_examples': True,
 }
-import shutil
 
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
-
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -110,6 +108,6 @@ smv_outputdir_format = '{ref.name}'
 smv_prefer_remote_refs = False
 
 html_sidebars = {
-   '**': ['globaltoc.html', 'sourcelink.html', 'searchbox.html','versioning.html'],
-   'using/windows': ['windows-sidebar.html', 'searchbox.html'],
+	'**': ['globaltoc.html', 'sourcelink.html', 'searchbox.html', 'versioning.html'],
+	'using/windows': ['windows-sidebar.html', 'searchbox.html'],
 }

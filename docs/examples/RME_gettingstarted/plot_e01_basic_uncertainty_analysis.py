@@ -15,11 +15,10 @@ perform the uncertainty analysis.
 # %%
 # Importing packages
 # ------------------
-#
-# For this example we only need RMEMeas objects and the RME propagator.
 
 from rmellipse.uobjects import RMEMeas
 from rmellipse.propagators import RMEProp
+import matplotlib.pyplot as plt
 
 # %%
 # Creating a propagator
@@ -70,21 +69,11 @@ myprop = RMEProp(montecarlo_sims=N, sensitivity=True)
 use_sample_mean = False
 
 V = RMEMeas.from_dist(
-    name='voltage',
-    nom=2,
-    std=0.01,
-    samples=N,
-    dist='gaussian',
-    use_sample_mean=False
+	name='voltage', nom=2, std=0.01, samples=N, dist='gaussian', use_sample_mean=False
 )
 
 I = RMEMeas.from_dist(
-    name='current',
-    nom=1.5,
-    std=0.01,
-    samples=N,
-    dist='gaussian',
-    use_sample_mean=False
+	name='current', nom=1.5, std=0.01, samples=N, dist='gaussian', use_sample_mean=False
 )
 
 print(V)
@@ -134,13 +123,13 @@ print('V linear uncertainty mechanisms :', V.umech_id)
 
 @myprop.propagate
 def power(v, i):
-    print(v.dims, v.shape, i.shape)
-    return v * i
+	print(v.dims, v.shape, i.shape)
+	return v * i
 
 
 # when we call this, note that the power function is called twice, and the shapes
 # of the v and i arguments are changed from the original definitions for the
-#`RMEMeas.cov`attribute, now (3,) after the uncertainty mechanisms were aligned.
+# `RMEMeas.cov`attribute, now (3,) after the uncertainty mechanisms were aligned.
 p = power(V, I)
 
 # %%
@@ -169,7 +158,7 @@ lower, upper = p.confint(0.95)
 # %%%
 # We can plot the montecarlo distributions of our results as well.
 
-import matplotlib.pyplot as plt
+
 fig, ax = plt.subplots(1, 1)
 ax.hist(V.mc[1:], label=V.name)
 ax.hist(I.mc[1:], label=I.name)

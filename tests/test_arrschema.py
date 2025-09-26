@@ -53,23 +53,22 @@ zeros = arrschema.arrschema(name='zeros', shape=(...,), dims=(...,), dtype=float
 REGISTRY.add_schema(s2p_ri)
 REGISTRY.add_schema(zeros)
 
-
 REGISTRY.add_loader(
-	'rmellipse.arrschema._test_collections:load_csv_like_s2p_ri',
+	'rmellipse.arrschema.examples:load_csv_like_s2p_ri',
 	'.s2p',
 	loader_type='csv',
 	schema_name='s2p_ri',
 )
 
 REGISTRY.add_loader(
-	'rmellipse.arrschema._test_collections:load_group_saveable',
+	'rmellipse.arrschema.examples:load_group_saveable',
 	['.h5', '.hdf5'],
 	loader_type='group_saveable',
 	schema_name='s2p_ri',
 )
 
 REGISTRY.add_saver(
-	'rmellipse.arrschema._test_collections:save_group_saveable',
+	'rmellipse.arrschema.examples:save_group_saveable',
 	['.h5', '.hdf5'],
 	saver_type='group_saveable',
 	schema_name='s2p_ri',
@@ -77,7 +76,7 @@ REGISTRY.add_saver(
 
 
 REGISTRY.add_converter(
-	'rmellipse.arrschema._test_collections:convert_zeros_to_s2p_ri',
+	'rmellipse.arrschema.examples:convert_zeros_to_s2p_ri',
 	input_schema_name='s2p_ri',
 	output_schema_uid=zeros['uid'],
 )
@@ -140,6 +139,7 @@ def test_convert():
 		verbose=True,
 		registry=REGISTRY,
 	)
+	arrschema.validate(data, registry=REGISTRY, schema_name='s2p_ri')
 	new = arrschema.convert(data, registry=REGISTRY, output_schema_name='zeros')
 	print(new)
 

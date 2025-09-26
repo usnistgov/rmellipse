@@ -79,4 +79,5 @@ dev = [
     "pre-commit>=4.3.0",
     "ruff>=0.13.2",
     "black>=25.9.0",
+    "sphinxcontrib-spelling>=8.0.1",
 ]

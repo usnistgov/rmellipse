@@ -27,6 +27,7 @@ extensions = [
 	'sphinx_click',
 	'sphinx.ext.githubpages',
 	'sphinx_multiversion',
+	'sphinxcontrib.spelling',
 ]
 
 # napoleon settings
@@ -77,6 +78,7 @@ sphinx_gallery_conf = {
 exclude_patterns = []
 
 
+spelling_word_list_filename = ['docs/source/spelling_wordlist.txt']
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for

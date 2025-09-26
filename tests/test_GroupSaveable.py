@@ -2,6 +2,7 @@ from rmellipse.utils import save_object, load_object, GroupSaveable
 from pathlib import Path
 import pytest
 import h5py as h5
+import numpy as np
 import xarray as xr
 from rmellipse.uobjects import RMEMeas
 
@@ -54,6 +55,18 @@ class SaveableIsh(GroupSaveable):
 		)
 		self.int = 1
 		self.add_child('int', self.int)
+
+
+def test_xrdataarrays():
+	# no coords
+	my_data = xr.DataArray(np.zeros((4, 4), dtype=float))
+
+	with h5.File(TEST_FILE, 'w') as f:
+		print('saving ', my_data)
+		group = save_object(f, 'myxarr-nocoords', my_data, verbose=True)
+		read = load_object(group)
+		print(read)
+		assert np.all(my_data.data == read.data)
 
 
 def test_primatives():
@@ -241,3 +254,4 @@ if __name__ == '__main__':
 	test_rmemeas_list()
 	test_rmemeas_dict()
 	test_childless()
+	test_xrdataarrays()

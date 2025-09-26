@@ -62,6 +62,7 @@ __all__ = [
 	'validate',
 	'save',
 	'convert',
+	'ValidationError',
 ]
 
 
@@ -615,28 +616,36 @@ def save(
 	schema_name: str = None,
 	schema_uid: str = None,
 	saver_type: str = None,
+	validate_schema: bool = True,
 	verbose=False,
 	**saver_kwargs,
 ) -> object:
 	"""
-	Load a DataArray object with a schema.
+	Load a dataset using arrschema registry.
 
 	Parameters
 	----------
-	data : Path | str
-	    _description_
-	schema_name : str, optional
-	    _description_, by default None
-	schema_uid : str, optional
-	    _description_, by default None
+	path : str | Path
+		_description_
+	arr : object
+		_description_
 	registry : ArrSchemaRegistry
-	    _description_, by default stdreg
-	verbose: bool = True
+		_description_
+	schema_name : str, optional
+		_description_, by default None
+	schema_uid : str, optional
+		_description_, by default None
+	saver_type : str, optional
+		_description_, by default None
+	validate_schema : bool, optional
+		_description_, by default True
+	verbose : bool, optional
+		_description_, by default False
 
 	Returns
 	-------
 	object
-	    _description_
+		_description_
 	"""
 	# lookup by the schema if provided
 	extension = ''.join(Path(path).suffixes)
@@ -656,7 +665,8 @@ def save(
 	)
 
 	# validate on the way in to the saver
-	validate(arr, schema=schema, registry=registry)
+	if validate_schema:
+		validate(arr, schema=schema, registry=registry)
 
 	# save it
 	return saver(path, arr, *saver_args, **saver_kwargs)
@@ -669,28 +679,34 @@ def load(
 	schema_name: str = None,
 	schema_uid: str = None,
 	loader_type: str = None,
+	validate_schema: bool = False,
 	verbose=False,
 	**load_kwargs,
 ) -> object:
 	"""
-	Load a DataArray object with a schema.
+	Save a dataset using an array schema registry.
 
 	Parameters
 	----------
-	data : Path | str
-	    _description_
+	path : Path | str
+		_description_
+	registry : ArrSchemaRegistry
+		_description_
 	schema_name : str, optional
-	    _description_, by default None
+		_description_, by default None
 	schema_uid : str, optional
-	    _description_, by default None
-	registry : ArrSchemaRegistry, optional
-	    _description_, by default stdreg
-	verbose: bool = True
+		_description_, by default None
+	loader_type : str, optional
+		_description_, by default None
+	validate_schema : bool, optional
+		_description_, by default False
+	verbose : bool, optional
+		_description_, by default False
 
 	Returns
 	-------
 	object
-	    _description_
+		_description_
 	"""
 	# lookup by the schema if provided
 	extension = ''.join(Path(path).suffixes)
@@ -702,7 +718,8 @@ def load(
 		verbose=verbose,
 	)
 	read = loader(path, *load_args, **load_kwargs)
-	validate(read, schema=schema, registry=registry)
+	if validate_schema:
+		validate(read, schema=schema, registry=registry)
 	return read
 
 
@@ -767,7 +784,7 @@ def convert(
 def validate(
 	arr: 'xarray.DataArray',
 	*,
-	registry: ArrSchemaRegistry,
+	registry: ArrSchemaRegistry = None,
 	schema_name: str = None,
 	schema_uid: str = None,
 	schema: Mapping = None,

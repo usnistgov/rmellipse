@@ -713,7 +713,11 @@ def load_dataarray_saveable(
 				getting_dims = False
 		coords = {}
 		for k in dims:
-			coords[k] = _load_ndarray(data_set[k], vlen_object_encoding=str)
+			try:
+				coords[k] = _load_ndarray(data_set[k], vlen_object_encoding=str)
+			# coord werent actually saved if the group isnt there
+			except KeyError:
+				pass
 		o = dataset_class(vals, dims=dims, coords=coords)
 		for k in data_set.attrs:
 			o.attrs[k] = data_set.attrs[k]

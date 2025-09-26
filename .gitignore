@@ -16,7 +16,7 @@ uv.lock
 ignore_me/
 .vscode/
 *.rme/
-
+example.h5
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

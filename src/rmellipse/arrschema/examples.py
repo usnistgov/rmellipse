@@ -5,6 +5,10 @@ import numpy as np
 import h5py
 
 
+def convert_float_to_int(zeros):
+	return zeros.astype(int)
+
+
 def convert_zeros_to_s2p_ri(s2p_ri):
 	return s2p_ri * 0
 

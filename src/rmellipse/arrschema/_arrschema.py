@@ -18,13 +18,14 @@ import numpy as _np
 import uuid
 import numpy as np
 import copy
-from typing import Mapping, Any
+from typing import Mapping, Any, Tuple
 from pathlib import Path
 import yaml
 import json
 import importlib
 import sys
 import jsonschema
+from abc import ABC, abstractmethod
 
 # delete accessors before redefining, avoids a warning
 try:
@@ -56,14 +57,53 @@ def _allowed_shape_spec(s: object):
 
 __all__ = [
 	'ArrSchemaRegistry',
-	'stdreg',
+	'ValidationError',
 	'arrschema',
 	'load',
 	'validate',
 	'save',
 	'convert',
-	'ValidationError',
 ]
+
+
+class AnnotatedArrayLike(ABC):
+	"""
+	Interface for an array structure with annotate dimensions and coordinates.
+
+	Inspired by xarray DataArray. Objects conforming to this specification
+	can be interacted with by functions in this module to generate annotations
+	or validate against schema.
+	"""
+
+	@property
+	@abstractmethod
+	def shape(self) -> tuple[int]:
+		"""Tuple of dimension sizes corresponding to dim."""
+		pass
+
+	@property
+	@abstractmethod
+	def dim(self) -> tuple[str]:
+		"""Tuple of dimension names corresponding to shape."""
+		pass
+
+	@property
+	@abstractmethod
+	def coords(self) -> Mapping['AnnotatedArrayLike']:
+		"""Mapping of dimension names to cooordinate sets."""
+		pass
+
+	@property
+	@abstractmethod
+	def dtype(self) -> str | Any:
+		"""Data type that conforms to numpy dtype_string specs."""
+		pass
+
+	@property
+	@abstractmethod
+	def attrs(self) -> dict:
+		"""JSON compatable dictionary of metadata."""
+		pass
 
 
 def lazy_import_module(name):
@@ -599,10 +639,6 @@ class ArrSchemaRegistry(dict):
 			self._named_lookup[schema['name']] = [schema]
 
 
-"""Standard registry to load in and define array schemas."""
-stdreg = ArrSchemaRegistry()
-
-
 class ValidationError(Exception):
 	def __init__(self, *args, **kwargs):
 		Exception.__init__(self, *args, **kwargs)
@@ -610,7 +646,7 @@ class ValidationError(Exception):
 
 def save(
 	path: str | Path,
-	arr: object,
+	arr: AnnotatedArrayLike,
 	*saver_args,
 	registry: ArrSchemaRegistry,
 	schema_name: str = None,
@@ -724,7 +760,7 @@ def load(
 
 
 def convert(
-	input: Any,
+	input: AnnotatedArrayLike,
 	registry: ArrSchemaRegistry,
 	output_schema_name: str = None,
 	output_schema_uid: str = None,
@@ -782,7 +818,7 @@ def convert(
 
 
 def validate(
-	arr: 'xarray.DataArray',
+	arr: AnnotatedArrayLike,
 	*,
 	registry: ArrSchemaRegistry = None,
 	schema_name: str = None,

@@ -163,6 +163,7 @@ class CachedCurator(cdcs.CDCS):
 				parse_dates=False,
 				mongoquery={'sha1': sha1},
 				current=False,
+				progress_bar=False,
 			)
 			# keep most recent id, if there
 			# are multiple then that means there
@@ -299,8 +300,9 @@ def upload_record(
 	template_title: str,
 	content: dict,
 	workspace_title: str = None,
+	verbose: bool = False,
 ):
-	print(f'- status: uploading jrec {title}')
+	# print(f'- status: uploading jrec {title}')
 	response = None
 	record_id = 1
 	try:
@@ -321,12 +323,15 @@ def upload_record(
 
 		if response.status_code == 201:
 			response_data = response.json()
-			print(f'- status: success: json record {title} created')
+			if verbose:
+				print(f'- status: success: json record {title} created')
 			record_id = response_data.get('id')
 		else:
-			print(f'- error: failed: {response.status_code} - {response.text}')
+			if verbose:
+				print(f'- error: failed: {response.status_code} - {response.text}')
 	except Exception as e:
-		print(f'- error: {e}')
+		if verbose:
+			print(f'- error: {e}')
 	return response
 
 

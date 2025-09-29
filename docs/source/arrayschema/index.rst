@@ -1,4 +1,4 @@
-Introduction
+Array Schema
 ============
 
 Array schema are a tool for annotating the structure of homogenous array-like data

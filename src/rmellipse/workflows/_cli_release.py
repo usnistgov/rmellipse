@@ -2,12 +2,14 @@ import click
 from yaml import safe_load
 from itertools import cycle
 from pathlib import Path
-from rmellipse.workflows._printtools import cprint, colors, braile_load
+from rmellipse.workflows._printtools import cprint, colors, braile_load, symbols
 import rmellipse.workflows._cdcs_helpers as cdcsh
 import rmellipse.workflows._globals as gv
 import rmellipse.workflows._cli_map as maph
 import rmellipse.workflows._wf_helpers as colh
 import json
+import concurrent.futures
+import time
 
 # from rmellipse.workflows.projecttree import ProjectTree
 # import rmellipse.workflows._globals as flowbals
@@ -23,9 +25,35 @@ __all__ = ['release']
 @click.argument('workflow-file', type=Path)
 @click.option('--no-blobs', is_flag=True, default=False)
 @click.option('--repeat-release', is_flag=True, default=False)
+@click.option(
+	'--max-threads', type=int, default=50, help='Maximum number of threads to use.'
+)
 def release_cli(*args, **kwargs):
 	"""Release a workflow to CDCS."""
 	return release(*args, **kwargs)
+
+
+def upload_blob_and_mapping(
+	cmap: dict,
+	curator: cdcsh.CachedCurator,
+	project_directory: Path,
+	no_blobs: bool,
+	thread_finished_map: dict,
+):
+	# move cursor to beginning of list
+	if not no_blobs:
+		blob_id = cdcsh.process_file(
+			curator=curator,
+			posix_rel_path=cmap['/path/'],
+			working_dir=project_directory,
+			verbose=False,
+		)
+	else:
+		blob_id = 'NONE'
+	# assign the blob id to the mapping of the blob
+	cmap[gv.MAPPING_META_KEYS.BPID.value] = blob_id
+	# update the thread finished portion
+	thread_finished_map[cmap[gv.MAPPING_META_KEYS.PATHSPEC.value]] = True
 
 
 def release(
@@ -33,6 +61,7 @@ def release(
 	project_directory: Path = Path.cwd(),
 	no_blobs: bool = False,
 	repeat_release: bool = False,
+	max_threads: int = 50,
 ):
 	workflow_file = Path(workflow_file)
 	project_directory = Path(project_directory)
@@ -69,7 +98,7 @@ def release(
 	if not repeat_release:
 		cprint('Checking for repeat...', color=colors.UNDERLINE + colors.HEADER)
 		releases = curator.query(
-			template='Release', mongoquery={'title': release_title}
+			template='Release', mongoquery={'title': release_title}, progress_bar=False
 		)
 		if len(releases) > 0:
 			msg = f'Release {release_title} already exists.'
@@ -80,31 +109,62 @@ def release(
 	if no_blobs:
 		cprint('NO BLOBS ARE BEING UPLOADED', color=colors.WARNING)
 		input('Continue or Ctrl + C')
+
+	# walk the project map,
+	# counting number of blobably items and starting
+	# a worker to upload them
 	total = 0
 	max_name = 0
-	for name, cmap in colh.iter_blobable(project_mapping):
-		total += 1
-		max_name = max((max_name), len(name))
-
-	print('total blobable items: ', total)
-	load_sym = cycle(braile_load)
-	count = 1
-	for name, cmap in colh.iter_blobable(project_mapping):
-		# move cursor to beginning of list
-		print('\033[F' * 2)
-		msg = f'{next(load_sym)} | {name.ljust(max_name)} | {count}/{total}'
-		print(msg, end='\n')
-		if not no_blobs:
-			blob_id = cdcsh.process_file(
-				curator=curator,
-				posix_rel_path=cmap['/path/'],
-				working_dir=project_directory,
-				verbose=False,
+	thread_finished_map = {}
+	with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
+		for name, cmap in colh.iter_blobable(project_mapping):
+			total += 1
+			max_name = max((max_name), len(name))
+			thread_finished_map[cmap[gv.MAPPING_META_KEYS.PATHSPEC.value]] = False
+			executor.submit(
+				upload_blob_and_mapping,
+				cmap,
+				curator,
+				project_directory,
+				no_blobs,
+				thread_finished_map,
 			)
-		else:
-			blob_id = 'NONE'
-		cmap[gv.MAPPING_META_KEYS.BPID.value] = blob_id
-		count += 1
+
+		print('total blobable items: ', total)
+		load_sym = cycle(braile_load)
+		finished_sym = symbols.CHECK
+		finished_count = 0
+		cursor_count = 0
+		# monitor each uploading thread
+		while finished_count < total:
+			print('\033[F' * cursor_count, end='')
+			msg = ''
+			ongoing_sym = next(load_sym)
+			finished_count = 0
+			cursor_count = 0
+			for i, (pathspec, finished) in enumerate(thread_finished_map.items()):
+				if finished:
+					finished_count += 1
+					sym = finished_sym
+				else:
+					sym = ongoing_sym
+				# print ongoing upload if less then 10
+				if i < 10:
+					cursor_count += 1
+					msg += f'{sym} | {pathspec.ljust(max_name)}\n'
+
+			if total > 10:
+				msg += 'other processes hidden ...\n'
+				cursor_count += 1
+
+			msg = f'completed {finished_count}/{total}\n' + msg
+			cursor_count += 1
+			cursor_count += 1
+			print(msg)
+
+			time.sleep(0.1)
+
+		executor.shutdown(wait=True)
 
 	# read in the workflow solution
 	# generated for the workflow file
@@ -129,12 +189,15 @@ def release(
 		'project': project_mapping,
 	}
 
-	cdcsh.upload_record(
+	response = cdcsh.upload_record(
 		curator=curator,
 		title=release_title,
 		template_title='Release',
 		content=release_record,
 	)
+
+	pid = json.loads(response.json().get('content'))['/PID/']
+	print(f'release uploaded at: {pid}')
 
 
 if __name__ == '__main__':

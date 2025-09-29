@@ -1,4 +1,7 @@
 import rmellipse.arrschema as arrschema
+import rmellipse.arrschema.xr as arrschema_xr
+import xarray as xr
+import numpy as np
 from rmellipse.uobjects import RMEMeas
 import pytest
 from pathlib import Path
@@ -81,6 +84,24 @@ REGISTRY.add_converter(
 	output_schema_uid=zeros['uid'],
 )
 
+# some more stuff
+zeros_complex = arrschema.arrschema(
+	name='zeros_complex', shape=(...,), dims=(...,), dtype=complex
+)
+float_2by2 = arrschema.arrschema(
+	name='float_2by2',
+	shape=(3, ..., 2, 2),
+	dims=('d0', ..., 'd1', 'd2'),
+	dtype=float,
+	coords={
+		'd0': {'values': [0, 1, 2], 'dtype': float},
+		'd1': {'values': [0, 1], 'dtype': int},
+		'd2': {'dtype': int},
+	},
+)
+REGISTRY.add_schema(zeros_complex)
+REGISTRY.add_schema(float_2by2)
+
 
 def test_with_RMEMeas():
 	path = ARRAY_SAMPLES / 'load.s2p'
@@ -117,7 +138,7 @@ def test_load_and_save():
 	# on the frequency units
 	with pytest.raises(Exception):
 		data.attrs['frequency_units'] = 'MHz'
-		arrschema.save(h5_path, data, 'sample', registry=REGISTRY)
+		arrschema.save(h5_path, data, 'sample', registry=REGISTRY, schema_name='s2p_ri')
 
 	data.attrs['frequency_units'] = 'GHz'
 
@@ -144,11 +165,34 @@ def test_convert():
 	print(new)
 
 
+def test_as_xr_schema():
+	# schema with 2by2
+	print('zeros arbitrary 3,2,2')
+	output = arrschema_xr.as_schema(
+		xr.DataArray(np.zeros((3, 2, 2), dtype='f4')),
+		0,
+		schema=float_2by2,
+	)
+	print(output)
+
+	# basic arbitrary array with changing types
+	print('zeros arbitrary')
+	output = arrschema_xr.as_schema(
+		xr.DataArray(np.zeros((4, 4), dtype='f8')),
+		0,
+		schema=zeros_complex,
+	)
+	print(output)
+
+
 if __name__ == '__main__':
-	# test_build_registry()
 	data = test_load_and_save()
+
 	test_with_RMEMeas()
-	arrschema.stdreg.show_schema()
-	# arrschema.stdreg.show_loaders()
 	print(data)
 	test_convert()
+	print('ZEROS LIKE \n ============')
+	test_as_xr_schema()
+	import json
+
+	print(json.dumps(zeros_complex, indent=True))

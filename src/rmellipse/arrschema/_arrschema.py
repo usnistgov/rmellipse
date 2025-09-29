@@ -89,7 +89,7 @@ class AnnotatedArrayLike(ABC):
 
 	@property
 	@abstractmethod
-	def coords(self) -> Mapping['AnnotatedArrayLike']:
+	def coords(self) -> Mapping[str, 'AnnotatedArrayLike']:
 		"""Mapping of dimension names to cooordinate sets."""
 		pass
 

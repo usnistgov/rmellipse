@@ -1,0 +1,63 @@
+release:
+  # name of the release
+  title: 'first-workflow'
+  # version tag
+  version: '0.1.5'
+  includes:
+    - '{my-output}'
+  ignores:
+    - 'inputs/*'
+
+# declare files as dependencies within a namespace
+# with pattern matching. Files dont have version matching
+# so
+requires-files:
+  # group under a folder name space
+  my-files:
+    # link out to files
+    load: '../const/Load.meas'
+    some-sub-folder: '../arrsamples'
+
+# declare environment variables
+requires-env:
+  # For something
+  - MY_NAME
+
+# declare any additional datasets
+datasets:
+  my-input: 'inputs/input-file.txt'
+  my-output: 'results/output-file.txt'
+
+jobs:
+  copy-file:
+    inputs:
+      - '{my-input}'
+    outputs:
+      - '{my-output}'
+    commands:
+      - 'echo hello ${MY_NAME}'
+      - 'uv run copy_file.py {my-input} {my-output}'
+      - 'echo copied file to {my-output}'
+
+  copy-file-again:
+    for each:
+      index: i
+      in:
+        - results/iter0.txt
+        - results/iter1.txt
+        - results/iter2.txt
+        - results/iter3.txt
+        - results/iter4.txt
+        - results/iter5.txt
+        - results/iter6.txt
+        - results/iter7.txt
+        - results/iter8.txt
+    inputs:
+      - '{my-output}'
+    outputs:
+      - '{i}'
+    commands:
+      - 'echo in job iterator {i} my friend'
+      - 'sleep 0.1s'
+      - 'uv run copy_file.py {my-output} {i}'
+      - 'echo copied file to {my-output-again}'

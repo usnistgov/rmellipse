@@ -1,0 +1,3 @@
+my-files:
+  1load: ../const/Load.meas
+  some-sub-folder: ../arrsamples

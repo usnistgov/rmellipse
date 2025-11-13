@@ -3,6 +3,8 @@ import click
 import rmellipse.workflows._cli_run
 import rmellipse.workflows._cli_map
 import rmellipse.workflows._cli_release
+import rmellipse.workflows._cli_sync
+import rmellipse.workflows._cli_logs
 
 
 class LazyGroup(click.Group):
@@ -41,14 +43,13 @@ class LazyGroup(click.Group):
 		return cmd_object
 
 
-@click.group(name='rmellipse')
+@click.group(name='rme')
 @click.version_option()
 def main():
 	"""
-	A tool for executing traceable data-analysis workflows compatable
-	with NIST's CDCS (Configural Data Curation System). Contains tools
-	to help define, run, map, and release workflows to CDCS that can
-	be consumed downstream by other analysis.
+	A tool for executing traceable data-analysis workflows. Contains tools
+	to help define, run, map, and release workflows that can
+	be consumed downstream by other analysis as packages.
 	"""
 
 
@@ -60,4 +61,11 @@ main.add_command(
 )
 main.add_command(
 	rmellipse.workflows._cli_release.release_cli,
+)
+main.add_command(
+	rmellipse.workflows._cli_sync.sync_cli,
+)
+
+main.add_command(
+	rmellipse.workflows._cli_logs.logs_cli,
 )

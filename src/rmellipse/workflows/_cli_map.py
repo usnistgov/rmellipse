@@ -1,17 +1,20 @@
 import click
 from pathlib import Path
-import rmellipse.workflows._globals as flowbals
+import rmellipse.workflows._settings as settings
 import json
-from rmellipse.workflows._wf_helpers import map_directory, show_map
-from rmellipse.workflows._printtools import cprint, colors
+import git
+from rmellipse.workflows.extras import map_directory, show_map
+from rmellipse.workflows._printtools import cprint, Colors
+from yaml import safe_load
 
 
 @click.command(name='map')
+@click.argument('workflow_file', type=Path)
 @click.option(
 	'--show-attrs', is_flag=True, default=False, help='Show the attrs of mapped items.'
 )
 def map_cli(*args, **kwargs):
-	"""Map a workflow in the project, building release-ready objects."""
+	"""Make a map of a workflow's project structure."""
 	return map(*args, **kwargs)
 
 
@@ -22,6 +25,7 @@ def map_cli(*args, **kwargs):
 # 4. map the any datasets from the workflow to that project structure
 # 5. save the mapping with archival format in the .rme folder
 def map(
+	workflow_file: str | Path,
 	project_dir: str | Path = Path.cwd(),
 	no_show: bool = False,
 	show_attrs: bool = False,
@@ -47,11 +51,35 @@ def map(
 	_type_
 	    _description_
 	"""
-	project_config = flowbals.ProjectSettings(project_dir)
+	project_config = settings.ProjectSettings(project_dir)
+
+	# open the workflow file
+	workflow_config = settings.WorkflowConfig(
+		project_dir / workflow_file, project_config
+	)
+
 	if not show_only:
 		show_only = '*'
+
+	repo = git.Repo(project_config.project_dir, search_parent_directories=True)
+
+	# add include patterns
+	try:
+		include_globs = workflow_config['release']['includes']
+		include_globs = [str(project_dir / pattern) for pattern in include_globs]
+	except KeyError:
+		include_globs = []
+	# add ignore patterns
+	try:
+		ign_globs = workflow_config['release']['ignores']
+		ign_globs = [str(project_dir / pattern) for pattern in ign_globs]
+	except KeyError:
+		ign_globs = []
+
 	# map out the project directory
-	mapping = map_directory({}, project_config.project_dir)
+	mapping = map_directory(
+		{}, project_config.project_dir, incl_globs=include_globs, ign_globs=ign_globs
+	)
 
 	# write my things to json
 	map_file = project_config.project_map
@@ -59,7 +87,7 @@ def map(
 		json.dump(mapping, f, indent=True)
 
 	if not no_show:
-		cprint(project_config.project_dir.name, color=colors.HEADER + colors.UNDERLINE)
+		cprint(project_config.project_dir.name, color=Colors.HEADER + Colors.UNDERLINE)
 		if isinstance(show_only, str):
 			show_only = [show_only]
 		show_map(mapping, level=1, show_attrs=show_attrs, show_only=show_only)
@@ -69,5 +97,7 @@ def map(
 if __name__ == '__main__':
 	path = r'\tests\workflow-hello\.rme\workflow-solutions\workflows\hello.json'
 	proj_tree = map(
-		project_dir=Path(r'.\tests\workflow-hello\\').resolve(), show_attrs='*'
+		'first-workflow',
+		project_dir=Path(r'.\tests\first-workflow\\').resolve(),
+		show_attrs='*',
 	)

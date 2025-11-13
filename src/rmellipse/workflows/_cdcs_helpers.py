@@ -26,6 +26,8 @@ import json
 import hashlib
 from pathlib import Path
 import io
+import requests
+import os
 
 
 class HashNotInDatabaseError(Exception):
@@ -73,7 +75,9 @@ def raise_from_status_code(response):
 	raise error(msg)
 
 
-class CachedCurator(cdcs.CDCS):
+class CachedCurator(
+	cdcs.CDCS,
+):
 	"""
 	Extension of the CDCS curator that caches information locally.
 
@@ -179,31 +183,6 @@ class CachedCurator(cdcs.CDCS):
 			return blob_pid
 
 
-def chunked_sha1(f: io.BytesIO, chunk: int = 2**25):
-	"""
-	Generate a SHA1 for a file in chunks.
-
-	Parameters
-	----------
-	f : io.BytesIO
-
-	chunk : int, optional
-	    How many bytes to chunk at a time, by default 2^20 (~1MB)
-
-	Returns
-	-------
-	str
-	    sha1 hash as a string.
-	"""
-	sha1 = hashlib.sha1()
-	while True:
-		data = f.read(chunk)
-		if not data:
-			break
-		sha1.update(data)
-	return sha1.hexdigest()
-
-
 def login(
 	hostname='http://127.0.0.1', username='', password='', verbose=True
 ) -> CachedCurator:
@@ -215,82 +194,6 @@ def login(
 		version = '.'.join([str(ci) for ci in c.cdcsversion])
 		print(f'{host_url} @ {version}')
 	return c
-
-
-def process_file(
-	curator: CachedCurator,
-	posix_rel_path: Path,
-	verbose: bool = True,
-	workspace_title: str = None,
-	working_dir: Path = Path.cwd(),
-) -> tuple[str]:
-	"""
-	Upload a file to a CDCS workspace.
-
-	Parameters
-	----------
-	curator : CachedCurator
-	    _description_
-	posix_rel_path : Path
-	    _description_
-
-	Returns
-	-------
-	blob_id:
-	    blob_id
-	pid:
-	    PID of item that was uploaded
-	"""
-	# first get a hash of the blob, see
-	# if it already exists
-	# if it does, then just return that pid
-	with open(working_dir / posix_rel_path, 'rb') as f:
-		sha1 = chunked_sha1(f)
-		try:
-			blob_pid = curator.get_sha1_pid(sha1, verbose=verbose)
-			if verbose:
-				print('File already exists.')
-		except HashNotInDatabaseError:
-			if verbose:
-				print('SHA1 not in database, uploading.')
-			blob_pid = None
-
-	if blob_pid is None:
-		with open(working_dir / posix_rel_path, 'rb') as f:
-			# TODO: This should probably be chunked
-			bcontent = f.read()
-
-			# blob id is the download url
-			fname = Path(posix_rel_path).name
-			blob_id = curator.upload_blob(
-				filename=fname,
-				blobbytes=bcontent,
-				workspace=workspace_title,
-				verbose=verbose,
-			)
-			blob_id = blob_id.split('/')[-2]
-			blob_meta = curator.get_blob(id=blob_id)
-			blob_pid = blob_meta.pid
-
-			# generate a blob metadata record
-			blob_meta_rec = {'sha1': sha1, 'blob/PID/': blob_pid}
-			# make a record of metadata
-			meta_record = upload_record(
-				curator=curator,
-				title=f'{fname}-meta',
-				template_title='BlobMetadata',
-				content=blob_meta_rec,
-				workspace_title=workspace_title,
-			)
-			meta_record_id = meta_record.json()['id']
-			meta_record_data = json.loads(meta_record.json()['content'])
-
-			# assign metadata to the blob
-			rest_url = f'/rest/blob/{blob_id}/metadata/{meta_record_id}/'
-			response = curator.post(rest_url)
-			raise_from_status_code(response)
-
-	return blob_pid
 
 
 def upload_record(
@@ -351,3 +254,44 @@ def upload_json_schema(curator: CachedCurator, title: str, filename: str, conten
 		raise Exception(f'- error: failed: {response.status_code} - {response.text}')
 
 	return response, template_id
+
+
+def stream_blob_to_file(
+	curator: CachedCurator,
+	blob_pid: str,
+	target_file: Path,
+	update_dict: dict,
+	expected_size: int,
+	chunk_size=2**25,
+):
+	"""
+	Stream a blob on CDCS to a target file.
+
+	Parameters
+	----------
+	blob_pid : str
+		PID (i.e. unique url) of the blob.
+	target_file : Path
+		Target file path.
+	"""
+	# with open(target_file, 'wb') as out_file:
+	# 	content = requests.get(blob_pid, stream=True).content
+	# 	out_file.write(content)
+	try:
+		url_str = blob_pid.split(curator.host)[-1]
+		with curator.get(url_str, stream=True) as r:
+			r.raise_for_status()
+			with open(target_file, 'wb') as f:
+				for chunk in r.iter_content(chunk_size=chunk_size):
+					# If you have chunk encoded response uncomment if
+					# and set chunk_size parameter to None.
+					# if chunk:
+					update_dict['size'] += chunk_size
+					if update_dict['size'] > expected_size:
+						update_dict['size'] = expected_size
+					f.write(chunk)
+		update_dict['success'] = True
+	except Exception as e:
+		update_dict['error'] = str(e)
+		update_dict['success'] = False
+	update_dict['finished'] = True

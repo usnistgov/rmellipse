@@ -8,4 +8,4 @@ is not intended for use.
 """
 
 from ._errors import *
-from ._globals import *
+from ._settings import *

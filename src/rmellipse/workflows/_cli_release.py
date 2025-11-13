@@ -2,14 +2,20 @@ import click
 from yaml import safe_load
 from itertools import cycle
 from pathlib import Path
-from rmellipse.workflows._printtools import cprint, colors, braile_load, symbols
+from rmellipse.workflows._printtools import cprint, Colors, braile_load, symbols
 import rmellipse.workflows._cdcs_helpers as cdcsh
-import rmellipse.workflows._globals as gv
+import rmellipse.workflows._settings as gv
 import rmellipse.workflows._cli_map as maph
-import rmellipse.workflows._wf_helpers as colh
+import rmellipse.workflows.extras as colh
+from rmellipse.workflows.archive_interface import (
+	get_interface,
+	get_credentials,
+	ReleaseRecordNotFoundError,
+)
 import json
 import concurrent.futures
 import time
+import packaging.version as version
 
 # from rmellipse.workflows.projecttree import ProjectTree
 # import rmellipse.workflows._globals as flowbals
@@ -17,48 +23,29 @@ import time
 # import jsonschema
 # from rmellipse.workflows._collections import walk_project, matches_any
 # from rmellipse.workflows.workflowtree import WorkflowTree
-# from rmellipse.workflows._printtools import cprint, colors
+# from rmellipse.workflows._printtools import cprint, olors
 __all__ = ['release']
 
 
 @click.command(name='release')
 @click.argument('workflow-file', type=Path)
+@click.argument('host', type=str)
 @click.option('--no-blobs', is_flag=True, default=False)
 @click.option('--repeat-release', is_flag=True, default=False)
+@click.option('--workspace', type=str, default='Global Public Workspace')
 @click.option(
 	'--max-threads', type=int, default=50, help='Maximum number of threads to use.'
 )
 def release_cli(*args, **kwargs):
-	"""Release a workflow to CDCS."""
+	"""Release a workflow to an archive."""
 	return release(*args, **kwargs)
-
-
-def upload_blob_and_mapping(
-	cmap: dict,
-	curator: cdcsh.CachedCurator,
-	project_directory: Path,
-	no_blobs: bool,
-	thread_finished_map: dict,
-):
-	# move cursor to beginning of list
-	if not no_blobs:
-		blob_id = cdcsh.process_file(
-			curator=curator,
-			posix_rel_path=cmap['/path/'],
-			working_dir=project_directory,
-			verbose=False,
-		)
-	else:
-		blob_id = 'NONE'
-	# assign the blob id to the mapping of the blob
-	cmap[gv.MAPPING_META_KEYS.BPID.value] = blob_id
-	# update the thread finished portion
-	thread_finished_map[cmap[gv.MAPPING_META_KEYS.PATHSPEC.value]] = True
 
 
 def release(
 	workflow_file: Path,
+	host: str | Path,
 	project_directory: Path = Path.cwd(),
+	workspace: str = 'Global Public Workspace',
 	no_blobs: bool = False,
 	repeat_release: bool = False,
 	max_threads: int = 50,
@@ -66,105 +53,82 @@ def release(
 	workflow_file = Path(workflow_file)
 	project_directory = Path(project_directory)
 
-	if workflow_file.suffixes == []:
-		workflow_file = workflow_file.with_suffix('.rme.yml')
-
 	# global config settings
 	project_config = gv.ProjectSettings(project_directory)
 
-	# requirements
-	reqs = project_config.requirements
-
 	# workflow settings
-	with open(project_directory / workflow_file, 'r') as f:
-		wf_config = safe_load(f)
-	cdcssettings = project_config.cdcssettings()
+	wf_config = gv.WorkflowConfig(project_directory / workflow_file, project_config)
+	rmesettings = project_config.rmesettings
 
-	rel_set = wf_config['cdcs-release']
+	# requirements
+	reqs = list(set(project_config.requires_releases + wf_config.requires_releases))
+
 	# build a project map
-	project_mapping = maph.map(project_dir=project_directory, no_show=True)
-
-	release_title_no_version = f'{workflow_file.stem.split(".")[0]}'
-	release_version = f'{wf_config["cdcs-release"]["version"]}'
-	release_title = f'{release_title_no_version}-v{release_version}'
-
-	cprint('Connecting to CDCS...', color=colors.UNDERLINE + colors.HEADER)
-	curator = cdcsh.login(
-		hostname=cdcssettings[rel_set['to']]['host'],
-		username=cdcssettings[rel_set['to']]['user'],
-		password=cdcssettings[rel_set['to']]['password'],
+	project_mapping = maph.map(
+		workflow_file, project_dir=project_directory, no_show=True
 	)
 
-	if not repeat_release:
-		cprint('Checking for repeat...', color=colors.UNDERLINE + colors.HEADER)
-		releases = curator.query(
-			template='Release', mongoquery={'title': release_title}, progress_bar=False
-		)
-		if len(releases) > 0:
-			msg = f'Release {release_title} already exists.'
-			msg += 'set --repeat-release to ignore this error.'
-			raise SystemExit(msg)
+	release_title_no_version = wf_config.title
+	release_version = wf_config.release_version
+	release_title = colh.format_release_verions(
+		release_title_no_version, release_version
+	)
+	cprint('Building release for...', color=Colors.UNDERLINE + Colors.HEADER)
+	cprint(f'workflow file : {str(wf_config.path.relative_to(project_directory))}')
+	cprint(f'release title : {release_title}')
 
-	cprint('Uploading blobs...', color=colors.UNDERLINE + colors.HEADER)
+	# cprint('Connecting to archive...'
+	try:
+		host, user, password = rmesettings.get_host_settings(host)
+	except LookupError:
+		host = host
+		user = None
+		password = None
+	archive = get_interface(host, user=user, password=password)
+	if repeat_release:
+		supports_repeats = False
+		try:
+			supports_repeats = archive.supports_repeat_releases
+		except AttributeError:
+			pass
+		if not supports_repeats:
+			raise ValueError(
+				f"Archive {type(archive)} doesn't support repeat releases."
+			)
+	if not repeat_release:
+		# query for any versions matching the version trying to be released
+		try:
+			releases = archive.get_release_records(
+				title_versionless=release_title_no_version,
+				version_expressions=['==' + release_version],
+				workspace=workspace,
+			)
+		except ReleaseRecordNotFoundError:
+			releases = {}
+
+		if len(releases) > 0:
+			msg = f'Release {release_title} already exists at {archive.host} \n'
+			msg += ' set --repeat-release to ignore this error.'
+			# cprint(msg, color=Colors.FAIL)
+			raise Exception(msg)
+
+	cprint('Uploading blobs...', color=Colors.UNDERLINE + Colors.HEADER)
 	if no_blobs:
-		cprint('NO BLOBS ARE BEING UPLOADED', color=colors.WARNING)
+		cprint('NO BLOBS ARE BEING UPLOADED', color=Colors.WARNING)
 		input('Continue or Ctrl + C')
 
-	# walk the project map,
-	# counting number of blobably items and starting
-	# a worker to upload them
-	total = 0
-	max_name = 0
-	thread_finished_map = {}
-	with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
-		for name, cmap in colh.iter_blobable(project_mapping):
-			total += 1
-			max_name = max((max_name), len(name))
-			thread_finished_map[cmap[gv.MAPPING_META_KEYS.PATHSPEC.value]] = False
-			executor.submit(
-				upload_blob_and_mapping,
-				cmap,
-				curator,
-				project_directory,
-				no_blobs,
-				thread_finished_map,
-			)
-
-		print('total blobable items: ', total)
-		load_sym = cycle(braile_load)
-		finished_sym = symbols.CHECK
-		finished_count = 0
-		cursor_count = 0
-		# monitor each uploading thread
-		while finished_count < total:
-			print('\033[F' * cursor_count, end='')
-			msg = ''
-			ongoing_sym = next(load_sym)
-			finished_count = 0
-			cursor_count = 0
-			for i, (pathspec, finished) in enumerate(thread_finished_map.items()):
-				if finished:
-					finished_count += 1
-					sym = finished_sym
-				else:
-					sym = ongoing_sym
-				# print ongoing upload if less then 10
-				if i < 10:
-					cursor_count += 1
-					msg += f'{sym} | {pathspec.ljust(max_name)}\n'
-
-			if total > 10:
-				msg += 'other processes hidden ...\n'
-				cursor_count += 1
-
-			msg = f'completed {finished_count}/{total}\n' + msg
-			cursor_count += 1
-			cursor_count += 1
-			print(msg)
-
-			time.sleep(0.1)
-
-		executor.shutdown(wait=True)
+	# upload all the plobs and update the project
+	# mapping with relecant metadata
+	archive.upload_blobs_and_update_mapping(
+		release_title=release_title,
+		release_title_versionless=release_title_no_version,
+		workspace=workspace,
+		project_mapping=project_mapping,
+		project_directory=project_directory,
+		max_threads=max_threads,
+		chunk_size=2**20,
+		no_blobs=no_blobs,
+	)
 
 	# read in the workflow solution
 	# generated for the workflow file
@@ -179,31 +143,26 @@ def release(
 		wft = json.load(f)
 
 	# (currently empty)
-	cprint('Uploading the release record...', color=colors.UNDERLINE + colors.HEADER)
+	cprint('Uploading the release record...', color=Colors.UNDERLINE + Colors.HEADER)
 	release_record = {
 		'title': release_title,
-		'tile_versionless': release_title_no_version,
+		'title_versionless': release_title_no_version,
 		'version': release_version,
+		'workflow_config_path': Path(relative_path).as_posix(),
 		'workflow': wft,
 		'requirements': reqs,
 		'project': project_mapping,
+		'datasets': wf_config.datasets,
 	}
 
-	response = cdcsh.upload_record(
-		curator=curator,
-		title=release_title,
-		template_title='Release',
-		content=release_record,
-	)
-
-	pid = json.loads(response.json().get('content'))['/PID/']
+	# upload the release record
+	pid = archive.upload_release_record(release_record, workspace)
 	print(f'release uploaded at: {pid}')
 
 
 if __name__ == '__main__':
 	release(
-		'hello',
-		project_directory='tests/workflow-hello',
-		no_blobs=False,
-		repeat_release=True,
+		'second-workflow',
+		'tests/ignored_archive',
+		project_directory='tests/first-workflow',
 	)

@@ -11,7 +11,7 @@ Command Line Interface
    only as part of the development process.
 
 .. click:: rmellipse._cli:main
-   :prog: rmellipse
+   :prog: rme
    :nested: full
 
 

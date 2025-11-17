@@ -6,9 +6,14 @@ from typing import Callable
 import rmellipse.workflows._settings as flowbals
 import os
 from rmellipse.workflows._printtools import cprint
-from rmellipse.arrschema._arrschema import SCHEMA_ATTRS_KEY
+from rmellipse.arrschema._arrschema import (
+	SCHEMA_ATTRS_KEY,
+	convert_h5attrs_to_json_types,
+)
 from rmellipse.workflows.local_interfaces import EnvInterface, CacheInterface
 import git
+import copy
+import numpy as np
 
 __all__ = ['matches_any', 'make_globs', 'iter_blobable']
 
@@ -90,15 +95,15 @@ def map_hdf5(
 			# groups get mapped
 			mapping[child_name] = {}
 			if SCHEMA_ATTRS_KEY in child.attrs:
-				mapping[child_name][flowbals.MAPPING_META_KEYS.ARRSCHEMA.values] = (
+				mapping[child_name][flowbals.MAPPING_META_KEYS.ARRSCHEMA.value] = (
 					child.attrs[SCHEMA_ATTRS_KEY]
 				)
 			if isinstance(child, h5py.Group):
 				mapping[child_name][flowbals.MAPPING_META_KEYS.PATHSPEC.value] = (
 					child_path.relative_to(root).as_posix()
 				)
-				mapping[child_name][flowbals.MAPPING_META_KEYS.ATTRS.value] = dict(
-					child.attrs
+				mapping[child_name][flowbals.MAPPING_META_KEYS.ATTRS.value] = (
+					convert_h5attrs_to_json_types(child.attrs)
 				)
 				mapping[child_name][flowbals.MAPPING_META_KEYS.ITEM.value] = (
 					flowbals.DIRECTORY_ITEMS.H5_GROUP.value

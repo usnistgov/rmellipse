@@ -26,7 +26,6 @@ Table of Contents
    :maxdepth: 4
 
    get_started/index.rst
-   arrayschema/index.rst
    auto_examples/index.rst
    for_contributors/index.rst
    cli/index.rst

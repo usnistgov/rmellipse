@@ -26,6 +26,7 @@ import importlib
 import sys
 import jsonschema
 from abc import ABC, abstractmethod
+import dict_hash
 
 # delete accessors before redefining, avoids a warning
 try:
@@ -43,7 +44,8 @@ ALLOWED_SHAPE_SPECS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 ALLOWED_SHAPE_SPECS = list(ALLOWED_SHAPE_SPECS) + ['...', ...]
 UNSPECIFIED_SPECS = ('...', ...)
 
-SCHEMA_ATTRS_KEY = 'ARRSCHEMA_UID'
+SCHEMA_ATTRS_KEY = 'ARRSCHEMA'
+ANNOTATION_ATTRS_KEY = 'ARRANNOTATION'
 
 
 def _allowed_shape_spec(s: object):
@@ -55,6 +57,18 @@ def _allowed_shape_spec(s: object):
 		return False
 
 
+def convert_h5attrs_to_json_types(attrs: dict) -> dict:
+	out = {}
+	for k, v in attrs.items():
+		if isinstance(v, np.ndarray):
+			out[k] = v.tolist()
+		elif isinstance(v, np.generic):
+			out[k] = v.item()
+		else:
+			out[k] = copy.copy(v)
+	return out
+
+
 __all__ = [
 	'ArrSchemaRegistry',
 	'ValidationError',
@@ -63,6 +77,9 @@ __all__ = [
 	'validate',
 	'save',
 	'convert',
+	'annotate',
+	'zeros',
+	'as_schema',
 ]
 
 
@@ -83,7 +100,7 @@ class AnnotatedArrayLike(ABC):
 
 	@property
 	@abstractmethod
-	def dim(self) -> tuple[str]:
+	def dims(self) -> tuple[str]:
 		"""Tuple of dimension names corresponding to shape."""
 		pass
 
@@ -104,6 +121,31 @@ class AnnotatedArrayLike(ABC):
 	def attrs(self) -> dict:
 		"""JSON compatable dictionary of metadata."""
 		pass
+
+
+def annotate(arr: AnnotatedArrayLike):
+	"""Generate an array annotation and attatch it as metadata."""
+	annotation = {}
+	attrs = convert_h5attrs_to_json_types(arr.attrs)
+	if SCHEMA_ATTRS_KEY in attrs:
+		attrs.pop(SCHEMA_ATTRS_KEY)
+	if ANNOTATION_ATTRS_KEY in attrs:
+		attrs.pop(ANNOTATION_ATTRS_KEY)
+
+	annotation = {
+		'shape': list(arr.shape),
+		'dims': list(arr.dims),
+		'dtype': str(arr.dtype),
+		'attrs': attrs,
+		'coords': {},
+	}
+
+	# add coordinate annotations
+	for k, v in arr.coords.items():
+		annotation['coords']['dtype'] = str(v.dtype)
+		annotation['coords']['shape'] = list(v.shape)
+
+	arr.attrs[ANNOTATION_ATTRS_KEY] = json.dumps(annotation)
 
 
 def lazy_import_module(name):
@@ -450,10 +492,8 @@ class ArrSchemaRegistry(dict):
 	def add_converter(
 		self,
 		funspec: str,
-		input_schema_name: str = None,
-		input_schema_uid: str = None,
-		output_schema_name: str = None,
-		output_schema_uid: str = None,
+		input_schema: dict,
+		output_schema: dict,
 	):
 		"""
 		Add a converting functiom between two schema.
@@ -466,23 +506,12 @@ class ArrSchemaRegistry(dict):
 		funspec : str
 		    Path spec of function in dot-notation
 		    (module.submodule:function)
-		input_schema_name : str, optional
-		    name of schema (or provide the uid), by default None
-		input_schema_uid : str, optional
-		    uid of input schema (or provide the name), by default None
-		output_schema_name : str, optional
-		    _description_, by default None
-		output_schema_uid : str, optional
-		    _description_, by default None
+		input_schema : dict, optional
+		    name of schema (or provide the uid) for converter
+		output_schema : dict, optional
+		    output_schema for converter
 		"""
 		# get the actual schema
-		input_schema = self.find_schema(
-			schema_name=input_schema_name, schema_uid=input_schema_uid
-		)
-		output_schema = self.find_schema(
-			schema_name=output_schema_name, schema_uid=output_schema_uid
-		)
-
 		input_uid = input_schema['uid']
 		output_uid = output_schema['uid']
 
@@ -527,7 +556,11 @@ class ArrSchemaRegistry(dict):
 		input_uid = input_schema['uid']
 		output_uid = output_schema['uid']
 
-		fspec = self['converters'][input_uid][output_uid]
+		try:
+			fspec = self['converters'][input_uid][output_uid]
+		except KeyError as e:
+			msg = f'conversion from {input_schema["name"]} to {output_schema["name"]} not defined in registry.'
+			raise ValueError(msg) from e
 		modstr = fspec.split(':')[0]
 		funstr = fspec.split(':')[1]
 		if modstr not in self._imported_modules:
@@ -539,8 +572,7 @@ class ArrSchemaRegistry(dict):
 		funspec: str,
 		extension: str,
 		saver_type: str,
-		schema_name: str = None,
-		schema_uid: str = None,
+		schema: dict,
 	):
 		"""
 		Add a saving function to the registry.
@@ -554,10 +586,8 @@ class ArrSchemaRegistry(dict):
 		saver_type : str, optional
 		    Specify the type of saver (e.g. csv like, HDF5, group_saveable).
 		    If notprovided, '' is used.
-		schema_name : str, optional
-		    _description_, by default None
-		schema_uid : str, optional
-		    _description_, by default None
+		schema : dict, optional
+		    Schema, by default None
 
 		Raises
 		------
@@ -569,17 +599,11 @@ class ArrSchemaRegistry(dict):
 			funspec=funspec,
 			extension=extension,
 			serial_type=saver_type,
-			schema_name=schema_name,
-			schema_uid=schema_uid,
+			schema_uid=schema['uid'],
 		)
 
 	def add_loader(
-		self,
-		funspec: str,
-		extension: str,
-		loader_type: str,
-		schema_name: str = None,
-		schema_uid: str = None,
+		self, funspec: str, extension: str, loader_type: str, schema: dict | Mapping
 	):
 		"""
 
@@ -593,10 +617,8 @@ class ArrSchemaRegistry(dict):
 		loader_type : str, optional
 		    Specify the type of loader (e.g. csv like, HDF5, group_saveable).
 		    If notprovided, '' is used.
-		schema_name : str, optional
-		    _description_, by default None
-		schema_uid : str, optional
-		    _description_, by default None
+		schema : dict | Mapping
+			Schema to use
 
 		Raises
 		------
@@ -608,8 +630,7 @@ class ArrSchemaRegistry(dict):
 			funspec=funspec,
 			extension=extension,
 			serial_type=loader_type,
-			schema_name=schema_name,
-			schema_uid=schema_uid,
+			schema_uid=schema['uid'],
 		)
 
 	def add_schema(
@@ -649,8 +670,7 @@ def save(
 	arr: AnnotatedArrayLike,
 	*saver_args,
 	registry: ArrSchemaRegistry,
-	schema_name: str = None,
-	schema_uid: str = None,
+	schema: dict = None,
 	saver_type: str = None,
 	validate_schema: bool = True,
 	verbose=False,
@@ -688,12 +708,18 @@ def save(
 
 	# if a specific schema wasnt asked for
 	# then try to use one thats already attatched
-	if SCHEMA_ATTRS_KEY in arr.attrs and schema_uid is None and schema_name is None:
-		schema_uid = arr.attrs[SCHEMA_ATTRS_KEY]
+
+	if schema is None and SCHEMA_ATTRS_KEY in arr.attrs:
+		schema_uid = json.loads(arr.attrs[SCHEMA_ATTRS_KEY])['uid']
+	elif schema is not None:
+		schema_uid = schema['uid']
+	else:
+		raise ValueError(
+			'Arr must have a schema attatched to attrs OR schema must be provided as a key word argument.'
+		)
 
 	# grab he right saver function
 	saver, schema = registry.import_saver(
-		schema_name=schema_name,
 		schema_uid=schema_uid,
 		extension=extension,
 		saver_type=saver_type,
@@ -702,20 +728,196 @@ def save(
 
 	# validate on the way in to the saver
 	if validate_schema:
-		validate(arr, schema=schema, registry=registry)
+		validate(arr, schema=schema)
 
 	# save it
 	return saver(path, arr, *saver_args, **saver_kwargs)
+
+
+def as_schema(
+	array: xr.DataArray,
+	registry: ArrSchemaRegistry = None,
+	schema: dict | Mapping = None,
+	schema_uid: str = None,
+	schema_name: str = None,
+):
+	"""
+	Cast an array into a schema.
+
+	Casts the correct data_type of the data
+	as well as the coordinates. If coordinates
+	are fixed, applies those as the values.
+
+
+	Parameters
+	----------
+	array : xr.DataArray
+		_description_
+	registry : ArrSchemaRegistry, optional
+		_description_, by default None
+	schema : dict | Mapping, optional
+		_description_, by default None
+	schema_uid : str, optional
+		_description_, by default None
+	schema_name : str, optional
+		_description_, by default None
+
+	Returns
+	-------
+	_type_
+		_description_
+
+	Raises
+	------
+	ValueError
+		_description_
+	"""
+
+	# get schema if not given
+	if schema is None:
+		schema = registry.find_schema(schema_name=schema_name, schema_uid=schema_uid)
+
+	new_shape_spec = schema['shape']
+	new_dims_spec = schema['dims']
+	new_dtype = schema['dtype']
+
+	# require that specified dimensions be uninterrupted
+	# i.e. at most 1 unspecified, arbitrary dimensions
+	unq_vals, unq_counts = np.unique(new_shape_spec, return_counts=True)
+	unspecified_count = unq_counts[unq_vals == '...'][0]
+	if unspecified_count > 1:
+		raise ValueError(
+			f'Schema with >1 arbitrary dimension specifications (...) can not be intialized as xarrays from a schema: \n {json.dumps(schema, indent=True)}'
+		)
+
+	# instantiate new array
+	new = array
+	old_dims = array.dims
+	for i, (si, di) in enumerate(zip(new_shape_spec, new_dims_spec)):
+		if si == '...':
+			break
+		# print('forward', si, di)
+		new = new.rename({old_dims[i]: di})
+		if di in schema['coords']:
+			crd_schema = schema['coords'][di]
+			crd_dtype = crd_schema['dtype']
+			if 'values' not in crd_schema:
+				new = new.assign_coords({di: new.coords[di].astype(crd_dtype)})
+			else:
+				new_crd_vals = crd_schema['values']
+				new = new.assign_coords({di: np.array(new_crd_vals).astype(crd_dtype)})
+
+	# recast coordinate and dimension names
+	rev_new_shape_spec = list(new_shape_spec)[::-1]
+	rev_new_dims_spec = list(new_dims_spec)[::-1]
+	for i, (si, di) in enumerate(zip(rev_new_shape_spec, rev_new_dims_spec)):
+		if si == '...':
+			break
+		# print('backward', si, di, old_dims[-(i + 1)])
+		new = new.rename({old_dims[-(i + 1)]: di})
+		if di in schema['coords']:
+			crd_schema = schema['coords'][di]
+			crd_dtype = crd_schema['dtype']
+			if 'values' not in crd_schema:
+				new = new.assign_coords({di: new.coords[di].astype(crd_dtype)})
+			else:
+				new_crd_vals = crd_schema['values']
+				new = new.assign_coords({di: np.array(new_crd_vals).astype(crd_dtype)})
+
+	new = new.astype(new_dtype)
+
+	validate(new, schema=schema)
+	return new
+
+
+def zeros(
+	schema: dict | Mapping,
+	like: xr.DataArray = None,
+	drop_mismatched_dims: bool = True,
+	attrs: dict = None,
+	**with_coords,
+):
+	shape = []
+	dims = []
+	coords = {}
+	extras_appended = False
+	like_schema_dims = []
+	# try to get extra dimensions
+	# frmo the old schema
+	try:
+		like_schema_dims = json.loads(like.attrs[SCHEMA_ATTRS_KEY])['dims']
+	except (KeyError, AttributeError):
+		pass
+
+	if attrs is None:
+		attrs = {}
+
+	# try to copy metadata
+	new_attrs = {}
+	try:
+		new_attrs = copy.deepcopy(like.attrs)
+		if SCHEMA_ATTRS_KEY in new_attrs:
+			new_attrs.pop(SCHEMA_ATTRS_KEY)
+		if ANNOTATION_ATTRS_KEY in new_attrs:
+			new_attrs.pop(ANNOTATION_ATTRS_KEY)
+		new_attrs.update(attrs)
+	except (KeyError, AttributeError):
+		new_attrs.update(attrs)
+
+	for s, d in zip(schema['shape'], schema['dims']):
+		# insert any extra dimensions
+		if s == '...' and not extras_appended:
+			if like is not None:
+				for d in like.dims:
+					# matching dims go in location of new schema
+					# so only look for extra dims here
+					if d not in schema['dims']:
+						# if its not a required dimension OR requested
+						# not to drop old required dimensions
+						if d not in like_schema_dims or not drop_mismatched_dims:
+							shape.append(len(like.coords[d]))
+							dims.append(d)
+							coords[d] = like.coords[d].copy()
+			extras_appended = True
+
+		# coordinate is required and has predefined labels
+		elif type(s) is int:
+			crd_schema = schema['coords'][d]
+			shape.append(s)
+			dims.append(d)
+			coords[d] = np.array(
+				schema['coords'][d]['values'], dtype=crd_schema['dtype']
+			)
+		# coordinate is required and doesn't have predefined labels
+		else:
+			crd_schema = schema['coords'][d]
+			dims.append(d)
+			if like is not None:
+				shape.append(len(like.coords[d]))
+				coords[d] = like.coords[d].astype(crd_schema['dtype'])
+
+			else:
+				try:
+					shape.append(len(with_coords[d]))
+				except KeyError as e:
+					msg = f'Missing required coordinates {d} with schema: \n{json.dumps(crd_schema, indent=True)}'
+					raise ValueError(msg) from e
+				coords[d] = np.array(with_coords[d]).astype(crd_schema['dtype'])
+
+	new = np.zeros(shape, dtype=schema['dtype'])
+	new = xr.DataArray(new, dims=dims, coords=coords)
+	new.attrs = new_attrs
+	validate(new, schema=schema, attach_schema=True)
+	return new
 
 
 def load(
 	path: Path | str,
 	*load_args,
 	registry: ArrSchemaRegistry,
-	schema_name: str = None,
-	schema_uid: str = None,
+	schema: dict,
 	loader_type: str = None,
-	validate_schema: bool = False,
+	validate_schema: bool = True,
 	verbose=False,
 	**load_kwargs,
 ) -> object:
@@ -728,14 +930,12 @@ def load(
 		_description_
 	registry : ArrSchemaRegistry
 		_description_
-	schema_name : str, optional
-		_description_, by default None
-	schema_uid : str, optional
+	schema : str, optional
 		_description_, by default None
 	loader_type : str, optional
 		_description_, by default None
 	validate_schema : bool, optional
-		_description_, by default False
+		_description_, by default True
 	verbose : bool, optional
 		_description_, by default False
 
@@ -747,25 +947,22 @@ def load(
 	# lookup by the schema if provided
 	extension = ''.join(Path(path).suffixes)
 	loader, schema = registry.import_loader(
-		schema_name=schema_name,
-		schema_uid=schema_uid,
+		schema_uid=schema['uid'],
 		extension=extension,
 		loader_type=loader_type,
 		verbose=verbose,
 	)
 	read = loader(path, *load_args, **load_kwargs)
 	if validate_schema:
-		validate(read, schema=schema, registry=registry)
+		validate(read, schema=schema)
 	return read
 
 
 def convert(
 	input: AnnotatedArrayLike,
 	registry: ArrSchemaRegistry,
-	output_schema_name: str = None,
-	output_schema_uid: str = None,
-	input_schema_name: str = None,
-	input_schema_uid: str = None,
+	output_schema: dict,
+	input_schema: dict = None,
 ) -> Any:
 	"""
 	Convert an input data to a new schema.
@@ -798,21 +995,22 @@ def convert(
 	AttributeError
 	    If the input schema can't be inferred.
 	"""
-	if input_schema_name is None and input_schema_uid is None:
+	if input_schema is None:
 		try:
 			input_attrs = input.attrs
 		except AttributeError as e:
 			msg = "Couldn't infer input schema (no attrs). Specify input schema on convert call."
 			raise AttributeError(msg) from e
 		try:
-			input_schema_uid = input_attrs[SCHEMA_ATTRS_KEY]
+			input_schema_uid = json.loads(input_attrs[SCHEMA_ATTRS_KEY])['uid']
 		except KeyError:
 			msg = f"Couldn't infer input schema ({SCHEMA_ATTRS_KEY} isn't present on attrs). Specify input schema on convert call."
+	else:
+		input_schema_uid = input_schema['uid']
+
 	converter_fun = registry.import_converter(
-		input_schema_name=input_schema_name,
 		input_schema_uid=input_schema_uid,
-		output_schema_name=output_schema_name,
-		output_schema_uid=output_schema_uid,
+		output_schema_uid=output_schema['uid'],
 	)
 	return converter_fun(input)
 
@@ -820,10 +1018,7 @@ def convert(
 def validate(
 	arr: AnnotatedArrayLike,
 	*,
-	registry: ArrSchemaRegistry = None,
-	schema_name: str = None,
-	schema_uid: str = None,
-	schema: Mapping = None,
+	schema: Mapping,
 	attach_schema: bool = True,
 ):
 	"""
@@ -833,14 +1028,8 @@ def validate(
 	----------
 	arr : xarray.DataArray
 	    DataArray object to validate
-	schema_name : str, optional
-	    Non-unique name of the schema in the registry, by default None
-	schema_uid : str, optional
-	    Unique ID of the schema, by default None
 	schema : Mapping, optional
 	    A schema dictionary to validate against, by default None
-	registry : ArrSchemaRegistry, optional
-	    _description_, by default stdreg
 	attach_schema : bool, optional
 	    If True, the schema is dumped into a string and
 	    attatched to the attrs of the input data array.
@@ -848,9 +1037,6 @@ def validate(
 
 	"""
 	# get the schema
-	if schema is None:
-		schema = registry.find_schema(schema_name=schema_name, schema_uid=schema_uid)
-
 	# compare dimensions to the actual shape,
 	# map symbolic dimensions to actual dimensions
 	sym_map = {}
@@ -902,7 +1088,7 @@ def validate(
 		raise ValidationError(msg) from e
 
 	if attach_schema:
-		arr.attrs[SCHEMA_ATTRS_KEY] = schema['uid']
+		arr.attrs[SCHEMA_ATTRS_KEY] = json.dumps(schema)
 
 
 def atomic_str(dtype: str):
@@ -910,6 +1096,18 @@ def atomic_str(dtype: str):
 	Validate and return a string according to an atomic type.
 	"""
 	return _np.dtype(dtype)
+
+
+def from_dict(d: Mapping | dict) -> dict:
+	"""
+	Generate a schema from a dictionary.
+
+	Parameters
+	----------
+	d : dict | Mapping
+		Schema object
+	"""
+	return arrschema(**d)
 
 
 # %% defines what is in a dataformat
@@ -1035,10 +1233,6 @@ def arrschema(
 	else:
 		coords = {}
 
-	# assign a uid:
-	if uid is None:
-		uid = uuid.uuid4()
-
 	# check that the units mapping is valid
 	if isinstance(units, str):
 		units = units
@@ -1091,5 +1285,10 @@ def arrschema(
 
 	if units is None:
 		out.pop('units')
+
+	if uid is None:
+		out.pop('uid')
+		hash = dict_hash.sha256(out)
+		out['uid'] = hash
 
 	return out

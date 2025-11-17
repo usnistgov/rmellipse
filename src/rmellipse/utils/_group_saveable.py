@@ -1079,7 +1079,9 @@ class GroupSaveable(GROUP_SAVEABLE):
 			if verbose:
 				print('about to try to save', key, self)  # , self.children[key])
 			if hasattr(self.children[key], 'attrs'):
-				self.children[key].attrs['is_big_object'] = self.is_big_object[key]
+				self.children[key].attrs['is_big_object'] = bool(
+					self.is_big_object[key]
+				)
 				new_object = save_object(
 					group, key, self.children[key], verbose=verbose
 				)
@@ -1087,7 +1089,7 @@ class GroupSaveable(GROUP_SAVEABLE):
 				new_object = save_object(
 					group, key, self.children[key], verbose=verbose
 				)
-				new_object.attrs['is_big_object'] = self.is_big_object[key]
+				new_object.attrs['is_big_object'] = bool(self.is_big_object[key])
 			if verbose:
 				print('*' * 80)
 				print(key, 'attrs', new_object.attrs.keys())
@@ -1175,7 +1177,7 @@ class GroupSaveable(GROUP_SAVEABLE):
 					raise ValueError("data.attrs['name'] does not match key.")
 
 		self.children[data_key] = data
-		self.is_big_object[data_key] = is_big_object
+		self.is_big_object[data_key] = bool(is_big_object)
 		setattr(self, key, self.children[data_key])
 
 		if isinstance(self.children[data_key], GROUP_SAVEABLE):

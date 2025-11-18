@@ -54,13 +54,13 @@ arrschema.validate(my_data, schema=float_zeros)
 
 # reffered to by a registry and uid
 my_data = xr.DataArray(np.zeros((4, 4), dtype=float))
-arrschema.validate(my_data, schema_uid=float_zeros['uid'], registry=registry)
+arrschema.validate(my_data, schema=float_zeros)
 
 # reffered to by a registry and name
 # Names are not unique, this may fail if multiple
 # schemas share a name and is not recommended.
 my_data = xr.DataArray(np.zeros((4, 4), dtype=float))
-arrschema.validate(my_data, schema_name='float_zeros', registry=registry)
+arrschema.validate(my_data, schema=float_zeros)
 
 # this will fail because the dtype isn't correct
 my_data_fails = xr.DataArray(np.zeros((4, 4), dtype=complex))
@@ -88,28 +88,25 @@ registry.add_loader(
 	'rmellipse.arrschema.examples:load_group_saveable',
 	['.h5', '.hdf5'],
 	loader_type='group_saveable',
-	schema_uid=float_zeros['uid'],
+	schema=float_zeros,
 )
 
 registry.add_saver(
 	'rmellipse.arrschema.examples:save_group_saveable',
 	['.h5', '.hdf5'],
 	saver_type='group_saveable',
-	schema_uid=float_zeros['uid'],
+	schema=float_zeros,
 )
 
 # %%
-#
-# The save/load function will try to infer what schema
-# your data set corresponds to, and save it accordingly. Currently
-# this ability to make inferences about the schema only works with validated
-# objects.
-#
+
 # Encoding and decoding functions are expected have function signatures
 # that look like ``fun(path, data, *args, **kwargs)``
 
 arrschema.save('example.h5', my_data, 'my-name', registry=registry)
-my_data_read = arrschema.load('example.h5', group='my-name', registry=registry)
+my_data_read = arrschema.load(
+	'example.h5', group='my-name', registry=registry, schema=float_zeros
+)
 print(my_data_read)
 
 # %%
@@ -117,9 +114,7 @@ print(my_data_read)
 # Otherwise, you will have to explicitly declare what schema your
 # data corresponds to.
 
-arrschema.save(
-	'example.h5', my_data, 'my-name', registry=registry, schema_uid=float_zeros['uid']
-)
+arrschema.save('example.h5', my_data, 'my-name', registry=registry, schema=float_zeros)
 
 # %%
 # Conversion
@@ -137,12 +132,10 @@ registry.add_schema(int_zeros)
 
 registry.add_converter(
 	'rmellipse.arrschema.examples:convert_float_to_int',
-	input_schema_uid=float_zeros['uid'],
-	output_schema_uid=int_zeros['uid'],
+	input_schema=float_zeros,
+	output_schema=int_zeros,
 )
 
-converted = arrschema.convert(
-	my_data, registry=registry, output_schema_uid=int_zeros['uid']
-)
+converted = arrschema.convert(my_data, registry=registry, output_schema=int_zeros)
 arrschema.validate(converted, schema=int_zeros)
 print(converted)

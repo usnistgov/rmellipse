@@ -81,6 +81,8 @@ def map(
 		{}, project_config.project_dir, incl_globs=include_globs, ign_globs=ign_globs
 	)
 
+	# add any additional annotations
+
 	# write my things to json
 	map_file = project_config.project_map
 	with open(map_file, 'w') as f:
@@ -95,9 +97,8 @@ def map(
 
 
 if __name__ == '__main__':
-	path = r'\tests\workflow-hello\.rme\workflow-solutions\workflows\hello.json'
 	proj_tree = map(
-		'first-workflow',
-		project_dir=Path(r'.\tests\first-workflow\\').resolve(),
+		'workflow',
+		project_dir=Path(r'.\tests\arrschema-workflow\\').resolve(),
 		show_attrs='*',
 	)

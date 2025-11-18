@@ -1,0 +1,35 @@
+{
+    "name": "current-measurements",
+    "shape": [
+        "...",
+        "N",
+        "D"
+    ],
+    "dim": [
+        "...",
+        "time",
+        "voltage_source"
+    ],
+    "dtype": "f8",
+    "coords": {
+        "time": {
+            "units": "s",
+            "dtype": "f8"
+        },
+        "voltage_source": {
+            "units": "V",
+            "dtype": "f8"
+        }
+    },
+    "attrs_schema": {
+        "type": "object",
+        "properties": {
+            "date_created": {
+                "type": "string"
+            },
+            "required": [
+                "date_created"
+            ]
+        }
+    }
+}

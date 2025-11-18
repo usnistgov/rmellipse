@@ -1,8 +1,17 @@
-Array Schema
-============
+Why Array Schema?
+=================
+Tools like xarray_ have shown to be very useful for creating self describing data of homogenous
+data sets, which carry with them coordinate arrays, labels, and potentiolly complex metadata.
+While it's convenient to make rich, descriptive data, writing scripts or functions is difficult, as
+it becomes difficult to describe the specification of the structure of data that a function or script is
+expecting. Managing a project with multiple different data formats, each with arbitrarily complex specifications
+of what structure, and metadata, is required or even allowed, becomes hard to manage. It also becomes
+difficult, when looking at the data, to parse what specification that dataset is trying to adhere to.
 
-Array schema are a tool for annotating the structure of homogenous array-like data
-and its metadata. They are designed to be JSON documents so they can be uploaded to
+Arrschema (Array schema) is a tool for annotating the structure of homogenous array-like data
+and its metadata, along with the specification that data is intended to meet.
+
+They are designed to be JSON documents so they can be uploaded to
 and discoverable by databases like mongodb. In general, array schema are intended
 to be an annotation tool, but provides some utility for managing encoding, decoding, converting
 between schemas, and validating datasets against schemas for the Python and xarray package.
@@ -28,9 +37,14 @@ is length N, and the final dimension is length 2.
 .. code-block:: json
 
     {
-        "name":"current-measurements"
-        "shape": ["...", "N", "2"],
+        "name": "current-measurements",
+        "shape": [
+            "...",
+            "N",
+            "D"
+        ]
     }
+
 
 
 Dimension names can be added to describe their meaning. Any specified dimension (i.e. not an ellipses)
@@ -41,9 +55,17 @@ describes the voltage source level.
 .. code-block:: json
 
     {
-        "name":"current-measurements"
-        "shape": ["...", "N", "2"],
-        "dim": ["...", "time", "voltage_source"]
+        "name": "current-measurements",
+        "shape": [
+            "...",
+            "N",
+            "D"
+        ],
+        "dim": [
+            "...",
+            "time",
+            "voltage_source"
+        ]
     }
 
 
@@ -53,9 +75,17 @@ In this case we want our data to be 64 bit floating point numbers.
 .. code-block:: json
 
     {
-        "name":"current-measurements"
-        "shape": ["...", "N", "2"],
-        "dim": ["...", "time", "voltage_source"]
+        "name": "current-measurements",
+        "shape": [
+            "...",
+            "N",
+            "D"
+        ],
+        "dim": [
+            "...",
+            "time",
+            "voltage_source"
+        ],
         "dtype": "f8"
     }
 
@@ -70,55 +100,76 @@ as well.
 .. code-block:: json
 
     {
-        "name":"current-measurements"
-        "shape": ["...", "N", "D"],
-        "dim": ["...", "time", "voltage_source"]
+        "name": "current-measurements",
+        "shape": [
+            "...",
+            "N",
+            "D"
+        ],
+        "dim": [
+            "...",
+            "time",
+            "voltage_source"
+        ],
         "dtype": "f8",
         "coords": {
-            "time":{
-               "units":"s",
-               "dtype":"f8"
+            "time": {
+                "units": "s",
+                "dtype": "f8"
             },
-            "voltage_source":{
-               "units":"V",
-               "dtype":"f8"
-            },
+            "voltage_source": {
+                "units": "V",
+                "dtype": "f8"
+            }
         }
     }
 
 
 Finally, often times there are data formats with required metadata. Metadata
 is modelled after the HDF5_ model of data with metadata, and is specified with
-the ``attrs_schema`` key.
+the ``attrs_schema`` key. Arrschema allow you to specify metadata format using
+`JSON Schema`_.
 
 .. code-block:: json
 
     {
-        "name":"current-measurements"
-        "shape": ["...", "N", "D"],
-        "dim": ["...", "time", "voltage_source"]
+        "name": "current-measurements",
+        "shape": [
+            "...",
+            "N",
+            "D"
+        ],
+        "dim": [
+            "...",
+            "time",
+            "voltage_source"
+        ],
         "dtype": "f8",
         "coords": {
-            "time":{
-               "units":"s",
-               "dtype":"f8"
+            "time": {
+                "units": "s",
+                "dtype": "f8"
             },
-            "voltage_source":{
-               "units":"V",
-               "dtype":"f8"
-            },
-        ,
+            "voltage_source": {
+                "units": "V",
+                "dtype": "f8"
+            }
+        },
         "attrs_schema": {
             "type": "object",
             "properties": {
-               "date_created": {
-                  "type":"string"
+                "date_created": {
+                    "type": "string"
+                },
+                "required": [
+                    "date_created"
+                ]
             }
-            "required": ["date_created"],
-         },
-
-      },
+        }
     }
+    }
+
+
 
 .. _xarray: https://docs.xarray.dev/en/stable/user-guide/data-structures.html#dataarray
 .. _dtype: https://numpy.org/doc/stable/reference/arrays.dtypes.html

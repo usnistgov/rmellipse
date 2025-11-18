@@ -1,0 +1,4 @@
+archives:
+  default_archive:
+    host: ../test_case_archive
+    default: True

@@ -1,5 +1,4 @@
 import rmellipse.arrschema as arrschema
-import rmellipse.arrschema.xr as arrschema_xr
 import xarray as xr
 import numpy as np
 from rmellipse.uobjects import RMEMeas
@@ -60,28 +59,28 @@ REGISTRY.add_loader(
 	'rmellipse.arrschema.examples:load_csv_like_s2p_ri',
 	'.s2p',
 	loader_type='csv',
-	schema_name='s2p_ri',
+	schema=s2p_ri,
 )
 
 REGISTRY.add_loader(
 	'rmellipse.arrschema.examples:load_group_saveable',
 	['.h5', '.hdf5'],
 	loader_type='group_saveable',
-	schema_name='s2p_ri',
+	schema=s2p_ri,
 )
 
 REGISTRY.add_saver(
 	'rmellipse.arrschema.examples:save_group_saveable',
 	['.h5', '.hdf5'],
 	saver_type='group_saveable',
-	schema_name='s2p_ri',
+	schema=s2p_ri,
 )
 
 
 REGISTRY.add_converter(
 	'rmellipse.arrschema.examples:convert_zeros_to_s2p_ri',
-	input_schema_name='s2p_ri',
-	output_schema_uid=zeros['uid'],
+	input_schema=s2p_ri,
+	output_schema=zeros,
 )
 
 # some more stuff
@@ -107,14 +106,14 @@ def test_with_RMEMeas():
 	path = ARRAY_SAMPLES / 'load.s2p'
 	data = arrschema.load(
 		ARRAY_SAMPLES / 'load.s2p',
-		schema_name='s2p_ri',
+		schema=s2p_ri,
 		loader_type='csv',
 		verbose=True,
 		registry=REGISTRY,
 	)
 	data = RMEMeas.from_nom('mysample', data)
 
-	arrschema.validate(data, schema=s2p_ri, registry=REGISTRY)
+	arrschema.validate(data, schema=s2p_ri)
 
 
 def test_load_and_save():
@@ -122,13 +121,15 @@ def test_load_and_save():
 	path = ARRAY_SAMPLES / 'load.s2p'
 	data = arrschema.load(
 		ARRAY_SAMPLES / 'load.s2p',
-		schema_name='s2p_ri',
+		schema=s2p_ri,
 		loader_type='csv',
 		verbose=True,
 		registry=REGISTRY,
 	)
 
-	data = arrschema.load(ARRAY_SAMPLES / 'load.s2p', verbose=True, registry=REGISTRY)
+	data = arrschema.load(
+		ARRAY_SAMPLES / 'load.s2p', verbose=True, registry=REGISTRY, schema=s2p_ri
+	)
 
 	h5_path = MUTABLE / 'loadarr.h5'
 	group = 'sample'
@@ -138,15 +139,13 @@ def test_load_and_save():
 	# on the frequency units
 	with pytest.raises(Exception):
 		data.attrs['frequency_units'] = 'MHz'
-		arrschema.save(h5_path, data, 'sample', registry=REGISTRY, schema_name='s2p_ri')
+		arrschema.save(h5_path, data, 'sample', registry=REGISTRY, schema=s2p_ri)
 
 	data.attrs['frequency_units'] = 'GHz'
 
-	arrschema.save(h5_path, data, 'sample', registry=REGISTRY)
+	arrschema.save(h5_path, data, 'sample', registry=REGISTRY, schema=s2p_ri)
 
-	data = arrschema.load(
-		h5_path, group='sample', schema_name='s2p_ri', registry=REGISTRY
-	)
+	data = arrschema.load(h5_path, group='sample', schema=s2p_ri, registry=REGISTRY)
 
 	return data
 
@@ -155,20 +154,20 @@ def test_convert():
 	path = ARRAY_SAMPLES / 'load.s2p'
 	data = arrschema.load(
 		ARRAY_SAMPLES / 'load.s2p',
-		schema_name='s2p_ri',
+		schema=s2p_ri,
 		loader_type='csv',
 		verbose=True,
 		registry=REGISTRY,
 	)
-	arrschema.validate(data, registry=REGISTRY, schema_name='s2p_ri')
-	new = arrschema.convert(data, registry=REGISTRY, output_schema_name='zeros')
+	arrschema.validate(data, schema=s2p_ri)
+	new = arrschema.convert(data, registry=REGISTRY, output_schema=zeros)
 	print(new)
 
 
 def test_as_xr_schema():
 	# schema with 2by2
 	print('zeros arbitrary 3,2,2')
-	output = arrschema_xr.as_schema(
+	output = arrschema.as_schema(
 		xr.DataArray(np.zeros((3, 2, 2), dtype='f4')),
 		0,
 		schema=float_2by2,
@@ -177,12 +176,21 @@ def test_as_xr_schema():
 
 	# basic arbitrary array with changing types
 	print('zeros arbitrary')
-	output = arrschema_xr.as_schema(
+	output = arrschema.as_schema(
 		xr.DataArray(np.zeros((4, 4), dtype='f8')),
 		0,
 		schema=zeros_complex,
 	)
 	print(output)
+
+
+def test_zeros_like():
+	new = arrschema.zeros(
+		s2p_ri, frequency=[0, 1, 2, 3], attrs={'frequency_units': 'GHz'}
+	)
+	# init a new array
+	new2 = arrschema.zeros(s2p_ri, like=new)
+	pass
 
 
 if __name__ == '__main__':
@@ -196,3 +204,4 @@ if __name__ == '__main__':
 	import json
 
 	print(json.dumps(zeros_complex, indent=True))
+	test_zeros_like()

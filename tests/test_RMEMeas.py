@@ -689,8 +689,10 @@ def test_grouping():
 
 
 if __name__ == '__main__':
-	test_overload()
-	test_h5_encoding()
-	test_validate_conventions()
-	a = np.array(1)
-	print(a.size)
+	test_add_umech()
+	# test_from_dist()
+	# test_overload()
+	# test_h5_encoding()
+	# test_validate_conventions()
+	# a = np.array(1)
+	# print(a.size)

@@ -31,6 +31,7 @@ _uncoutput = namedtuple('RMEUncTuple', 'cov mc')
 __all__ = ['RMEMeas', 'RMEMeasFormatError']
 
 UMECHID_DTYPE = np.dtype('U36')
+RMELLIPSE_NAMESPACE = uuid.UUID('c421f33f-4b1c-4f15-a2a6-896cd39430b1')
 
 
 class RMEMeasFormatError(Exception):
@@ -288,7 +289,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
 		"""
 		Cast any umech_id dimensions to the correct type.
 		"""
-		for attr_name in ('covcats', 'covdofs', 'mc', 'cov'):
+		for attr_name in ('covcats', 'covdofs', 'cov'):
 			attr = getattr(self, attr_name)
 			if attr is not None:
 				try:
@@ -302,13 +303,31 @@ class RMEMeas(uobj.UObj, GroupSaveable):
 						self,
 						attr_name,
 						attr.assign_coords(
-							{
-								'umech_id': attr.coords['umech_id']
-								.to_numpy()
-								.astype(UMECHID_DTYPE, copy=False)
-							}
+							{'umech_id': self.hash_to_uid(attr.coords['umech_id'])}
 						),
 					)
+
+	@staticmethod
+	def hash_to_uid(arr):
+		# if array is empty, just
+		# cast it in the right type
+		for_hash = arr.values
+		if len(for_hash) == 0:
+			return np.array(for_hash, UMECHID_DTYPE)
+		hashed = []
+		# keep the nominal
+		if for_hash[0] == 'nominal':
+			for_hash = for_hash[1:]
+			hashed = ['nominal']
+
+		# hash every umech_id
+		for s in for_hash:
+			if len(s) > 36:
+				uuid_obj = uuid.uuid5(RMELLIPSE_NAMESPACE, s)
+				hashed.append(str(uuid_obj))
+			else:
+				hashed.append(str(s))
+		return np.array(hashed, UMECHID_DTYPE)
 
 	def _validate_conventions(self):
 		"""
@@ -994,10 +1013,12 @@ class RMEMeas(uobj.UObj, GroupSaveable):
 		value: xr.DataArray,
 		dof: float = np.inf,
 		category: dict = {'Type': 'B'},
-		add_uid: bool = False,
+		add_uid=False,
 	):
 		"""
 		Add a linear mechanisms to covariance data.
+
+		Note:
 
 		Parameters
 		----------
@@ -1014,17 +1035,22 @@ class RMEMeas(uobj.UObj, GroupSaveable):
 		    Dictionary of key-value string pairs categorizing the uncertainty
 		    mechanisms. E.g. {'Type':'B','Origin':'Datasheet'}. The default
 		    is {'Type':'B'}.
-		add_uid: bool,
-		    If true, adds a uuid4 string to the uncertainty mechanism name
-		    to make it unique.
+		add_uid: bool, optional
+		    Will be deprecated, uids are used automatically now.
 
 		Returns
 		-------
 		None.
 
 		"""
+		# if add_uid is not None:
+		#     raise DeprecationWarning('add_uid will be deprecated so that all u_mechids will be a uid.')
+
+		umech_id_meta_name = name
+		category.update({'Name': 'umech_id_meta_name'})
 		if add_uid:
 			name += str(uuid.uuid4())
+
 		if name in self.umech_id:
 			raise ValueError('Linear mechanisms name ' + name + ' already exists')
 

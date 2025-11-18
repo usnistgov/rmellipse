@@ -386,6 +386,8 @@ def test_combine():
 	)
 	err_count = np.sum([basename in p for p in m12.umech_id])
 	# in this case we are specifying to only keep 3 error vectors
+	a = m12.covcats.sel(categories='combine_id')
+	err_count = a.values[a.values != ''].size
 	assert err_count == 3
 
 	# this should fail because of the -1

@@ -41,6 +41,8 @@ import matplotlib.pyplot as plt
 
 
 sample_data_dir = Path(r'../../../sol_demo_data').resolve()
+# sample_data_dir = Path(r'sol_demo_data').resolve()
+
 # sphinx_gallery_end_ignore
 
 # text files paths as Path objects

@@ -425,5 +425,5 @@ def test_combine():
 
 
 if __name__ == '__main__':
-	test_combine()
+	test_covcats_collisions()
 	pass

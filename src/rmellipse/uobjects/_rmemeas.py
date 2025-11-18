@@ -1103,6 +1103,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         designations = list(category.values())
         n = len(cats)
         self.assign_categories([name] * n, cats, designations)
+        self.cast_umechids()
 
         return name
 
@@ -1842,12 +1843,26 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         if umechs or isinstance(umechs, list):
             if 'nominal' in umechs:
                 raise ValueError('nominal always included, dont pass it.')
-            keep1 = {'umech_id': np.array(umechs)}
-            lin2 = np.append(['nominal'], np.array(umechs))
-            keep2 = {'umech_id': lin2}
-            cov = self.cov.sel(**keep2)
-            covcats = self.covcats.sel(**keep1)
-            covdofs = self.covdofs.sel(**keep1)
+            lin1 = np.array(umechs, dtype=UMECHID_DTYPE)
+            # keep1 = {'umech_id': lin1 }
+            lin2 = np.append(['nominal'], np.array(umechs, dtype=UMECHID_DTYPE))
+            # keep2 = {'umech_id': lin2}
+            _, _, where_1 = np.intersect1d(lin2, self.cov.umech_id, return_indices=True)
+            _, _, where_2 = np.intersect1d(
+                lin1, self.covcats.umech_id, return_indices=True
+            )
+            _, _, where_3 = np.intersect1d(
+                lin1, self.covdofs.umech_id, return_indices=True
+            )
+            # for some reason this would fail if I just
+            # used .sel and the strings are <U36 (that was my
+            # situation) so I changed it to use the intersect1d
+            # function which didn't fail to truthfully evaluate
+            # matching strings. IDK why, maybe something to do
+            # with forcing it to store strings as U36?
+            cov = self.cov[where_1, ...]
+            covcats = self.covcats[where_2, ...]
+            covdofs = self.covdofs[where_3, ...]
         elif umechs is not None:
             raise ValueError('umech_id not recognized, must be iterable')
 

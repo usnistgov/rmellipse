@@ -16,7 +16,7 @@ ignore = ["F401","E501","F403","F841","E741"]
 
 [tool.ruff.format]
 quote-style = "single"
-indent-style = "tab"
+indent-style = "space"
 docstring-code-format = true
 
 [tool.ruff.lint.pydocstyle]

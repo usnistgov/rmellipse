@@ -186,7 +186,23 @@ class RMEMeas(uobj.UObj, GroupSaveable):
 
 		# enforce that the umech_id dimension
 		# is always the correct U36
-		self.cast_umechids()
+		for attr in (self.covcats, self.covdofs, self.mc, self.cov):
+			if attr is not None:
+				try:
+					attr_dtype = attr.coords['umech_id'].dtype
+				except KeyError as e:
+					raise RMEMeasFormatError(f'{attr} missing umech_id') from e
+				except AttributeError as e:
+					raise RMEMeasFormatError(f'{attr} has no coordinates.') from e
+				if attr_dtype != UMECHID_DTYPE:
+					attr.assign_coords(
+						{
+							'umech_id': attr.coords['umech_id'].astype(
+								UMECHID_DTYPE, copy=False
+							)
+						}
+					)
+		pass
 
 		# enforce rule on name of uncertainty/montecarlo dimensions
 		# self._validate_conventions()
@@ -283,32 +299,6 @@ class RMEMeas(uobj.UObj, GroupSaveable):
 			return True
 		else:
 			return False
-
-	def cast_umechids(self):
-		"""
-		Cast any umech_id dimensions to the correct type.
-		"""
-		for attr_name in ('covcats', 'covdofs', 'mc', 'cov'):
-			attr = getattr(self, attr_name)
-			if attr is not None:
-				try:
-					attr_dtype = attr.coords['umech_id'].dtype
-				except KeyError as e:
-					raise RMEMeasFormatError(f'{attr} missing umech_id') from e
-				except AttributeError as e:
-					raise RMEMeasFormatError(f'{attr} has no coordinates.') from e
-				if attr_dtype != UMECHID_DTYPE:
-					setattr(
-						self,
-						attr_name,
-						attr.assign_coords(
-							{
-								'umech_id': attr.coords['umech_id']
-								.to_numpy()
-								.astype(UMECHID_DTYPE, copy=False)
-							}
-						),
-					)
 
 	def _validate_conventions(self):
 		"""
@@ -1064,8 +1054,6 @@ class RMEMeas(uobj.UObj, GroupSaveable):
 		designations = list(category.values())
 		n = len(cats)
 		self.assign_categories([name] * n, cats, designations)
-
-		self.cast_umechids()
 
 	@property
 	def nom(self):

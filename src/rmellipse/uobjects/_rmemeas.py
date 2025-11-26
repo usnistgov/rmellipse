@@ -30,7 +30,7 @@ _uncoutput = namedtuple('RMEUncTuple', 'cov mc')
 
 __all__ = ['RMEMeas', 'RMEMeasFormatError']
 
-UMECHID_DTYPE = np.dtype('U36')
+UMECHID_DTYPE = np.dtype('object')
 RMELLIPSE_NAMESPACE = uuid.UUID('c421f33f-4b1c-4f15-a2a6-896cd39430b1')
 
 
@@ -188,7 +188,8 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         # enforce that the umech_id dimension
         # is always the correct U36
         self.cast_umechids()
-
+        # enforce the use of string meatadata
+        self.cast_covcats()
         # enforce rule on name of uncertainty/montecarlo dimensions
         # self._validate_conventions()
 
@@ -285,6 +286,10 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         else:
             return False
 
+    def cast_covcats(self):
+        if self.covcats is not None:
+            self.covcats = self.covcats.astype(str).astype(object)
+
     def cast_umechids(self):
         """
         Cast any umech_id dimensions to the correct type.
@@ -298,36 +303,13 @@ class RMEMeas(uobj.UObj, GroupSaveable):
                     raise RMEMeasFormatError(f'{attr} missing umech_id') from e
                 except AttributeError as e:
                     raise RMEMeasFormatError(f'{attr} has no coordinates.') from e
-                if attr_dtype != UMECHID_DTYPE:
-                    setattr(
-                        self,
-                        attr_name,
-                        attr.assign_coords(
-                            {'umech_id': self.hash_to_uid(attr.coords['umech_id'])}
-                        ),
-                    )
-
-    @staticmethod
-    def hash_to_uid(arr):
-        # if array is empty, just
-        # cast it in the right type
-        for_hash = arr.values
-        if len(for_hash) == 0:
-            return np.array(for_hash, UMECHID_DTYPE)
-        hashed = []
-        # keep the nominal
-        if for_hash[0] == 'nominal':
-            for_hash = for_hash[1:]
-            hashed = ['nominal']
-
-        # hash every umech_id
-        for s in for_hash:
-            if len(s) > 36:
-                uuid_obj = uuid.uuid5(RMELLIPSE_NAMESPACE, s)
-                hashed.append(str(uuid_obj))
-            else:
-                hashed.append(str(s))
-        return np.array(hashed, UMECHID_DTYPE)
+                setattr(
+                    self,
+                    attr_name,
+                    attr.assign_coords(
+                        {'umech_id': attr.coords['umech_id'].astype(str).astype(object)}
+                    ),
+                )
 
     def _validate_conventions(self):
         """

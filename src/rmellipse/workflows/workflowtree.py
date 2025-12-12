@@ -487,9 +487,10 @@ def execute_concurrent_jobs(jobs: list[Job], level: int, max_threads: int = None
 						failed.add(cj.name)
 				elif worker.running():
 					msg += row_str.format(s, cj.name, memory_percent, cpu)
-			time.sleep(0.1)
 			pm.clear()
 			pm.cprint(msg, end='')
+			time.sleep(0.01)
+			check_count+=1
 			sys.stdout.flush()
 
 	pool.shutdown(wait=True)

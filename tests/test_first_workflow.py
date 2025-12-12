@@ -49,6 +49,10 @@ def clear_rme_folders(proj):
 
 
 def test_first_workflow():
+		
+	print('RUNNING FIRST WORKFLOW')
+	print('======================')
+
 	proj_dir = TEST_DIR / 'first-workflow'
 	clear_ignored_archive()
 	clear_rme_folders(proj_dir)
@@ -80,12 +84,15 @@ def test_first_workflow():
 	for line in tree(IGNORED_ARCHIVE):
 		print(line)
 
-	# try to sync the second workflow, which should pull in the first
-	sync.sync('first-workflow', proj_dir, default_host=IGNORED_ARCHIVE)
+	
+	print('RUNNING SECOND WORKFLOW')
+	print('=======================')
 
 	# try to sync the second workflow, which should pull in the first
 	sync.sync('second-workflow', proj_dir, default_host=IGNORED_ARCHIVE)
 
+	# try to sync the second workflow, which should pull in the first
+	run.run('second-workflow', project_dir=proj_dir, default_host=IGNORED_ARCHIVE)
 
 if __name__ == '__main__':
 	test_first_workflow()

@@ -17,7 +17,7 @@ release:
   # name of the release
   title: 'second-workflow'
   # version tag
-  version: '0.1.0'
+  version: '0.1.1'
   includes:
     - '{my-output}'
   ignores:
@@ -25,23 +25,20 @@ release:
 
 datasets:
   my-input: 'data_env/first-workflow/my-output.txt'
-  my-output: 'results/output-file-2.txt'
+  my-output: 'results'
 
 # run some validation parameters
 jobs:
   copy-file:
       for each:
-        iterator: fi
-        in: [file1, file2, file2]
+        index: fi
+        in: [file0, file1, file1]
       inputs:
-        - '{connect}'
+        - data_env
         - '{my-input}'
       outputs:
         - '{my-output}'
       commands:
-        -analyze {connect} {my-input}
-
-
-  matlab:
-    commands:
-      - matlab -batch disp(1.0)
+        - echo "Im being logged in job index fffff{fi}"
+        - echo {fi} > {my-output}/{fi}.txt
+        - sleep .25

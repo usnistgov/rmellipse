@@ -106,7 +106,7 @@ def get_interface(
 	host: str | Path,
 	user: str = None,
 	password: str = None,
-	resolve_relative_paths_to: str | Path = None,
+	resolve_relative_paths_to: str | Path = Path.cwd(),
 ) -> 'ArchiveInterface':
 	"""
 	Login to an archive, returns an ArchiveInterface.
@@ -163,6 +163,23 @@ class ArchiveInterface(ABC):
 
 	@staticmethod
 	def _validate_release_record_output(fn):
+		"""
+		Raises an error if the get_release_records function fails.
+
+		Parameters
+		----------
+		fn : function
+			function to be wrapped.
+
+		Returns
+		-------
+		dict
+			Output of get_release_records
+		Raises
+		------
+		ReleaseRecordNotFoundError
+			No release records were found.
+		"""
 		@wraps(fn)
 		def inner(*args, **kwargs):
 			available_records = fn(*args, **kwargs)
@@ -437,7 +454,7 @@ class ArchiveInterface(ABC):
 		no_blobs: bool = False,
 	):
 		"""
-		Upload a blobs to the archive and update the project mapping.
+		Upload blobs to the archive and update the project mapping.
 
 		The project mapping metadata for each blob is updated with information
 		that is only determined at upload time (i.e. the PID, bytes). Should
@@ -677,9 +694,11 @@ class CDCSArchive(ArchiveInterface):
 			Working directory of release, from with all paths
 			are relative.
 		release_title: str
-			Name of the relase with version code. Isn't required
+			Name of the release with version code. Isn't required
 			for the CDCS archive, but included for interface
 			compatability.
+		release_title_versionless: str
+			Name of the release without the version code.
 		workspace_title: str
 			Name of the workspace to upload to.
 

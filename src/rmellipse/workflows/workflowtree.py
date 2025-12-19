@@ -48,8 +48,6 @@ class DataPointer(dict):
 
 # executes job and print's it to a file
 class Job(dict):
-	all_jobs = {}
-
 	def __init__(self, job_dict: dict, project_settings: ProjectSettings):
 		"""
 		Initialize a Job object.
@@ -75,11 +73,6 @@ class Job(dict):
 		# assign dictionarry to myself as a shallow object
 		for k, v in job_dict.items():
 			self[k] = v
-
-		# add self to the dictionairy of jobs
-		if self.name in Job.all_jobs:
-			raise ValueError(f'Job {self.name} already exists.')
-		Job.all_jobs[self.name] = self
 
 		# make a log file path
 		config = project_settings

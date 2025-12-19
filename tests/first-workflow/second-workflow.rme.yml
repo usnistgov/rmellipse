@@ -32,13 +32,13 @@ jobs:
   copy-file:
       for each:
         index: fi
-        in: [file0, file1, file1]
+        in: [file0, file1, file2]
       inputs:
         - data_env
         - '{my-input}'
       outputs:
         - '{my-output}'
       commands:
-        - echo "Im being logged in job index fffff{fi}"
+        - echo "Im being logged in job index {fi}"
         - echo {fi} > {my-output}/{fi}.txt
         - sleep .25

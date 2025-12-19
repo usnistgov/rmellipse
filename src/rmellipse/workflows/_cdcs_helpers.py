@@ -119,7 +119,12 @@ class CachedCurator(
 			self._workspace_df_cache[title] = wrkspace_df
 		# access the cache and return the id
 		wrkspace_df = self._workspace_df_cache[title]
-		return str(wrkspace_df.sort_values(by='id').iloc[-1].id)
+		# it's possible for this to return a series instead
+		# of a data frame, in which case this will fail
+		try:
+			return str(wrkspace_df.sort_values(by='id').iloc[-1].id)
+		except TypeError:
+			return  str(wrkspace_df.id)
 
 	def cached_template_id(self, title: str) -> str:
 		"""
@@ -208,33 +213,31 @@ def upload_record(
 	# print(f'- status: uploading jrec {title}')
 	response = None
 	record_id = 1
-	try:
-		template_id = curator.cached_template_id(template_title)
-		data = {
-			'title': title,
-			'template': template_id,
-			'content': json.dumps(content),
-		}
-		# if a workspace was specified, upload there
-		# not specifed defaults to the private workspace
-		if workspace_title is not None:
-			workspace_id = curator.cached_workspace_id(workspace_title)
-			data.update({'workspace': workspace_id})
 
-		rest_url = '/rest/data/'
-		response = curator.post(rest_url, json=data)
+	template_id = curator.cached_template_id(template_title)
+	data = {
+		'title': title,
+		'template': template_id,
+		'content': json.dumps(content),
+	}
+	# if a workspace was specified, upload there
+	# not specifed defaults to the private workspace
+	if workspace_title is not None:
+		workspace_id = curator.cached_workspace_id(workspace_title)
+		data.update({'workspace': workspace_id})
 
-		if response.status_code == 201:
-			response_data = response.json()
-			if verbose:
-				print(f'- status: success: json record {title} created')
-			record_id = response_data.get('id')
-		else:
-			if verbose:
-				print(f'- error: failed: {response.status_code} - {response.text}')
-	except Exception as e:
+	rest_url = '/rest/data/'
+	response = curator.post(rest_url, json=data)
+
+	if response.status_code == 201:
+		response_data = response.json()
 		if verbose:
-			print(f'- error: {e}')
+			print(f'- status: success: json record {title} created')
+		record_id = response_data.get('id')
+	else:
+		if verbose:
+			print(f'- error: failed: {response.status_code} - {response.text}')
+
 	return response
 
 

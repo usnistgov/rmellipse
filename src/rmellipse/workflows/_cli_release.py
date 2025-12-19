@@ -162,7 +162,7 @@ def release(
 
 if __name__ == '__main__':
 	release(
-		'second-workflow',
-		'tests/ignored_archive',
+		'first-workflow',
+		'http://127.0.0.1',
 		project_directory='tests/first-workflow',
 	)

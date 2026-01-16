@@ -70,11 +70,27 @@ pages:
   - git branch -r | grep -v '\->' | while read remote; do git branch --track "${remote#origin/}" "$remote"; done
   - chmod +x ./tools/docs.sh
   - ./tools/docs.sh html-multiversioned-ci
+  # clone the ipages repo on github
+  - git clone https://oauth2:$NIST_IPAGES_TOKEN@github.com/usnistgov/rmellipse-ipages.git nist-pages
+  - git config --global user.email "daniel.c.gray@nist.gov"
+  - git config --global user.name "d-c-gray"
+  # removes any subdirectories in the
+  # i-pages repo, those are build files.
+  - rm -rf nist-pages/*/
+  - cp -R public/* nist-pages
+  # move to the cloned folder
+  - cd nist-pages
+  - touch .nojekyll
+  - git add .
+  - git diff-index --quiet HEAD || git commit -m "updating docs - automated"
+  - git push
   artifacts:
     paths:
     - public
   rules:
     - if: $CI_COMMIT_TAG
+    - if: $CI_PIPELINE_SOURCE == "schedule" # Runs automatically on schedule
+
 
 
 project-package-registry:
@@ -106,5 +122,3 @@ internal-package-registry:
     - python -m twine upload --repository-url ${CI_API_V4_URL}/projects/10154/packages/pypi dist/* --verbose
   rules:
     - if: $CI_COMMIT_TAG
-
-

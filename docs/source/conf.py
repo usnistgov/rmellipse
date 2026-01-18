@@ -199,7 +199,7 @@ html_static_path = ['_static']
 
 # Whitelist pattern for tags (set to None to ignore all tags)
 # white list the most recent minor tags we found earlier
-smv_tag_whitelist = '|'.join([t.replace('.', '\.') for t in latest_minors])
+smv_tag_whitelist = '|'.join(['^'+t.replace('.', r'\.')+'$' for t in latest_minors])
 
 
 # Whitelist pattern for branches (set to None to ignore all branches)

@@ -107,17 +107,22 @@ multiversioned = os.getenv('SPHINX_MULTIVERSIONED')
 release = get_version('rmellipse')
 version = '.'.join(release.split('.')[:-1])
 plot_gallery = True
-tags = get_all_git_tags()
-print(tags)
-latest_minors = get_latest_minor_versions(get_all_git_tags())
 
-# multiversioned documentation then use the
-# most up to date release tag
-if multiversioned is not None:
-    release = latest_minors[-1]
-    version = '.'.join(release.split('.')[:-1])
+
+try:
+    tags = get_all_git_tags()
+    print(tags)
+    latest_minors = get_latest_minor_versions(get_all_git_tags())
+
+    # multiversioned documentation then use the
+    # most up to date release tag
+    if multiversioned is not None:
+        release = latest_minors[-1]
+        version = '.'.join(release.split('.')[:-1])
+        plot_gallery = False
+except Exception:
     plot_gallery = False
-
+    latest_minors = []
 
 # -- General configuration ---------------------------------------------------
 

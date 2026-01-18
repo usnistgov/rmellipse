@@ -18,23 +18,23 @@ import numpy as np
 import h5py
 
 nom = xr.DataArray(
-	np.zeros((10, 2)),
-	dims=('d1', 'd2'),
-	coords={'d1': np.arange(10), 'd2': np.arange(2)},
+    np.zeros((10, 2)),
+    dims=('d1', 'd2'),
+    coords={'d1': np.arange(10), 'd2': np.arange(2)},
 )
 
 meas = RMEMeas.from_nom(name='meas', nom=nom)
 
 meas.add_umech(
-	name='mymechanisms',
-	value=meas.nom + np.ones(meas.nom.shape) * 0.01,
-	dof=np.inf,
-	category={'Type': 'B', 'Origin': 'Data Sheet'},
-	add_uid=True,
+    name='mymechanisms',
+    value=meas.nom + np.ones(meas.nom.shape) * 0.01,
+    dof=np.inf,
+    category={'Type': 'B', 'Origin': 'Data Sheet'},
+    add_uid=True,
 )
 
 for i in range(100):
-	meas.add_mc_sample(meas.nom + np.random.rand(*meas.nom.shape) * 0.01)
+    meas.add_mc_sample(meas.nom + np.random.rand(*meas.nom.shape) * 0.01)
 
 # %%
 # HDF5 Saving
@@ -59,16 +59,16 @@ for i in range(100):
 # your RMEMeas object.
 
 with h5py.File('meas.hdf5', 'a') as f:
-	# save object will throw an error if the group
-	# or dataset name already exists. So you need
-	# handle that manually if you want to overwrite
-	# existing data
-	try:
-		save_object(f, meas.name, meas)
-	except ValueError:
-		del f[meas.name]
-		save_object(f, meas.name, meas)
-	print(f[meas.name])
+    # save object will throw an error if the group
+    # or dataset name already exists. So you need
+    # handle that manually if you want to overwrite
+    # existing data
+    try:
+        save_object(f, meas.name, meas)
+    except ValueError:
+        del f[meas.name]
+        save_object(f, meas.name, meas)
+    print(f[meas.name])
 
 # %%
 # HDF5 Reading
@@ -78,8 +78,8 @@ with h5py.File('meas.hdf5', 'a') as f:
 # then pass in the group with it's name to
 # :func:`rmellipse.utils.load_object` in order to read it.
 with h5py.File('meas.hdf5', 'r') as f:
-	meas = load_object(f[meas.name], load_big_objects=True)
-	print(meas)
+    meas = load_object(f[meas.name], load_big_objects=True)
+    print(meas)
 
 
 # %%
@@ -105,12 +105,12 @@ with h5py.File('meas.hdf5', 'r') as f:
 
 
 def to_txt(data, path):
-	np.savetxt(path, data.values, delimiter=',')
+    np.savetxt(path, data.values, delimiter=',')
 
 
 def from_txt(path):
-	values = xr.DataArray(np.loadtxt(path, float, delimiter=','))
-	return values
+    values = xr.DataArray(np.loadtxt(path, float, delimiter=','))
+    return values
 
 
 m1 = RMEMeas.from_nom('mymeas', xr.DataArray(np.zeros((2, 2))))

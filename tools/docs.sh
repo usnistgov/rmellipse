@@ -24,11 +24,13 @@ then
 elif [ $1 = "html-multiversioned" ]
 then
 	set -e
+	export SPHINX_MULTIVERSIONED=true
 	uv run sphinx-multiversion docs/source docs/build
 	cp docs/source/reroute_to_stable.html	docs/build/index.html
 elif [ $1 = "html-multiversioned-ci" ]
 then
 	set -e
+	export SPHINX_MULTIVERSIONED=true
 	uv run sphinx-multiversion docs/source public
 	cp docs/source/reroute_to_stable.html	public/index.html
 fi

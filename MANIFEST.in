@@ -1,0 +1,24 @@
+# Exclude the entire tests directory from the sdist
+recursive-exclude tests *
+
+# Exclude the entire docs directory
+recursive-exclude docs *
+
+# exclude any hidden directories
+recursive-exclude .* *
+
+# exclude any hidden directories
+recursive-exclude graphics_dev *
+
+# exclude any hidden directories
+recursive-exclude tools *
+
+# Exclude all build artifacts within any sample? directory under examples
+prune examples/sample?/build
+
+# exclude ci files
+exclude .pre-commit-config.yaml
+exclude .gitlab-ci.yml
+exclude  dev_deps.txt
+exclude uv.lock
+exclude .gitignore

@@ -8,7 +8,7 @@ recursive-exclude docs *
 recursive-exclude .* *
 
 # exclude any hidden directories
-recursive-exclude graphics_dev *
+recursive-exclude sol_demo_data *
 
 # exclude any hidden directories
 recursive-exclude tools *

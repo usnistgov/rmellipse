@@ -6,8 +6,23 @@ image: python:3.12.4
   - pip install -r dev_deps.txt
 
 stages:
+  - install
   - test
   - deploy
+
+
+install_dependencies:
+  stage: install
+  cache:
+    key:
+      files:
+        - requirements.txt # Use requirements.txt or uv.lock as the cache key
+    paths:
+      - /root/.cache/uv # The default cache directory on Linux
+      # Adjust path based on your runner OS/configuration
+    policy: pull-push
+  script:
+    - *build-env
 
 unit_test:
   stage: test

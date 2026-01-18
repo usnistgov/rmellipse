@@ -107,6 +107,8 @@ multiversioned = os.getenv('SPHINX_MULTIVERSIONED')
 release = get_version('rmellipse')
 version = '.'.join(release.split('.')[:-1])
 plot_gallery = True
+tags = get_all_git_tags()
+print(tags)
 latest_minors = get_latest_minor_versions(get_all_git_tags())
 
 # multiversioned documentation then use the
@@ -172,7 +174,6 @@ sphinx_gallery_conf = {
     'within_subsection_order': 'FileNameSortKey',
     'ignore_pattern': '/_*',
     'run_stale_examples': True,
-    'recommender': {'enable': True, 'n_examples': 5, 'min_df': 3, 'max_df': 0.9},
     # only execute examples on development builds for CI jobs
     'plot_gallery': plot_gallery,
 }
@@ -199,8 +200,8 @@ html_static_path = ['_static']
 
 # Whitelist pattern for tags (set to None to ignore all tags)
 # white list the most recent minor tags we found earlier
-smv_tag_whitelist = '|'.join(['^'+t.replace('.', r'\.')+'$' for t in latest_minors])
-
+smv_tag_whitelist = '|'.join(['^' + t.replace('.', r'\.') + '$' for t in latest_minors])
+print(smv_tag_whitelist)
 
 # Whitelist pattern for branches (set to None to ignore all branches)
 smv_branch_whitelist = r'^stable$|^development$'
@@ -221,3 +222,5 @@ html_sidebars = {
     '**': ['globaltoc.html', 'sourcelink.html', 'searchbox.html', 'versioning.html'],
     'using/windows': ['windows-sidebar.html', 'searchbox.html'],
 }
+
+print('done')

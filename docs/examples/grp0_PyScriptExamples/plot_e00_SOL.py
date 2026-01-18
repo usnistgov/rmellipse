@@ -73,14 +73,14 @@ defs_path = sample_data_dir / 'definitions.hdf5'
 # a dimension called Frequency (GHz), where we store the frequencies corresponding to each
 # S-parameter. We also store our data as a complex-valued array.
 def from_s1p(path) -> xr.DataArray:
-	arr = np.loadtxt(path, float, delimiter='\t')
-	# define a coordinate set
-	coords = {'Frequency (GHz)': arr[:, 0]}
-	# convert to 1 port complex data
-	values = arr[:, 1] + 1.0j * arr[:, 2]
-	# create an xarray data set
-	out = xr.DataArray(values, coords=coords, dims=('Frequency (GHz)'))
-	return out
+    arr = np.loadtxt(path, float, delimiter='\t')
+    # define a coordinate set
+    coords = {'Frequency (GHz)': arr[:, 0]}
+    # convert to 1 port complex data
+    values = arr[:, 1] + 1.0j * arr[:, 2]
+    # create an xarray data set
+    out = xr.DataArray(values, coords=coords, dims=('Frequency (GHz)'))
+    return out
 
 
 # %%
@@ -106,64 +106,64 @@ raw_load = from_s1p(load_raw_path)
 
 
 def SOL_cal(**stds: xr.DataArray) -> xr.DataArray:
-	# get list of standards and definitions, ordered to correspond
-	defs = []
-	ms = []
-	for k, v in stds.items():
-		if 'def' in k:
-			def_key = k
-			m_key = def_key.replace('def_', 'raw_')
-			defs.append(stds[def_key])
-			ms.append(stds[m_key])
-	N = len(defs)
-	frequencies = ms[-1]['Frequency (GHz)']
+    # get list of standards and definitions, ordered to correspond
+    defs = []
+    ms = []
+    for k, v in stds.items():
+        if 'def' in k:
+            def_key = k
+            m_key = def_key.replace('def_', 'raw_')
+            defs.append(stds[def_key])
+            ms.append(stds[m_key])
+    N = len(defs)
+    frequencies = ms[-1]['Frequency (GHz)']
 
-	# output has the same shape as the inputs except an
-	# additional dimensions to hold the error terms
-	output_shape = list(ms[0].shape) + [3]
-	output_dims = list(ms[0].dims) + ['errterm']
-	output_coords = dict(ms[0].coords)
-	output_coords.update({'errterm': ['e00', 'e11', 'delta']})
+    # output has the same shape as the inputs except an
+    # additional dimensions to hold the error terms
+    output_shape = list(ms[0].shape) + [3]
+    output_dims = list(ms[0].dims) + ['errterm']
+    output_coords = dict(ms[0].coords)
+    output_coords.update({'errterm': ['e00', 'e11', 'delta']})
 
-	# pre allocate output xarray
-	# 3 output has 3
-	result = np.zeros(output_shape, complex)
-	result = xr.DataArray(result, dims=output_dims, coords=output_coords)
+    # pre allocate output xarray
+    # 3 output has 3
+    result = np.zeros(output_shape, complex)
+    result = xr.DataArray(result, dims=output_dims, coords=output_coords)
 
-	# pre allocated temporary arrays
-	# that will be used to solve the set of equations
-	mshape = list(result.shape)[:-1] + [N, 3]
-	M = np.zeros(mshape, complex)
+    # pre allocated temporary arrays
+    # that will be used to solve the set of equations
+    mshape = list(result.shape)[:-1] + [N, 3]
+    M = np.zeros(mshape, complex)
 
-	yshape = list(result.shape)[:-1] + [N, 1]
-	y = np.zeros(yshape, complex)
+    yshape = list(result.shape)[:-1] + [N, 1]
+    y = np.zeros(yshape, complex)
 
-	# I am going to work with the underlying numpy arrays
-	# here because it is convenient for linear algebra
-	# for each device add a row to the regressor matrix
-	for i in range(N):
-		S11_meas = ms[i].values
-		S11_def = defs[i].values
-		M[..., i, 0] = 1
-		M[..., i, 1] = S11_meas * S11_def
-		M[..., i, 2] = -S11_def
-		y[..., i, 0] = S11_meas
+    # I am going to work with the underlying numpy arrays
+    # here because it is convenient for linear algebra
+    # for each device add a row to the regressor matrix
+    for i in range(N):
+        S11_meas = ms[i].values
+        S11_def = defs[i].values
+        M[..., i, 0] = 1
+        M[..., i, 1] = S11_meas * S11_def
+        M[..., i, 2] = -S11_def
+        y[..., i, 0] = S11_meas
 
-	# this transposes M along last 2 dimensions
-	n_dims = len(M.shape)
-	transpose_dims = np.arange(n_dims)
-	transpose_dims[[n_dims - 1, n_dims - 2]] = transpose_dims[[n_dims - 2, n_dims - 1]]
-	Mt = np.transpose(M, transpose_dims)
+    # this transposes M along last 2 dimensions
+    n_dims = len(M.shape)
+    transpose_dims = np.arange(n_dims)
+    transpose_dims[[n_dims - 1, n_dims - 2]] = transpose_dims[[n_dims - 2, n_dims - 1]]
+    Mt = np.transpose(M, transpose_dims)
 
-	# do least squares
-	coeff = np.linalg.inv(Mt @ M) @ Mt @ y
+    # do least squares
+    coeff = np.linalg.inv(Mt @ M) @ Mt @ y
 
-	# reassign values to output
-	result.loc[..., 'e00'] = coeff[..., 0, 0]
-	result.loc[..., 'e11'] = coeff[..., 1, 0]
-	result.loc[..., 'delta'] = coeff[..., 2, 0]
+    # reassign values to output
+    result.loc[..., 'e00'] = coeff[..., 0, 0]
+    result.loc[..., 'e11'] = coeff[..., 1, 0]
+    result.loc[..., 'delta'] = coeff[..., 2, 0]
 
-	return result
+    return result
 
 
 # %%
@@ -172,18 +172,18 @@ def SOL_cal(**stds: xr.DataArray) -> xr.DataArray:
 # and grabbing just a view into the underlying nominal DataArray.
 
 with h5py.File(defs_path, 'r') as f:
-	def_short = RMEMeas.from_h5(f['Short']).nom
-	def_open = RMEMeas.from_h5(f['Open']).nom
-	def_load = RMEMeas.from_h5(f['Load']).nom
+    def_short = RMEMeas.from_h5(f['Short']).nom
+    def_open = RMEMeas.from_h5(f['Open']).nom
+    def_load = RMEMeas.from_h5(f['Load']).nom
 
 flist = raw_short['Frequency (GHz)']
 errbox = SOL_cal(
-	def_short=def_short,
-	def_open=def_open,
-	def_load=def_load,
-	raw_short=raw_short,
-	raw_open=raw_open,
-	raw_load=raw_load,
+    def_short=def_short,
+    def_open=def_open,
+    def_load=def_load,
+    raw_short=raw_short,
+    raw_open=raw_open,
+    raw_load=raw_load,
 )
 
 print(errbox)
@@ -197,17 +197,17 @@ print(errbox)
 
 
 def SOL_correct(errorbox: xr.DataArray, device: xr.DataArray) -> xr.DataArray:
-	S11 = device
-	e00 = errorbox.sel(errterm='e00')
-	e11 = errorbox.sel(errterm='e11')
-	delta = errorbox.sel(errterm='delta')
+    S11 = device
+    e00 = errorbox.sel(errterm='e00')
+    e11 = errorbox.sel(errterm='e11')
+    delta = errorbox.sel(errterm='delta')
 
-	corrected = (-e00 + S11) / (-delta + e11 * S11)
+    corrected = (-e00 + S11) / (-delta + e11 * S11)
 
-	# return the corrected result
-	r = xr.zeros_like(device)
-	r.loc[...] = corrected
-	return r
+    # return the corrected result
+    r = xr.zeros_like(device)
+    r.loc[...] = corrected
+    return r
 
 
 # %%
@@ -261,9 +261,9 @@ raw_load = RMEMeas.from_nom('DUT', raw_load)
 # %%
 # Lets also grab our definitions with the full uncertainty information
 with h5py.File(defs_path, 'r') as f:
-	def_short = RMEMeas.from_h5(f['Short'])
-	def_open = RMEMeas.from_h5(f['Open'])
-	def_load = RMEMeas.from_h5(f['Load'])
+    def_short = RMEMeas.from_h5(f['Short'])
+    def_open = RMEMeas.from_h5(f['Open'])
+    def_load = RMEMeas.from_h5(f['Load'])
 
 # %%
 # Propagate Functions
@@ -273,12 +273,12 @@ with h5py.File(defs_path, 'r') as f:
 # in the propagator to do our analysis.
 
 errbox = SOL_cal(
-	def_short=def_short,
-	def_open=def_open,
-	def_load=def_load,
-	raw_short=raw_short,
-	raw_open=raw_open,
-	raw_load=raw_load,
+    def_short=def_short,
+    def_open=def_open,
+    def_load=def_load,
+    raw_short=raw_short,
+    raw_open=raw_open,
+    raw_load=raw_load,
 )
 
 dut = SOL_correct(errbox, raw_dut)
@@ -300,16 +300,16 @@ dut = SOL_correct(errbox, raw_dut)
 
 @myprop.propagate
 def calc_mag(arr):
-	out = xr.zeros_like(arr, dtype=float)
-	out.values = np.abs(arr)
-	return out
+    out = xr.zeros_like(arr, dtype=float)
+    out.values = np.abs(arr)
+    return out
 
 
 @myprop.propagate
 def calc_phase(arr):
-	out = xr.zeros_like(arr, dtype=float)
-	out.values = np.angle(arr, deg=True)
-	return out
+    out = xr.zeros_like(arr, dtype=float)
+    out.values = np.angle(arr, deg=True)
+    return out
 
 
 mag = calc_mag(dut)
@@ -324,21 +324,21 @@ phs_lower = phase.uncbounds(k=k, deg=True).cov
 phs_upper = phase.uncbounds(k=-k, deg=True).cov
 
 ax[0].fill_between(
-	dut.nom['Frequency (GHz)'],
-	y1=mag_lower,
-	y2=mag_upper,
-	color='k',
-	alpha=0.5,
-	label=f'k = {k} Uncertainty',
+    dut.nom['Frequency (GHz)'],
+    y1=mag_lower,
+    y2=mag_upper,
+    color='k',
+    alpha=0.5,
+    label=f'k = {k} Uncertainty',
 )
 
 ax[1].fill_between(
-	dut.nom['Frequency (GHz)'],
-	y1=phs_lower,
-	y2=phs_upper,
-	alpha=0.5,
-	color='k',
-	label=f'k = {k} Uncertainty',
+    dut.nom['Frequency (GHz)'],
+    y1=phs_lower,
+    y2=phs_upper,
+    alpha=0.5,
+    color='k',
+    label=f'k = {k} Uncertainty',
 )
 
 ax[0].plot(mag.nom['Frequency (GHz)'], mag.nom, label='nominal')
@@ -363,8 +363,8 @@ fig.legend(handles, labels, loc='upper center', ncols=3)
 
 fig, ax = plt.subplots(2, 1)
 ax[0].plot(
-	mag.nom['Frequency (GHz)'],
-	mag.stdunc(k=k).cov,
+    mag.nom['Frequency (GHz)'],
+    mag.stdunc(k=k).cov,
 )
 ax[0].set_ylabel(f'Lin Magn k={k} Uncertainty')
 ax[1].plot(phase.nom['Frequency (GHz)'], phase.stdunc(k=k).cov, label='nominal')
@@ -397,14 +397,14 @@ mag_variance = []
 phase_variance = []
 fig, axs = plt.subplots(2, 1)
 for um in grouped_mag.umech_id:
-	mag_var_i = grouped_mag.usel(umech_id=[um]).stdunc().cov ** 2
-	phase_var_i = grouped_phase.usel(umech_id=[um]).stdunc().cov ** 2
-	mag_variance.append(mag_var_i / total_mag_variance * 100)
-	phase_variance.append(phase_var_i / total_phase_variance * 100)
+    mag_var_i = grouped_mag.usel(umech_id=[um]).stdunc().cov ** 2
+    phase_var_i = grouped_phase.usel(umech_id=[um]).stdunc().cov ** 2
+    mag_variance.append(mag_var_i / total_mag_variance * 100)
+    phase_variance.append(phase_var_i / total_phase_variance * 100)
 
 axs[0].stackplot(dut.nom['Frequency (GHz)'], mag_variance, labels=grouped_mag.umech_id)
 axs[1].stackplot(
-	dut.nom['Frequency (GHz)'], mag_variance, labels=grouped_phase.umech_id
+    dut.nom['Frequency (GHz)'], mag_variance, labels=grouped_phase.umech_id
 )
 
 handles, labels = axs[0].get_legend_handles_labels()

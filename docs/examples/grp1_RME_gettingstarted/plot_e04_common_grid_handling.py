@@ -24,26 +24,26 @@ import numpy as np
 
 
 def make_measurement(d1_coords):
-	"""Make a sample measurement with length 4 coordinate set."""
-	nom = xr.DataArray(
-		np.zeros((4, 2)),
-		dims=('d1', 'd2'),
-		coords={'d1': d1_coords, 'd2': np.arange(2)},
-	)
+    """Make a sample measurement with length 4 coordinate set."""
+    nom = xr.DataArray(
+        np.zeros((4, 2)),
+        dims=('d1', 'd2'),
+        coords={'d1': d1_coords, 'd2': np.arange(2)},
+    )
 
-	meas = RMEMeas.from_nom(name='meas', nom=nom)
+    meas = RMEMeas.from_nom(name='meas', nom=nom)
 
-	meas.add_umech(
-		name='mymechanisms',
-		value=meas.nom + np.ones(meas.nom.shape) * 0.01,
-		dof=np.inf,
-		category={'Type': 'B', 'Origin': 'Data Sheet'},
-		add_uid=True,
-	)
+    meas.add_umech(
+        name='mymechanisms',
+        value=meas.nom + np.ones(meas.nom.shape) * 0.01,
+        dof=np.inf,
+        category={'Type': 'B', 'Origin': 'Data Sheet'},
+        add_uid=True,
+    )
 
-	for i in range(100):
-		meas.add_mc_sample(meas.nom + np.random.rand(*meas.nom.shape) * 0.01)
-	return meas
+    for i in range(100):
+        meas.add_mc_sample(meas.nom + np.random.rand(*meas.nom.shape) * 0.01)
+    return meas
 
 
 m1 = make_measurement([0, 1, 2, 3])
@@ -67,21 +67,21 @@ m2 = make_measurement([0, 1.1, 2, 2.9])
 # propagator calls the function on the`RMEMeas.cov`attribute then on the`RMEMeas.mc` attribute.
 
 myprop = RMEProp(
-	sensitivity=True,
-	montecarlo_sims=100,
-	common_grid='d1',
-	handle_common_grid_method='interp_common',
-	common_coords={'d1': [0, 0.5, 1.5, 2.5]},
-	vectorize=True,
-	verbose=True,
+    sensitivity=True,
+    montecarlo_sims=100,
+    common_grid='d1',
+    handle_common_grid_method='interp_common',
+    common_coords={'d1': [0, 0.5, 1.5, 2.5]},
+    vectorize=True,
+    verbose=True,
 )
 
 
 @myprop.propagate
 def add(x, y):
-	"""Add two data sets."""
-	print(x.d1.values, y.d1.values)
-	return x + y
+    """Add two data sets."""
+    print(x.d1.values, y.d1.values)
+    return x + y
 
 
 m3 = add(m1, m2)

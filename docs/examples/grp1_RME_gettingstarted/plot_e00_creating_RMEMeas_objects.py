@@ -24,9 +24,9 @@ import xarray as xr
 import numpy as np
 
 nom = xr.DataArray(
-	[[1, 2, 3], [4, 5, 6]],
-	dims=('d1', 'd2'),
-	coords={'d1': [0.1, 0.2], 'd2': ['a', 'b', 'c']},
+    [[1, 2, 3], [4, 5, 6]],
+    dims=('d1', 'd2'),
+    coords={'d1': [0.1, 0.2], 'd2': ['a', 'b', 'c']},
 )
 
 meas = RMEMeas.from_nom(name='myval', nom=nom)
@@ -54,11 +54,11 @@ print(meas.nom)
 
 
 meas.add_umech(
-	name='My Uncertainty Mechanism',
-	value=meas.nom + np.ones(meas.nom.shape) * 0.01,
-	dof=np.inf,
-	category={'Type': 'B', 'Origin': 'Data Sheet'},
-	add_uid=True,
+    name='My Uncertainty Mechanism',
+    value=meas.nom + np.ones(meas.nom.shape) * 0.01,
+    dof=np.inf,
+    category={'Type': 'B', 'Origin': 'Data Sheet'},
+    add_uid=True,
 )
 print(meas.stdunc(k=1).cov)
 
@@ -85,7 +85,7 @@ print(meas.confint(0.95))
 # with the same dimensions and coordinates as the nominal.
 
 for i in range(100):
-	meas.add_mc_sample(meas.nom + np.random.normal(*meas.nom.shape) * 0.01)
+    meas.add_mc_sample(meas.nom + np.random.normal(*meas.nom.shape) * 0.01)
 
 print(meas.stdunc(k=1).mc)
 
@@ -180,9 +180,9 @@ print(nominal_only.stdunc())
 # Values can be reassigned through propagation.
 
 try:
-	meas[0] = 1
+    meas[0] = 1
 except TypeError as e:
-	print(e)
+    print(e)
 
 # %%
 # Interpolating

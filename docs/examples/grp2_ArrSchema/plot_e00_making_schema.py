@@ -34,7 +34,7 @@ registry = arrschema.ArrSchemaRegistry()
 # add it to the registry.
 
 float_zeros = arrschema.arrschema(
-	name='float_zeros', shape=(...,), dims=(...,), dtype=float
+    name='float_zeros', shape=(...,), dims=(...,), dtype=float
 )
 
 print(json.dumps(float_zeros, indent=True))
@@ -65,9 +65,9 @@ arrschema.validate(my_data, schema=float_zeros)
 # this will fail because the dtype isn't correct
 my_data_fails = xr.DataArray(np.zeros((4, 4), dtype=complex))
 try:
-	arrschema.validate(my_data_fails, schema=float_zeros)
+    arrschema.validate(my_data_fails, schema=float_zeros)
 except arrschema.ValidationError as e:
-	print(e)
+    print(e)
 
 # validated datasets store the associated schema in the metadata
 print(my_data.attrs)
@@ -85,17 +85,17 @@ print(my_data.attrs)
 # file extensions.
 
 registry.add_loader(
-	'rmellipse.arrschema.examples:load_group_saveable',
-	['.h5', '.hdf5'],
-	loader_type='group_saveable',
-	schema=float_zeros,
+    'rmellipse.arrschema.examples:load_group_saveable',
+    ['.h5', '.hdf5'],
+    loader_type='group_saveable',
+    schema=float_zeros,
 )
 
 registry.add_saver(
-	'rmellipse.arrschema.examples:save_group_saveable',
-	['.h5', '.hdf5'],
-	saver_type='group_saveable',
-	schema=float_zeros,
+    'rmellipse.arrschema.examples:save_group_saveable',
+    ['.h5', '.hdf5'],
+    saver_type='group_saveable',
+    schema=float_zeros,
 )
 
 # %%
@@ -105,7 +105,7 @@ registry.add_saver(
 
 arrschema.save('example.h5', my_data, 'my-name', registry=registry)
 my_data_read = arrschema.load(
-	'example.h5', group='my-name', registry=registry, schema=float_zeros
+    'example.h5', group='my-name', registry=registry, schema=float_zeros
 )
 print(my_data_read)
 
@@ -131,9 +131,9 @@ int_zeros = arrschema.arrschema(name='int_zeros', shape=(...,), dims=(...,), dty
 registry.add_schema(int_zeros)
 
 registry.add_converter(
-	'rmellipse.arrschema.examples:convert_float_to_int',
-	input_schema=float_zeros,
-	output_schema=int_zeros,
+    'rmellipse.arrschema.examples:convert_float_to_int',
+    input_schema=float_zeros,
+    output_schema=int_zeros,
 )
 
 converted = arrschema.convert(my_data, registry=registry, output_schema=int_zeros)

@@ -26,18 +26,18 @@ from rmellipse.propagators import RMEProp
 
 
 class myclass:
-	def __init__(self, val):
-		self.val = val
+    def __init__(self, val):
+        self.val = val
 
-	def __str__(self):
-		return 'my val is ' + str(self.val)
+    def __str__(self):
+        return 'my val is ' + str(self.val)
 
-	def __repr__(self):
-		return self.__str__()
+    def __repr__(self):
+        return self.__str__()
 
-	def __add__(self, o):
-		newval = self.val + o.val
-		return myclass(newval)
+    def __add__(self, o):
+        newval = self.val + o.val
+        return myclass(newval)
 
 
 nominal = xr.DataArray(myclass(2))
@@ -58,7 +58,7 @@ myprop = RMEProp(sensitivity=True, vectorize=True)
 
 @myprop.propagate
 def add(x, y):
-	return x + y
+    return x + y
 
 
 print(add(meas, meas))
@@ -72,13 +72,13 @@ print(add(meas, meas))
 
 @myprop.propagate
 def add2(x, y):
-	# pre-allocate an output
-	out = xr.zeros_like(x)
-	# take the custom classes out of the xarray object and operate on them
-	new_vals = x.values + y.values
-	# put them back in the DataArray we pre-allocated
-	out.values = new_vals
-	return out
+    # pre-allocate an output
+    out = xr.zeros_like(x)
+    # take the custom classes out of the xarray object and operate on them
+    new_vals = x.values + y.values
+    # put them back in the DataArray we pre-allocated
+    out.values = new_vals
+    return out
 
 
 new_meas = add2(meas, meas)
@@ -91,9 +91,9 @@ print(new_meas)
 
 @myprop.propagate
 def to_float(x):
-	out = xr.zeros_like(x)
-	out.values = [xi.val for xi in x.values]
-	return out
+    out = xr.zeros_like(x)
+    out.values = [xi.val for xi in x.values]
+    return out
 
 
 new_meas = to_float(new_meas)

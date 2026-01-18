@@ -17,20 +17,20 @@ import xarray as xr
 import numpy as np
 
 nom = xr.DataArray(
-	np.zeros((4, 2)), dims=('d1', 'd2'), coords={'d1': [0, 1, 2, 3], 'd2': np.arange(2)}
+    np.zeros((4, 2)), dims=('d1', 'd2'), coords={'d1': [0, 1, 2, 3], 'd2': np.arange(2)}
 )
 
 meas = RMEMeas.from_nom(name='meas', nom=nom)
 
 meas.add_umech(
-	name='my_mechanism',
-	value=meas.nom + np.ones(meas.nom.shape) * 0.01,
-	dof=np.inf,
-	category={'Type': 'B', 'Origin': 'Data Sheet'},
+    name='my_mechanism',
+    value=meas.nom + np.ones(meas.nom.shape) * 0.01,
+    dof=np.inf,
+    category={'Type': 'B', 'Origin': 'Data Sheet'},
 )
 
 for i in range(100):
-	meas.add_mc_sample(meas.nom + np.random.rand(*meas.nom.shape) * 0.01)
+    meas.add_mc_sample(meas.nom + np.random.rand(*meas.nom.shape) * 0.01)
 
 myprop = RMEProp(sensitivity=True, montecarlo_sims=100, verbose=True)
 
@@ -55,10 +55,10 @@ myprop.settings['verbose'] = False
 
 @myprop.propagate
 def add(x, y):
-	"""Add 2 numbers."""
-	output = x + y
-	print(x.umech_id.values, output.umech_id.values)
-	return output
+    """Add 2 numbers."""
+    output = x + y
+    print(x.umech_id.values, output.umech_id.values)
+    return output
 
 
 added = add(meas, 2)
@@ -76,7 +76,7 @@ added = add(meas, 2)
 
 @myprop.propagate
 def add2(x):
-	return x + 2
+    return x + 2
 
 
 myprop.settings['vectorize'] = True

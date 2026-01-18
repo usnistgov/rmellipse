@@ -69,11 +69,11 @@ myprop = RMEProp(montecarlo_sims=N, sensitivity=True)
 use_sample_mean = False
 
 V = RMEMeas.from_dist(
-	name='voltage', nom=2, std=0.01, samples=N, dist='gaussian', use_sample_mean=False
+    name='voltage', nom=2, std=0.01, samples=N, dist='gaussian', use_sample_mean=False
 )
 
 I = RMEMeas.from_dist(
-	name='current', nom=1.5, std=0.01, samples=N, dist='gaussian', use_sample_mean=False
+    name='current', nom=1.5, std=0.01, samples=N, dist='gaussian', use_sample_mean=False
 )
 
 print(V)
@@ -123,8 +123,8 @@ print('V linear uncertainty mechanisms :', V.umech_id)
 
 @myprop.propagate
 def power(v, i):
-	print(v.dims, v.shape, i.shape)
-	return v * i
+    print(v.dims, v.shape, i.shape)
+    return v * i
 
 
 # when we call this, note that the power function is called twice, and the shapes

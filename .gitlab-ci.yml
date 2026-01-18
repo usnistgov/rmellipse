@@ -2,8 +2,7 @@ image: python:3.12.4
 
 .build-env: &build-env
   - pip install uv
-  - uv pip install .
-  - uv pip install -r dev_deps.txt
+  - uv sync
 
 stages:
   - install

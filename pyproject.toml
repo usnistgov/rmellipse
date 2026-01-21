@@ -28,6 +28,9 @@ members = [
     "tests/workflow-hello/workspace",
 ]
 
+[tool.uv.sources]
+pypi = "https://pypi.org"
+
 [project]
 name = "rmellipse"
 dynamic = ["version"]
@@ -46,7 +49,7 @@ classifiers = [
 ]
 
 dependencies = [
-  "pandas>=2.2.2",
+  "pandas>=2.2.2,<3.0.0",
   "numpy>=2.0.0",
   "matplotlib>=3.9.0",
   "h5py>=3.11.0",

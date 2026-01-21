@@ -28,6 +28,14 @@ members = [
     "tests/workflow-hello/workspace",
 ]
 
+# ise PyPi as the index for
+# jobs run wth this package,
+# all dependencies should be on there.
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://pypi.org/simple"
+default = true
+
 [project]
 name = "rmellipse"
 dynamic = ["version"]
@@ -46,7 +54,7 @@ classifiers = [
 ]
 
 dependencies = [
-  "pandas>=2.2.2",
+  "pandas>=2.2.2,<3.0.0",
   "numpy>=2.0.0",
   "matplotlib>=3.9.0",
   "h5py>=3.11.0",

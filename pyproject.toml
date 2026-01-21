@@ -28,8 +28,13 @@ members = [
     "tests/workflow-hello/workspace",
 ]
 
-[tool.uv.sources]
-pypi = "https://pypi.org"
+# ise PyPi as the index for
+# jobs run wth this package,
+# all dependencies should be on there.
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://pypi.org/simple"
+default = true
 
 [project]
 name = "rmellipse"

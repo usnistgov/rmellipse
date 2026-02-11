@@ -14,6 +14,15 @@ Please see the [documentation](https://pages.nist.gov/rmellipse-ipages).
 > RMEllipse is still in development. We expect to make changes that will break backward compatibility. Also, there are known bugs that we have not fixed yet. Specifically, we plan to re-write the Monte-Carlo uncertainty propagation algorithm in RMEProp. Please check back for updates. When we increment the version to 1.0, we expect that that version will be stable. 
 
 ## Installation
+
+### Prerequisites:
+
+- libhdf5-dev
+- gnome-keyring
+
+### Dependencies
+
+
 Install the most recent stable build with [uv](https://docs.astral.sh/uv/):
 
 ```

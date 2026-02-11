@@ -6,6 +6,7 @@ then
 elif [ $1 = "open" ]
 then
     set -e
-    start htmlcov/index.html
+    # start htmlcov/index.html
+    echo $(pwd)/htmlcov/index.html
 fi
 exit 0

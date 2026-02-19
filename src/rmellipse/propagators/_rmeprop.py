@@ -764,12 +764,11 @@ class RMEProp(propagators.Propagator):
 
         return covdofs
 
-    @staticmethod
-    def _run_propagation_algrothm(
+    def _run_propagation_algorithm(
+        self,
         process: callable,
         process_args: tuple[type],
         process_kwargs: dict[type],
-        settings: dict,
     ) -> ('uobjs.RMEMeas', dict):
         """
         Run the propagation algorithm.
@@ -777,15 +776,11 @@ class RMEProp(propagators.Propagator):
         Parameters
         ----------
         process : callable
-            DESCRIPTION.
+            Function to call.
         process_args : tuple[type]
-            DESCRIPTION.
+            Positional passed to function.
         process_kwargs : dict[type]
-            DESCRIPTION.
-        settings : dict
-            DESCRIPTION.
-         : TYPE
-            DESCRIPTION.
+            Keyword args, passed to function.
 
         Returns
         -------
@@ -796,7 +791,7 @@ class RMEProp(propagators.Propagator):
         fun = process
         meta = None
 
-        if settings['verbose']:
+        if self.settings['verbose']:
             t0 = time.time()
             meta = {}
 
@@ -805,12 +800,12 @@ class RMEProp(propagators.Propagator):
             fun,
             list(process_args),
             process_kwargs,
-            sensitivity_analysis=settings['sensitivity'],
-            vectorize=settings['vectorize'],
-            verbose=settings['verbose'],
+            sensitivity_analysis=self.settings['sensitivity'],
+            vectorize=self.settings['vectorize'],
+            verbose=self.settings['verbose'],
         )
 
-        if settings['verbose']:
+        if self.settings['verbose']:
             meta['linear_runtime'] = time.time() - t0
             t0 = time.time()
 
@@ -819,24 +814,24 @@ class RMEProp(propagators.Propagator):
             fun,
             list(process_args),
             process_kwargs,
-            montecarlo_trials=settings['montecarlo_sims'],
-            vectorize=settings['vectorize'],
-            verbose=settings['verbose'],
+            montecarlo_trials=self.settings['montecarlo_sims'],
+            vectorize=self.settings['vectorize'],
+            verbose=self.settings['verbose'],
         )
-        if settings['verbose']:
+        if self.settings['verbose']:
             meta['mc_runtime'] = time.time() - t0
             t0 = time.time()
 
         # re categorize
         covcats = None
         covdofs = None
-        if settings['sensitivity']:
+        if self.settings['sensitivity']:
             covcats = RMEProp._get_new_categories(
                 param_set,
                 list(process_args),
                 process_kwargs,
-                sensitivity=settings['sensitivity'],
-                verbose=settings['verbose'],
+                sensitivity=self.settings['sensitivity'],
+                verbose=self.settings['verbose'],
             )
             # if None, then covcats didn't find any RMEObjects
             if covcats is not None:
@@ -847,11 +842,11 @@ class RMEProp(propagators.Propagator):
                     param_set,
                     list(process_args),
                     process_kwargs,
-                    sensitivity=settings['sensitivity'],
-                    verbose=settings['verbose'],
+                    sensitivity=self.settings['sensitivity'],
+                    verbose=self.settings['verbose'],
                 )
 
-        if settings['verbose']:
+        if self.settings['verbose']:
             meta['recategorize_runtime'] = time.time() - t0
             t0 = time.time()
 
@@ -863,14 +858,14 @@ class RMEProp(propagators.Propagator):
             mc_out,
             covcats=covcats,
             covdofs=covdofs,
-            montecarlo_trials=settings['montecarlo_sims'],
-            sensitivity=settings['sensitivity'],
-            verbose=settings['verbose'],
+            montecarlo_trials=self.settings['montecarlo_sims'],
+            sensitivity=self.settings['sensitivity'],
+            verbose=self.settings['verbose'],
         )
 
-        if settings['verbose']:
+        if self.settings['verbose']:
             meta['repack_runtime'] = time.time() - t0
-            meta['montecarlo trials'] = settings['montecarlo_sims']
+            meta['montecarlo trials'] = self.settings['montecarlo_sims']
             try:
                 meta['n_params'] = len(param_set)
             except TypeError:
@@ -1034,9 +1029,7 @@ class RMEProp(propagators.Propagator):
 
                 t0 = time.time()
 
-            out, meta = RMEProp._run_propagation_algrothm(
-                fun, args_hg, kwargs_hg, self.settings
-            )
+            out, meta = self._run_propagation_algorithm(fun, args_hg, kwargs_hg)
 
             if self.settings['verbose']:
                 print('grid handling runtime' + ':' + str(grid_runtime) + ' sec')
@@ -1060,6 +1053,7 @@ class RMEProp(propagators.Propagator):
 
         return fun_with_propagation
 
+    # TODO: this is wrong
     @staticmethod
     def _montecarlo_combine(
         measurements: tuple,
@@ -1067,30 +1061,35 @@ class RMEProp(propagators.Propagator):
         montecarlo_trials: int = 0,
         combine_across_dim=False,
     ):
-        mc_avg = None
-        if montecarlo_trials:
-            if combine_across_dim is False:
-                resampled = [
-                    RMEProp._sample_distribution(montecarlo_trials, m)
-                    for m in measurements
-                ]
-                stacked = xr.concat(resampled, dim='measurements')
-                mc_avg = stacked.mean(dim='measurements')
+        raise (
+            NotImplementedError(
+                "Monte Carlo combine not implemented yet. Please read 'Monte Carlo sampling bias in the microwave uncertainty framework'"
+            )
+        )
+        # mc_avg = None
+        # if montecarlo_trials:
+        #     if combine_across_dim is False:
+        #         resampled = [
+        #             RMEProp._sample_distribution(montecarlo_trials, m)
+        #             for m in measurements
+        #         ]
+        #         stacked = xr.concat(resampled, dim='measurements')
+        #         mc_avg = stacked.mean(dim='measurements')
 
-            else:  # We assume measurements length is one
-                assert len(measurements) == 1
-                resampled = RMEProp._sample_distribution(
-                    montecarlo_trials, measurements[0]
-                )
-                mc_avg = stacked.mean(dim=combine_across_dim)
+        #     else:  # We assume measurements length is one
+        #         assert len(measurements) == 1
+        #         resampled = RMEProp._sample_distribution(
+        #             montecarlo_trials, measurements[0]
+        #         )
+        #         mc_avg = stacked.mean(dim=combine_across_dim)
 
-            weights = np.random.normal(size=(err.shape[0], montecarlo_trials))
-            monte_typea = np.array(
-                [np.dot(err.T, weights[:, i]) for i in range(montecarlo_trials)]
-            ).T
-            monte_typea = monte_typea.reshape(mc_avg[1:, ...].shape)
-            mc_avg[1:, ...] += monte_typea
-        return mc_avg
+        #     weights = np.random.normal(size=(err.shape[0], montecarlo_trials))
+        #     monte_typea = np.array(
+        #         [np.dot(err.T, weights[:, i]) for i in range(montecarlo_trials)]
+        #     ).T
+        #     monte_typea = monte_typea.reshape(mc_avg[1:, ...].shape)
+        #     mc_avg[1:, ...] += monte_typea
+        # return mc_avg
 
     @staticmethod
     def _generate_error_vectors(
@@ -1345,11 +1344,13 @@ class RMEProp(propagators.Propagator):
         linear_runtime = time.time() - t0
         t0 = time.time()
 
-        avgmc = RMEProp._montecarlo_combine(
-            measurements_hg,
-            err,
-            montecarlo_trials=self.settings['montecarlo_sims'],
-        )
+        # TODO: implement combine
+        avgmc = None
+        # avgmc = RMEProp._montecarlo_combine(
+        #     measurements_hg,
+        #     err,
+        #     montecarlo_trials=self.settings['montecarlo_sims'],
+        # )
 
         mc_runtime = time.time() - t0
         t0 = time.time()
@@ -1532,12 +1533,13 @@ class RMEProp(propagators.Propagator):
         linear_runtime = time.time() - t0
         t0 = time.time()
 
-        avgmc = RMEProp._montecarlo_combine(
-            measurement,
-            err,
-            montecarlo_trials=self.settings['montecarlo_sims'],
-        )
-
+        # TODO: implement combine
+        # avgmc = RMEProp._montecarlo_combine(
+        #     measurement,
+        #     err,
+        #     montecarlo_trials=self.settings['montecarlo_sims'],
+        # )
+        avgmc = None
         mc_runtime = time.time() - t0
         t0 = time.time()
 

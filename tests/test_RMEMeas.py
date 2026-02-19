@@ -669,28 +669,6 @@ def test_create_empty_categories():
     assert all([ci in m.covcats.categories for ci in ['a', 'b', 'c']])
 
 
-def test_grouping():
-    m1 = RMEMeas.from_dist('dummy', 0, 1.0, dist='gaussian', mechanism_name='a')
-    m2 = RMEMeas.from_dist('dummy', 0, 1.0, dist='gaussian', mechanism_name='b')
-    prop = RMEProp(sensitivity=True)
-    m3 = prop.combine(m1, m2)
-    m3.assign_categories(['a', 'b'], ['type', 'type'], ['a', 'b'])
-    m3.assign_categories(['a'], ['something', 'other'], ['a', 'b'])
-    m3.dof()
-    a = m3.stdunc().cov
-    b = m3.categorize_by('type').stdunc().cov
-    c = m3.categorize_by('something').stdunc().cov
-    assert (a == b).all()
-    assert (a == c).all()
-    m4 = m3.copy()
-    m4.mc = None
-    a = m4.stdunc().cov
-    b = m4.categorize_by('type').stdunc().cov
-    c = m4.categorize_by('something').stdunc().cov
-    assert (a == b).all()
-    assert (a == c).all()
-
-
 if __name__ == '__main__':
     test_add_umech()
     test_assign_categories()

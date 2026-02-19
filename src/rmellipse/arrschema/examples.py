@@ -23,6 +23,7 @@ def load_group_saveable(path, group: str = None, load_big_objects=True):
 
 
 def save_group_saveable(path, object, name: str, group: str = None, write_mode='w'):
+    object = xr.DataArray(object)
     with h5py.File(path, write_mode) as f:
         use = f
         if group is not None:

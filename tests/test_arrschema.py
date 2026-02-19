@@ -7,15 +7,15 @@ from pathlib import Path
 
 LOCALS = Path(__file__).parents[0]
 ARRAY_SAMPLES = LOCALS / 'arrsamples'
-REGISTRY = arrschema.ArrSchemaRegistry()
+REGISTRY = arrschema.ArrayClassRegistry()
 MUTABLE = LOCALS / 'mutable'
 
-empty_float = arrschema.arrschema('empty', (...,), (...,), float)
+empty_float = arrschema.ArraySchema('empty', (...,), (...,), float)
 # basic float
 with pytest.raises(Exception):
-    mismatched_dims = arrschema.arrschema('empty', (..., 'N'), (...,), float)
+    mismatched_dims = arrschema.ArraySchema('empty', (..., 'N'), (...,), float)
 
-s2p_ri = arrschema.arrschema(
+s2p_ri = arrschema.ArraySchema(
     name='s2p_ri',
     shape=(..., 'N', 8),
     dims=(..., 'frequency', 'col'),
@@ -50,10 +50,28 @@ s2p_ri = arrschema.arrschema(
     },
 )
 
-zeros = arrschema.arrschema(name='zeros', shape=(...,), dims=(...,), dtype=float)
+zeros = arrschema.ArraySchema(name='zeros', shape=(...,), dims=(...,), dtype=float)
 
-REGISTRY.add_schema(s2p_ri)
-REGISTRY.add_schema(zeros)
+zeros_complex = arrschema.ArraySchema(
+    name='zeros_complex', shape=(...,), dims=(...,), dtype=complex
+)
+
+float_2by2 = arrschema.ArraySchema(
+    name='float_2by2',
+    shape=(3, ..., 2, 2),
+    dims=('d0', ..., 'd1', 'd2'),
+    dtype=float,
+    coords={
+        'd0': {'values': [0, 1, 2], 'dtype': float},
+        'd1': {'values': [0, 1], 'dtype': int},
+        'd2': {'dtype': int},
+    },
+)
+
+S2P_RI = REGISTRY.build_and_add_class(s2p_ri)
+ZEROS = REGISTRY.build_and_add_class(zeros)
+ZEROS_COMPLEX = REGISTRY.build_and_add_class(zeros_complex)
+FLOAT_2BY2 = REGISTRY.build_and_add_class(float_2by2)
 
 REGISTRY.add_loader(
     'rmellipse.arrschema.examples:load_csv_like_s2p_ri',
@@ -83,53 +101,26 @@ REGISTRY.add_converter(
     output_schema=zeros,
 )
 
-# some more stuff
-zeros_complex = arrschema.arrschema(
-    name='zeros_complex', shape=(...,), dims=(...,), dtype=complex
-)
-float_2by2 = arrschema.arrschema(
-    name='float_2by2',
-    shape=(3, ..., 2, 2),
-    dims=('d0', ..., 'd1', 'd2'),
-    dtype=float,
-    coords={
-        'd0': {'values': [0, 1, 2], 'dtype': float},
-        'd1': {'values': [0, 1], 'dtype': int},
-        'd2': {'dtype': int},
-    },
-)
-REGISTRY.add_schema(zeros_complex)
-REGISTRY.add_schema(float_2by2)
-
 
 def test_with_RMEMeas():
-    path = ARRAY_SAMPLES / 'load.s2p'
-    data = arrschema.load(
+    data = S2P_RI.load(
         ARRAY_SAMPLES / 'load.s2p',
-        schema=s2p_ri,
         loader_type='csv',
         verbose=True,
-        registry=REGISTRY,
     )
+
     data = RMEMeas.from_nom('mysample', data)
 
-    arrschema.validate(data, schema=s2p_ri)
+    # make a class method version of validate?
+    s2p_ri.validate(data)
 
 
 def test_load_and_save():
     print('trying to load s2p_ri')
-    path = ARRAY_SAMPLES / 'load.s2p'
-    data = arrschema.load(
-        ARRAY_SAMPLES / 'load.s2p',
-        schema=s2p_ri,
-        loader_type='csv',
-        verbose=True,
-        registry=REGISTRY,
-    )
+    s2p_path = ARRAY_SAMPLES / 'load.s2p'
+    data1 = S2P_RI.load(s2p_path, loader_type='csv', verbose=True)
 
-    data = arrschema.load(
-        ARRAY_SAMPLES / 'load.s2p', verbose=True, registry=REGISTRY, schema=s2p_ri
-    )
+    data2 = S2P_RI.load(ARRAY_SAMPLES / 'load.s2p', verbose=True)
 
     h5_path = MUTABLE / 'loadarr.h5'
     group = 'sample'
@@ -138,59 +129,43 @@ def test_load_and_save():
     # schema requires Hz or GHz
     # on the frequency units
     with pytest.raises(Exception):
-        data.attrs['frequency_units'] = 'MHz'
-        arrschema.save(h5_path, data, 'sample', registry=REGISTRY, schema=s2p_ri)
+        data1.attrs['frequency_units'] = 'MHz'
+        data1.save(h5_path, 'sample')
 
-    data.attrs['frequency_units'] = 'GHz'
+    data2.attrs['frequency_units'] = 'GHz'
 
-    arrschema.save(h5_path, data, 'sample', registry=REGISTRY, schema=s2p_ri)
+    data2.save(h5_path, group)
 
-    data = arrschema.load(h5_path, group='sample', schema=s2p_ri, registry=REGISTRY)
+    data3 = S2P_RI.load(h5_path, group=group)
 
-    return data
+    return data3
 
 
 def test_convert():
-    path = ARRAY_SAMPLES / 'load.s2p'
-    data = arrschema.load(
+    data = S2P_RI.load(
         ARRAY_SAMPLES / 'load.s2p',
-        schema=s2p_ri,
         loader_type='csv',
         verbose=True,
-        registry=REGISTRY,
     )
-    arrschema.validate(data, schema=s2p_ri)
-    new = arrschema.convert(data, registry=REGISTRY, output_schema=zeros)
+    S2P_RI.validate(data)
+    new = data.convert_to(ZEROS)
     print(new)
 
 
 def test_as_xr_schema():
     # schema with 2by2
     print('zeros arbitrary 3,2,2')
-    output = arrschema.as_schema(
+    output = FLOAT_2BY2.from_dataarray(
         xr.DataArray(np.zeros((3, 2, 2), dtype='f4')),
-        0,
-        schema=float_2by2,
     )
     print(output)
 
     # basic arbitrary array with changing types
     print('zeros arbitrary')
-    output = arrschema.as_schema(
+    output = ZEROS_COMPLEX.from_dataarray(
         xr.DataArray(np.zeros((4, 4), dtype='f8')),
-        0,
-        schema=zeros_complex,
     )
     print(output)
-
-
-def test_zeros_like():
-    new = arrschema.zeros(
-        s2p_ri, frequency=[0, 1, 2, 3], attrs={'frequency_units': 'GHz'}
-    )
-    # init a new array
-    new2 = arrschema.zeros(s2p_ri, like=new)
-    pass
 
 
 if __name__ == '__main__':
@@ -204,4 +179,3 @@ if __name__ == '__main__':
     import json
 
     print(json.dumps(zeros_complex, indent=True))
-    test_zeros_like()

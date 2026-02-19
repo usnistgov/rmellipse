@@ -25,7 +25,7 @@ import xarray as xr
 import numpy as np
 import json
 
-registry = arrschema.ArrSchemaRegistry()
+REGISTRY = arrschema.ArrayClassRegistry()
 
 # %%
 # We will define a basic schema of an arry with arbitrary shape
@@ -33,44 +33,42 @@ registry = arrschema.ArrSchemaRegistry()
 # the arrschema function a uid is automatically added. Then we
 # add it to the registry.
 
-float_zeros = arrschema.arrschema(
+# a schema is just a dictionary that specifies
+# what the expected structure of a dataset is
+float_zeros_schema = arrschema.ArraySchema(
     name='float_zeros', shape=(...,), dims=(...,), dtype=float
 )
 
-print(json.dumps(float_zeros, indent=True))
+# print(json.dumps(FLOAT_ZEROS, indent=True))
+# you can use that dictionary to generate a
+# python class object within the context of a registry
+FLOAT_ZEROS = REGISTRY.build_and_add_class(float_zeros_schema)
+print(FLOAT_ZEROS)
 
-registry.add_schema(float_zeros)
 
 # %%
 # Validation
 # ----------
 #
-# Currently validation is only implemented for xarray.DataArray objects
-# and RMEmeas objects.
+# Requires that the array conforms to the
+# AnnotatedArray subclass specification.
 
-# the schema can be provided directly
+# cast an array into the type to check it conforms
+# to the specification,
 my_data = xr.DataArray(np.zeros((4, 4), dtype=float))
-arrschema.validate(my_data, schema=float_zeros)
-
-# reffered to by a registry and uid
-my_data = xr.DataArray(np.zeros((4, 4), dtype=float))
-arrschema.validate(my_data, schema=float_zeros)
-
-# reffered to by a registry and name
-# Names are not unique, this may fail if multiple
-# schemas share a name and is not recommended.
-my_data = xr.DataArray(np.zeros((4, 4), dtype=float))
-arrschema.validate(my_data, schema=float_zeros)
+my_data = FLOAT_ZEROS(my_data)
+my_data.validate()
 
 # this will fail because the dtype isn't correct
 my_data_fails = xr.DataArray(np.zeros((4, 4), dtype=complex))
 try:
-    arrschema.validate(my_data_fails, schema=float_zeros)
+    my_data_fails = FLOAT_ZEROS(my_data_fails)
+    my_data_fails.validate()
 except arrschema.ValidationError as e:
-    print(e)
+    print('caught error: \n', e)
 
-# validated datasets store the associated schema in the metadata
-print(my_data.attrs)
+# succesfully validated datasets store the associated schema in the metadata
+print(my_data.attrs['ARRSCHEMA'])
 
 # %%
 # Loaders and Savers
@@ -84,18 +82,19 @@ print(my_data.attrs)
 # a loader/saver with a function using a module spec, and related
 # file extensions.
 
-registry.add_loader(
+# supply the module pathspec to the function
+REGISTRY.add_loader(
     'rmellipse.arrschema.examples:load_group_saveable',
     ['.h5', '.hdf5'],
     loader_type='group_saveable',
-    schema=float_zeros,
+    schema=float_zeros_schema,
 )
 
-registry.add_saver(
+REGISTRY.add_saver(
     'rmellipse.arrschema.examples:save_group_saveable',
     ['.h5', '.hdf5'],
     saver_type='group_saveable',
-    schema=float_zeros,
+    schema=float_zeros_schema,
 )
 
 # %%
@@ -103,18 +102,9 @@ registry.add_saver(
 # Encoding and decoding functions are expected have function signatures
 # that look like ``fun(path, data, *args, **kwargs)``
 
-arrschema.save('example.h5', my_data, 'my-name', registry=registry)
-my_data_read = arrschema.load(
-    'example.h5', group='my-name', registry=registry, schema=float_zeros
-)
+my_data.save('example.h5', 'my_data_name')
+my_data_read = FLOAT_ZEROS.load('example.h5', group='my_data_name')
 print(my_data_read)
-
-# %%
-#
-# Otherwise, you will have to explicitly declare what schema your
-# data corresponds to.
-
-arrschema.save('example.h5', my_data, 'my-name', registry=registry, schema=float_zeros)
 
 # %%
 # Conversion
@@ -126,16 +116,18 @@ arrschema.save('example.h5', my_data, 'my-name', registry=registry, schema=float
 
 # define a new format we care about
 
-int_zeros = arrschema.arrschema(name='int_zeros', shape=(...,), dims=(...,), dtype=int)
-
-registry.add_schema(int_zeros)
-
-registry.add_converter(
-    'rmellipse.arrschema.examples:convert_float_to_int',
-    input_schema=float_zeros,
-    output_schema=int_zeros,
+int_zeros_schema = arrschema.ArraySchema(
+    name='int_zeros', shape=(...,), dims=(...,), dtype=int
 )
 
-converted = arrschema.convert(my_data, registry=registry, output_schema=int_zeros)
-arrschema.validate(converted, schema=int_zeros)
+INT_ZEROS = REGISTRY.build_and_add_class(int_zeros_schema)
+
+REGISTRY.add_converter(
+    'rmellipse.arrschema.examples:convert_float_to_int',
+    input_schema=float_zeros_schema,
+    output_schema=int_zeros_schema,
+)
+
+converted = my_data.convert_to(INT_ZEROS)
+
 print(converted)

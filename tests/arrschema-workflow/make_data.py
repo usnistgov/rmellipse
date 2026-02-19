@@ -7,10 +7,10 @@ import numpy as np
 from pathlib import Path
 
 
-registry = arrschema.ArrSchemaRegistry()
+registry = arrschema.ArrayClassRegistry()
 
 
-s2p_ri = arrschema.arrschema(
+s2p_ri = arrschema.ArraySchema(
     name='s2p_ri',
     shape=(..., 'N', 8),
     dims=(..., 'frequency', 'col'),
@@ -47,7 +47,7 @@ s2p_ri = arrschema.arrschema(
 
 expected_hash = 'bf664787135f2dffba08cf8316281f3bea95a5bf3cf1ec56088e316dbef243dd'
 
-zeros = arrschema.arrschema(name='zeros', shape=(...,), dims=(...,), dtype=float)
+zeros = arrschema.ArraySchema(name='zeros', shape=(...,), dims=(...,), dtype=float)
 
 registry.add_schema(s2p_ri)
 registry.add_schema(zeros)

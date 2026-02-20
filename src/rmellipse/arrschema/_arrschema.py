@@ -431,6 +431,9 @@ class ArrayClassRegistry:
         self._imported_modules = {}
         self._extension_lookup = {'loaders': {}, 'savers': {}}
 
+    def __getitem__(self, key: str):
+        return getattr(self, key)
+
     def find_schema(
         self, schema_name: str = None, schema_uid: str = None
     ) -> ArraySchema:
@@ -992,6 +995,7 @@ class ArrayClassRegistry:
                 extension=extension,
                 saver_type=saver_type,
                 verbose=verbose,
+                schema_uid=schema['uid'],
             )
 
             # validate on the way in to the saver
@@ -1097,6 +1101,7 @@ class ArrayClassRegistry:
                 extension=extension,
                 loader_type=loader_type,
                 verbose=verbose,
+                schema_uid=schema['uid'],
             )
             read = loader(path, *load_args, **load_kwargs)
             out_array = cls.from_dataarray(read)
@@ -1189,6 +1194,7 @@ class ArrayClassRegistry:
 
         class_attrs = {
             '__init__': __init__,
+            '__slots__': (),
             'schema': schema,
             'registry': self,
             'save': save,

@@ -168,6 +168,23 @@ def test_as_xr_schema():
     print(output)
 
 
+def test_arrschema_collisions():
+    registry = arrschema.ArrayClassRegistry()
+
+    s1_schema = arrschema.ArraySchema(
+        name='schema1', dtype='float', shape=(..., 'N'), dims=(..., 'col2')
+    )
+
+    s2_schema = arrschema.ArraySchema(
+        name='schema1', dtype='float', shape=(..., 'N'), dims=(..., 'col')
+    )
+
+    S1 = registry.build_and_add_class(s1_schema)
+    S2 = registry.build_and_add_class(s2_schema)
+
+    ...
+
+
 if __name__ == '__main__':
     data = test_load_and_save()
 
@@ -179,3 +196,4 @@ if __name__ == '__main__':
     import json
 
     print(json.dumps(zeros_complex, indent=True))
+    test_arrschema_collisions()

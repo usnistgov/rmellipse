@@ -502,7 +502,7 @@ def save_function_saveable(
 def load_object(
     saved_object: Union[GROUP, DATASET],
     parent: GROUP_SAVEABLE = None,
-    load_big_objects: bool = False,
+    load_big_objects: bool = True,
     vlen_object_encoding: str = str,
 ) -> any:
     """
@@ -518,7 +518,7 @@ def load_object(
 
     load_big_objects : bool, optional
         If True, fully load all objects into memory. If False,
-        only the attributes of big objects will be loaded. The default is False.
+        only the attributes of big objects will be loaded. The default is True.
 
     vlen_object_encoding : str, optional
         Variable length byte objects (np.dtype('O')) are cast

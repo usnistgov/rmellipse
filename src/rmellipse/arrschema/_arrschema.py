@@ -17,6 +17,9 @@ import sys
 import jsonschema
 from abc import ABC, abstractmethod, ABCMeta
 import dict_hash
+import inspect
+import os
+
 
 # delete accessors before redefining, avoids a warning
 try:
@@ -44,6 +47,17 @@ __all__ = [
     'AnnotatedArray',
     'ArrayClassRegistry',
 ]
+
+
+def get_caller_module_name():
+    """
+    Returns the __name__ of the module that called this function.
+    """
+    caller_frame = inspect.stack()[1]
+    # Use the 'filename' attribute of the frame object to pass to getmodulename
+    module_path = caller_frame.filename
+    module_name = inspect.getmodulename(module_path)
+    return module_name
 
 
 def _allowed_shape_spec(s: object):
@@ -89,13 +103,26 @@ class ValidationError(Exception):
         Exception.__init__(self, *args, **kwargs)
 
 
-class AnnotatedArray(metaclass=ABCMeta):
+class AnnotatedArray(xr.DataArray):
     """
     Interface for an array structure with annotate dimensions and coordinates.
 
     Inspired by xarray DataArray. Classes conforming to this specification
     can be registered in an ArrayClassRegister.
     """
+
+    __slots__ = ()
+    schema: 'ArraySchema'
+    registry: 'ArrayClassRegistry'
+
+    def __init__(self, *args, **kwargs):
+        xr.DataArray.__init__(self, *args, **kwargs)
+
+    @classmethod
+    def __init_subclass__(cls, *args, **kwargs):
+        # add this class to the registry
+        xr.DataArray.__init_subclass__(*args, **kwargs)
+        cls.registry.add_class(cls, cls.schema)
 
     @classmethod
     def __subclasshook__(cls, C):
@@ -107,35 +134,254 @@ class AnnotatedArray(metaclass=ABCMeta):
         test = has_shape and has_dims and has_coords and has_dtype and has_attrs
         return test
 
-    @property
-    @abstractmethod
-    def shape(self) -> tuple[int]:
-        """Tuple of dimension sizes corresponding to dim."""
-        pass
+    def validate(self):
+        """
+        Validate array data against the schema of this type.
+        """
+        self.schema.validate(self)
 
-    @property
-    @abstractmethod
-    def dims(self) -> tuple[str]:
-        """Tuple of dimension names corresponding to shape."""
-        pass
+    def save(
+        self,
+        path: str | Path,
+        *saver_args,
+        saver_type: str = None,
+        validate_schema: bool = True,
+        verbose: bool = False,
+        **saver_kwargs,
+    ) -> object:
+        """
+        Save array using specified saver.
 
-    @property
-    @abstractmethod
-    def coords(self) -> Mapping[str, 'AnnotatedArray']:
-        """Mapping of dimension names to cooordinate sets."""
-        pass
+        This function dispatches to saver functions supplied
+        to the registry through add_saver.
 
-    @property
-    @abstractmethod
-    def dtype(self) -> str | Any:
-        """Data type that conforms to numpy dtype_string specs."""
-        pass
+        Parameters
+        ----------
+        path : str | Path
+            Path to location where data should will be saved.
+        *saver_args : positional arguments
+            Passed to saver as positional args.
+        saver_type : str, optional
+            Used to pick which saver to use.
+            The default is None.
+        validate_schema : bool, optional
+            If True, raise an exception if data does not conform to schema.
+            The default is True.
+        verbose : bool, optional
+            DESCRIPTION. The default is False.
+        **saver_kwargs : keyword arguments
+            Passed to saver as keyword arguments.
 
-    @property
-    @abstractmethod
-    def attrs(self) -> dict:
-        """JSON compatable dictionary of metadata."""
-        pass
+        Returns
+        -------
+        object
+            Object returned by saver fuction.
+
+        """
+        # lookup by the schema if provided
+        extension = ''.join(Path(path).suffixes)
+
+        # grab the right saver function
+        saver = self.registry.import_saver(
+            extension=extension,
+            saver_type=saver_type,
+            verbose=verbose,
+            schema_uid=self.schema['uid'],
+        )
+
+        # validate on the way in to the saver
+        if validate_schema:
+            self.schema.validate(self)
+
+        # save it
+        return saver(path, self, *saver_args, **saver_kwargs)
+
+    def convert_to(self, output_type: type) -> 'AnnotatedArray':
+        """
+         Convert self to a specified type.
+
+        This function dispatches to converter functions supplied
+        to the registry through add_converter.
+
+         Parameters
+         ----------
+         output_schema : ArraySchema | type
+             Schema for output array type or an array schema
+             class built by a registry.
+
+         Returns
+         -------
+         AnnotatedArray
+             Array matching output schema.
+
+        """
+        # allow someoine to pass in a class object
+        converter_fun = self.registry.import_converter(
+            input_schema_uid=self.schema['uid'],
+            output_schema_uid=output_type.schema['uid'],
+        )
+        out = output_type(converter_fun(self))
+        out.validate()
+        return out
+
+    @classmethod
+    def convert_from(cls, input_array: 'AnnotatedArray') -> Self:
+        """
+         Initialize from an input array.
+
+        This function dispatches to converter functions supplied
+        to the registry through add_converter.
+
+         Parameters
+         ----------
+         input_array : AnnotatedArray
+             Input data.
+
+         Returns
+         -------
+         Self
+             New array.
+
+        """
+        converter_fun = cls.registry.import_converter(
+            input_schema_uid=input_array.schema['uid'],
+            output_schema_uid=cls.schema['uid'],
+        )
+        new_data = converter_fun(input_array)
+        out = cls(new_data)
+        out.validate()
+        return out
+
+    @classmethod
+    def load(
+        cls,
+        path: Path | str,
+        *load_args,
+        loader_type: str = None,
+        validate_schema: bool = True,
+        verbose=False,
+        **load_kwargs,
+    ) -> Self:
+        """
+         Save a dataset.
+
+        This function dispatches to loader functions supplied
+        to the registry through add_loader.
+
+         Parameters
+         ----------
+         path : Path | str
+                 Path to data to load.
+         loader_type : str, optional
+                 If there are mulitple loaders, specify which one.
+         validate_schema : bool, optional
+                 If True, raise an exception if data do not conform to schema.
+                 The default is True.
+         verbose : bool, optional
+                 If True, print debugging messages.
+                 The default is False.
+
+         Returns
+         -------
+         Self
+                 Loaded data.
+        """
+        # lookup by the schema if provided
+        extension = ''.join(Path(path).suffixes)
+        loader = cls.registry.import_loader(
+            extension=extension,
+            loader_type=loader_type,
+            verbose=verbose,
+            schema_uid=cls.schema['uid'],
+        )
+        read = loader(path, *load_args, **load_kwargs)
+        out_array = cls.from_dataarray(read)
+        if validate_schema:
+            cls.schema.validate(out_array)
+
+        return out_array
+
+    @classmethod
+    def from_dataarray(
+        cls,
+        array: xr.DataArray,
+    ) -> Self:
+        """
+        Cast an array into an annotated array.
+
+        Parameters
+        ----------
+        array : xr.DataArray
+            Array that can be cast into this format.
+
+        Returns
+        -------
+        Self
+            New array.
+
+        """
+        new_shape_spec = cls.schema['shape']
+        new_dims_spec = cls.schema['dims']
+        new_dtype = cls.schema['dtype']
+
+        # require that specified dimensions be uninterrupted
+        # i.e. at most 1 unspecified, arbitrary dimensions
+        unq_vals, unq_counts = np.unique(new_shape_spec, return_counts=True)
+        unspecified_count = unq_counts[unq_vals == '...'][0]
+        if unspecified_count > 1:
+            raise ValueError(
+                f'Schema with >1 arbitrary dimension specifications (...) can not be intialized as xarrays from a schema: \n {json.dumps(cls.schema, indent=True)}'
+            )
+
+        # instantiate new array
+        new = array
+        old_dims = array.dims
+        for i, (si, di) in enumerate(zip(new_shape_spec, new_dims_spec)):
+            if si == '...':
+                break
+            # print('forward', si, di)
+            new = new.rename({old_dims[i]: di})
+            if di in cls.schema['coords']:
+                crd_schema = cls.schema['coords'][di]
+                crd_dtype = crd_schema['dtype']
+                if 'values' not in crd_schema:
+                    new = new.assign_coords({di: new.coords[di].astype(crd_dtype)})
+                else:
+                    new_crd_vals = crd_schema['values']
+                    new = new.assign_coords(
+                        {di: np.array(new_crd_vals).astype(crd_dtype)}
+                    )
+
+        # recast coordinate and dimension names
+        rev_new_shape_spec = list(new_shape_spec)[::-1]
+        rev_new_dims_spec = list(new_dims_spec)[::-1]
+        for i, (si, di) in enumerate(zip(rev_new_shape_spec, rev_new_dims_spec)):
+            if si == '...':
+                break
+            # print('backward', si, di, old_dims[-(i + 1)])
+            new = new.rename({old_dims[-(i + 1)]: di})
+            if di in cls.schema['coords']:
+                crd_schema = cls.schema['coords'][di]
+                crd_dtype = crd_schema['dtype']
+                if 'values' not in crd_schema:
+                    new = new.assign_coords({di: new.coords[di].astype(crd_dtype)})
+                else:
+                    new_crd_vals = crd_schema['values']
+                    new = new.assign_coords(
+                        {di: np.array(new_crd_vals).astype(crd_dtype)}
+                    )
+
+        new = new.astype(new_dtype)
+
+        kwargs = {
+            'data': new.data,
+            'coords': new.coords,
+            'dims': new.dims,
+            'name': new.name,
+            'attrs': new.attrs,
+        }
+
+        return cls(**kwargs)
 
 
 class ArraySchema(dict):
@@ -907,304 +1153,6 @@ class ArrayClassRegistry:
         else:
             self._named_lookup[schema['name']] = [schema]
 
-    def add_class(self, class_to_add: type, schema: ArraySchema):
+    def add_class(self, class_to_add: AnnotatedArray, schema: ArraySchema):
         self.add_schema(schema)
-
-    def build_and_add_class(self, schema: ArraySchema) -> type:
-        """
-        Build and register a custom subclass of Xarray.DataArray.
-
-        Parameters
-        ----------
-        schema : ArraySchema | Mapping
-            Schema to turn into a class.
-
-        Returns
-        -------
-        type
-            The newly created class.
-
-        """
-        self.add_schema(schema)
-
-        # be vary careful about what is added to the
-        # __init__ method, it could cause weird problems
-        def __init__(
-            self,
-            *args,
-            **kwargs,
-        ):
-            """
-
-            Parameters
-            ----------
-            *args :
-                Any constructure arguments normally given to xr.DataArray
-            """
-            xr.DataArray.__init__(self, *args, **kwargs)
-
-        def validate(self):
-            """
-            Validate array data against the schema of this type.
-            """
-            self.schema.validate(self)
-
-        def save(
-            self,
-            path: str | Path,
-            *saver_args,
-            saver_type: str = None,
-            validate_schema: bool = True,
-            verbose: bool = False,
-            **saver_kwargs,
-        ) -> object:
-            """
-            Save array using specified saver.
-
-            This function dispatches to saver functions supplied
-            to the registry through add_saver.
-
-            Parameters
-            ----------
-            path : str | Path
-                Path to location where data should will be saved.
-            *saver_args : positional arguments
-                Passed to saver as positional args.
-            saver_type : str, optional
-                Used to pick which saver to use.
-                The default is None.
-            validate_schema : bool, optional
-                If True, raise an exception if data does not conform to schema.
-                The default is True.
-            verbose : bool, optional
-                DESCRIPTION. The default is False.
-            **saver_kwargs : keyword arguments
-                Passed to saver as keyword arguments.
-
-            Returns
-            -------
-            object
-                Object returned by saver fuction.
-
-            """
-            # lookup by the schema if provided
-            extension = ''.join(Path(path).suffixes)
-
-            # grab the right saver function
-            saver = self.registry.import_saver(
-                extension=extension,
-                saver_type=saver_type,
-                verbose=verbose,
-                schema_uid=schema['uid'],
-            )
-
-            # validate on the way in to the saver
-            if validate_schema:
-                self.schema.validate(self)
-
-            # save it
-            return saver(path, self, *saver_args, **saver_kwargs)
-
-        def convert_to(self, output_type: type) -> AnnotatedArray:
-            """
-             Convert self to a specified type.
-
-            This function dispatches to converter functions supplied
-            to the registry through add_converter.
-
-             Parameters
-             ----------
-             output_schema : ArraySchema | type
-                 Schema for output array type or an array schema
-                 class built by a registry.
-
-             Returns
-             -------
-             AnnotatedArray
-                 Array matching output schema.
-
-            """
-            # allow someoine to pass in a class object
-            converter_fun = self.registry.import_converter(
-                input_schema_uid=self.schema['uid'],
-                output_schema_uid=output_type.schema['uid'],
-            )
-            out = output_type(converter_fun(self))
-            out.validate()
-            return out
-
-        @classmethod
-        def convert_from(cls, input_array: AnnotatedArray) -> Self:
-            """
-             Initialize from an input array.
-
-            This function dispatches to converter functions supplied
-            to the registry through add_converter.
-
-             Parameters
-             ----------
-             input_array : AnnotatedArray
-                 Input data.
-
-             Returns
-             -------
-             Self
-                 New array.
-
-            """
-            converter_fun = self.registry.import_converter(
-                input_schema_uid=input_array.schema['uid'],
-                output_schema_uid=cls.schema['uid'],
-            )
-            new_data = converter_fun(input_array)
-            out = cls(new_data)
-            out.validate()
-            return out
-
-        @classmethod
-        def load(
-            cls,
-            path: Path | str,
-            *load_args,
-            loader_type: str = None,
-            validate_schema: bool = True,
-            verbose=False,
-            **load_kwargs,
-        ) -> Self:
-            """
-             Save a dataset.
-
-            This function dispatches to loader functions supplied
-            to the registry through add_loader.
-
-             Parameters
-             ----------
-             path : Path | str
-                     Path to data to load.
-             loader_type : str, optional
-                     If there are mulitple loaders, specify which one.
-             validate_schema : bool, optional
-                     If True, raise an exception if data do not conform to schema.
-                     The default is True.
-             verbose : bool, optional
-                     If True, print debugging messages.
-                     The default is False.
-
-             Returns
-             -------
-             Self
-                     Loaded data.
-            """
-            # lookup by the schema if provided
-            extension = ''.join(Path(path).suffixes)
-            loader = cls.registry.import_loader(
-                extension=extension,
-                loader_type=loader_type,
-                verbose=verbose,
-                schema_uid=schema['uid'],
-            )
-            read = loader(path, *load_args, **load_kwargs)
-            out_array = cls.from_dataarray(read)
-            if validate_schema:
-                cls.schema.validate(out_array)
-
-            return out_array
-
-        @classmethod
-        def from_dataarray(
-            cls,
-            array: xr.DataArray,
-        ) -> Self:
-            """
-            Cast an array into an annotated array.
-
-            Parameters
-            ----------
-            array : xr.DataArray
-                Array that can be cast into this format.
-
-            Returns
-            -------
-            Self
-                New array.
-
-            """
-            new_shape_spec = cls.schema['shape']
-            new_dims_spec = cls.schema['dims']
-            new_dtype = cls.schema['dtype']
-
-            # require that specified dimensions be uninterrupted
-            # i.e. at most 1 unspecified, arbitrary dimensions
-            unq_vals, unq_counts = np.unique(new_shape_spec, return_counts=True)
-            unspecified_count = unq_counts[unq_vals == '...'][0]
-            if unspecified_count > 1:
-                raise ValueError(
-                    f'Schema with >1 arbitrary dimension specifications (...) can not be intialized as xarrays from a schema: \n {json.dumps(schema, indent=True)}'
-                )
-
-            # instantiate new array
-            new = array
-            old_dims = array.dims
-            for i, (si, di) in enumerate(zip(new_shape_spec, new_dims_spec)):
-                if si == '...':
-                    break
-                # print('forward', si, di)
-                new = new.rename({old_dims[i]: di})
-                if di in schema['coords']:
-                    crd_schema = schema['coords'][di]
-                    crd_dtype = crd_schema['dtype']
-                    if 'values' not in crd_schema:
-                        new = new.assign_coords({di: new.coords[di].astype(crd_dtype)})
-                    else:
-                        new_crd_vals = crd_schema['values']
-                        new = new.assign_coords(
-                            {di: np.array(new_crd_vals).astype(crd_dtype)}
-                        )
-
-            # recast coordinate and dimension names
-            rev_new_shape_spec = list(new_shape_spec)[::-1]
-            rev_new_dims_spec = list(new_dims_spec)[::-1]
-            for i, (si, di) in enumerate(zip(rev_new_shape_spec, rev_new_dims_spec)):
-                if si == '...':
-                    break
-                # print('backward', si, di, old_dims[-(i + 1)])
-                new = new.rename({old_dims[-(i + 1)]: di})
-                if di in schema['coords']:
-                    crd_schema = schema['coords'][di]
-                    crd_dtype = crd_schema['dtype']
-                    if 'values' not in crd_schema:
-                        new = new.assign_coords({di: new.coords[di].astype(crd_dtype)})
-                    else:
-                        new_crd_vals = crd_schema['values']
-                        new = new.assign_coords(
-                            {di: np.array(new_crd_vals).astype(crd_dtype)}
-                        )
-
-            new = new.astype(new_dtype)
-
-            kwargs = {
-                'data': new.data,
-                'coords': new.coords,
-                'dims': new.dims,
-                'name': new.name,
-                'attrs': new.attrs,
-            }
-
-            return cls(**kwargs)
-
-        class_attrs = {
-            '__init__': __init__,
-            '__slots__': (),
-            'schema': schema,
-            'registry': self,
-            'save': save,
-            'load': load,
-            'convert_to': convert_to,
-            'convert_from': convert_from,
-            'from_dataarray': from_dataarray,
-            'validate': validate,
-        }
-
-        out_type = type(schema['name'], (xr.DataArray,), class_attrs)
-        self.classes[schema['uid']] = out_type
-        return out_type
+        self.classes[schema['uid']] = class_to_add

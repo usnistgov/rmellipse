@@ -19,7 +19,7 @@ then
 elif [ $1 = "html" ]
 then
 	set -e
-	uv run sphinx-build -b html docs/source docs/build
+	uv run sphinx-build -b html docs/source docs/build --keep-going
 
 elif [ $1 = "html-multiversioned" ]
 then

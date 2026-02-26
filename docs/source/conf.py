@@ -132,9 +132,10 @@ except Exception:
 extensions = [
     'autoapi.extension',
     'sphinx_gallery.gen_gallery',
-    'numpydoc',
+    # 'numpydoc',
     'sphinx_click',
     'sphinx.ext.githubpages',
+    'sphinx.ext.napoleon',
 ]
 if multiversioned is not None:
     extensions.append('sphinx_multiversion')

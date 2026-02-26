@@ -39,11 +39,15 @@ float_zeros_schema = arrschema.ArraySchema(
     name='float_zeros', shape=(...,), dims=(...,), dtype=float
 )
 
-# print(json.dumps(FLOAT_ZEROS, indent=True))
+
 # you can use that dictionary to generate a
 # python class object within the context of a registry
-FLOAT_ZEROS = REGISTRY.build_and_add_class(float_zeros_schema)
-print(FLOAT_ZEROS)
+class FloatZeros(arrschema.AnnotatedArray):
+    registry = REGISTRY
+    schema = float_zeros_schema
+
+
+print(FloatZeros)
 
 
 # %%
@@ -56,13 +60,13 @@ print(FLOAT_ZEROS)
 # cast an array into the type to check it conforms
 # to the specification,
 my_data = xr.DataArray(np.zeros((4, 4), dtype=float))
-my_data = FLOAT_ZEROS(my_data)
+my_data = FloatZeros(my_data)
 my_data.validate()
 
 # this will fail because the dtype isn't correct
 my_data_fails = xr.DataArray(np.zeros((4, 4), dtype=complex))
 try:
-    my_data_fails = FLOAT_ZEROS(my_data_fails)
+    my_data_fails = FloatZeros(my_data_fails)
     my_data_fails.validate()
 except arrschema.ValidationError as e:
     print('caught error: \n', e)
@@ -87,14 +91,14 @@ REGISTRY.add_loader(
     'rmellipse.arrschema.examples:load_group_saveable',
     ['.h5', '.hdf5'],
     loader_type='group_saveable',
-    schema=float_zeros_schema,
+    schema=FloatZeros.schema,
 )
 
 REGISTRY.add_saver(
     'rmellipse.arrschema.examples:save_group_saveable',
     ['.h5', '.hdf5'],
     saver_type='group_saveable',
-    schema=float_zeros_schema,
+    schema=FloatZeros.schema,
 )
 
 # %%
@@ -103,7 +107,7 @@ REGISTRY.add_saver(
 # that look like ``fun(path, data, *args, **kwargs)``
 
 my_data.save('example.h5', 'my_data_name')
-my_data_read = FLOAT_ZEROS.load('example.h5', group='my_data_name')
+my_data_read = FloatZeros.load('example.h5', group='my_data_name')
 print(my_data_read)
 
 # %%
@@ -120,14 +124,18 @@ int_zeros_schema = arrschema.ArraySchema(
     name='int_zeros', shape=(...,), dims=(...,), dtype=int
 )
 
-INT_ZEROS = REGISTRY.build_and_add_class(int_zeros_schema)
+
+class IntZeros(arrschema.AnnotatedArray):
+    registry = REGISTRY
+    schema = int_zeros_schema
+
 
 REGISTRY.add_converter(
     'rmellipse.arrschema.examples:convert_float_to_int',
-    input_schema=float_zeros_schema,
-    output_schema=int_zeros_schema,
+    input_schema=FloatZeros.schema,
+    output_schema=IntZeros.schema,
 )
 
-converted = my_data.convert_to(INT_ZEROS)
+converted = my_data.convert_to(IntZeros)
 
 print(converted)

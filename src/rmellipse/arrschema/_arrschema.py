@@ -327,11 +327,12 @@ class AnnotatedArray(xr.DataArray):
         # require that specified dimensions be uninterrupted
         # i.e. at most 1 unspecified, arbitrary dimensions
         unq_vals, unq_counts = np.unique(new_shape_spec, return_counts=True)
-        unspecified_count = unq_counts[unq_vals == '...'][0]
-        if unspecified_count > 1:
-            raise ValueError(
-                f'Schema with >1 arbitrary dimension specifications (...) can not be intialized as xarrays from a schema: \n {json.dumps(cls.schema, indent=True)}'
-            )
+        if '...' in unq_vals:
+            unspecified_count = unq_counts[unq_vals == '...'][0]
+            if unspecified_count > 1:
+                raise ValueError(
+                    f'Schema with >1 arbitrary dimension specifications (...) can not be intialized as xarrays from a schema: \n {json.dumps(cls.schema, indent=True)}'
+                )
 
         # instantiate new array
         new = array

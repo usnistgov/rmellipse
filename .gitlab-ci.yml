@@ -102,7 +102,6 @@ pages:
     paths:
     - public
   rules:
-    - if: $CI_COMMIT_TAG
     - if: $CI_PIPELINE_SOURCE == "schedule" # Runs automatically on schedule
 
 
@@ -110,7 +109,6 @@ pages:
 project-package-registry:
   stage: deploy
   image: python:latest
-  needs: ["pages"]
   variables:
     TWINE_USERNAME: gitlab-ci-token
     TWINE_PASSWORD: $CI_JOB_TOKEN
@@ -125,7 +123,6 @@ project-package-registry:
 internal-package-registry:
   stage: deploy
   image: python:latest
-  needs: ["pages"]
   variables:
     TWINE_USERNAME: $INTERNAL_REGISTRY_TOKEN_NAME
     TWINE_PASSWORD: $INTERNAL_REGISTRY_TOKEN
@@ -134,5 +131,18 @@ internal-package-registry:
     - pip install twine
     - uv build
     - python -m twine upload --repository-url ${CI_API_V4_URL}/projects/10154/packages/pypi dist/* --verbose
+  rules:
+    - if: $CI_COMMIT_TAG
+
+pypi-release:
+  stage: deploy
+  image: python:latest
+  variables:
+    TWINE_USERNAME: $INTERNAL_REGISTRY_TOKEN_NAME
+    TWINE_PASSWORD: $INTERNAL_REGISTRY_TOKEN
+  script:
+    - pip install uv
+    - uv build
+    - uv publish --token $PYPI_TOKEN
   rules:
     - if: $CI_COMMIT_TAG

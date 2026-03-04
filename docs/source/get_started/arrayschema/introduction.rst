@@ -41,7 +41,7 @@ is length N, and the final dimension is length 2.
         "shape": [
             "...",
             "N",
-            "D"
+            2
         ]
     }
 
@@ -59,7 +59,7 @@ describes the voltage source level.
         "shape": [
             "...",
             "N",
-            "D"
+            2
         ],
         "dim": [
             "...",
@@ -79,7 +79,7 @@ In this case we want our data to be 64 bit floating point numbers.
         "shape": [
             "...",
             "N",
-            "D"
+            2
         ],
         "dim": [
             "...",
@@ -104,7 +104,7 @@ as well.
         "shape": [
             "...",
             "N",
-            "D"
+            2
         ],
         "dim": [
             "...",
@@ -137,7 +137,7 @@ the ``attrs_schema`` key. Arrschema allow you to specify metadata format using
         "shape": [
             "...",
             "N",
-            "D"
+            2
         ],
         "dim": [
             "...",

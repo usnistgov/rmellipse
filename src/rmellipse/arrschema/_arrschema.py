@@ -8,14 +8,12 @@ import uuid
 import numpy as np
 import copy
 from typing import Mapping, Any, Tuple, Self
-import abc
 from pathlib import Path
 import yaml
 import json
 import importlib
 import sys
 import jsonschema
-from abc import ABC, abstractmethod, ABCMeta
 import dict_hash
 import inspect
 import os
@@ -47,17 +45,6 @@ __all__ = [
     'AnnotatedArray',
     'ArrayClassRegistry',
 ]
-
-
-def get_caller_module_name():
-    """
-    Returns the __name__ of the module that called this function.
-    """
-    caller_frame = inspect.stack()[1]
-    # Use the 'filename' attribute of the frame object to pass to getmodulename
-    module_path = caller_frame.filename
-    module_name = inspect.getmodulename(module_path)
-    return module_name
 
 
 def _allowed_shape_spec(s: object):

@@ -4,8 +4,10 @@ import xarray as xr
 import numpy as np
 from rmellipse.uobjects import RMEMeas
 import pytest
+import json
 import h5py
 from pathlib import Path
+
 
 LOCALS = Path(__file__).parents[0]
 ARRAY_SAMPLES = LOCALS / 'arrsamples'
@@ -184,6 +186,69 @@ def test_arrschema_groupsaveable():
         save_object(f, 'zeros', zeros)
         read = load_object(f['zeros'])
         ...
+
+
+def test__allowed_shape_spec():
+    # _allowed_shape_spec returns True if it is given a lower case letter
+    assert arrschema._arrschema._allowed_shape_spec("a") == True
+    # _allowed_shape_spec returns True if it is given an ellipse 
+    assert arrschema._arrschema._allowed_shape_spec(...) == True
+    # _allowed_shape_spec returns False if it is given a string of length > 1
+    assert arrschema._arrschema._allowed_shape_spec("aa") == False
+
+
+def test_convert_h5attrs_to_json_types():
+    py_list = [0,1,2]
+    py_float = 3.14
+    py_str = "hello world"
+    d = {
+        "np_array": np.array(py_list),
+        "np_float": np.float64(py_float),
+        "py_str": py_str
+    }
+    d_out = arrschema._arrschema.convert_h5attrs_to_json_types(d)
+    assert d_out["np_array"] == py_list # np arrays turn into python lists
+    assert d_out["np_float"] == py_float # np generics turn into python generics
+    assert d_out["py_str"] == py_str # python objects stay as python objects
+
+def convert_float_to_int(zeros):
+    return zeros.astype(int)
+    
+def convert_int_to_float(zeros):
+    return zeros.astype(float)
+
+def test_convert_from():
+    TEST_REGISTRY = arrschema.ArrayClassRegistry()
+    class FloatZeros(arrschema.AnnotatedArray):
+        registry = TEST_REGISTRY 
+        schema = arrschema.ArraySchema(name='float_zeros', shape=(...,), dims=(...,), dtype=float)
+    class IntZeros(arrschema.AnnotatedArray):
+        registry = TEST_REGISTRY 
+        schema = arrschema.ArraySchema(name='int_zeros', shape=(...,), dims=(...,), dtype=int)
+
+    float_zeros_data = FloatZeros(xr.DataArray(np.zeros((4, 4), dtype=float)))
+    float_zeros_data.validate()
+    int_zeros_data = IntZeros(xr.DataArray(np.zeros((4, 4), dtype=int)))
+    int_zeros_data.validate()
+
+    TEST_REGISTRY.add_converter(
+        "test_arrschema:convert_float_to_int",
+        input_schema=FloatZeros.schema,
+        output_schema=IntZeros.schema,
+    )
+
+    TEST_REGISTRY.add_converter(
+        "test_arrschema:convert_int_to_float",
+        input_schema=IntZeros.schema,
+        output_schema=FloatZeros.schema,
+    )
+
+    converted = IntZeros.convert_from(float_zeros_data)
+    assert json.loads(converted.attrs[arrschema._arrschema.SCHEMA_ATTRS_KEY])["name"] == "int_zeros"
+    assert json.loads(converted.attrs[arrschema._arrschema.SCHEMA_ATTRS_KEY])["dtype"] == "int64"
+    converted = FloatZeros.convert_from(int_zeros_data)
+    assert json.loads(converted.attrs[arrschema._arrschema.SCHEMA_ATTRS_KEY])["name"] == "float_zeros"
+    assert json.loads(converted.attrs[arrschema._arrschema.SCHEMA_ATTRS_KEY])["dtype"] == "float64"
 
 
 if __name__ == '__main__':

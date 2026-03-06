@@ -142,7 +142,7 @@ print(meas.sel(d1=0.1, d2='a'), '\n')
 
 # This example throws away the montecarlo samples and looks only at a single
 # linear uncertainty mechanism.
-mech = meas.usel(umech_id=meas.umech_id[0], mcsamples=[])
+mech = meas.usel(umech_id=meas.umech_id[0], sample_id=[])
 
 linunc, mcunc = mech.stdunc(k=1)
 print(linunc)
@@ -151,7 +151,7 @@ print(linunc)
 # We can also look a one or more of the Monte Carlo samples
 # by throwing away the covariance data and just keeping one of the Monte Carlo
 # samples.
-sample = meas.usel(umech_id=[], mcsamples=[1])
+sample = meas.usel(umech_id=[], sample_id=[1])
 
 print(sample.mc[1, ...])
 
@@ -167,7 +167,7 @@ print(sample.mc[1, ...])
 # the nominal. This effectively means it no longer has any associated
 # uncertainties.
 
-nominal_only = meas.usel(umech_id=[], mcsamples=[])
+nominal_only = meas.usel(umech_id=[], sample_id=[])
 
 print(nominal_only.nom)
 print(nominal_only.stdunc())

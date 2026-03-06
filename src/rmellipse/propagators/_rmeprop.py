@@ -237,9 +237,14 @@ class RMEProp(propagators.Propagator):
         """
         # of
         if uobjs.RMEMeas._if_quacks(m) and m.mc is not None:
+            n_available_samples = max(m.mc.sample_id)
+            if montecarlo_trials > n_available_samples:
+                raise ValueError(
+                    f'Cannot do {montecarlo_trials} monte carlo trials as dataset only has {n_available_samples} available samples: \n {m}'
+                )
             # otherwise randomly sample the distribution
             distlength = len(m.mc.coords['sample_id'])
-            index = np.random.randint(1, distlength, (montecarlo_trials))
+            index = np.arange(1, montecarlo_trials + 1)
             index = np.append(0, index)
             d = m.mc.isel(sample_id=index)
             # reset sampling index
@@ -247,10 +252,9 @@ class RMEProp(propagators.Propagator):
             return d
         # if its got no MC data, just sample the nominal over and over again
         elif uobjs.RMEMeas._if_quacks(m) and m.mc is None:
-            d = m.cov.isel(umech_id=np.zeros(montecarlo_trials + 1, dtype=int))
-            # reset sampling index
-            d = d.assign_coords({'umech_id': np.arange(montecarlo_trials + 1)})
-            return d
+            raise AttributeError(
+                f'missing monte carlo data on RMEMeas object cannot do a monte carlo propagation:\n{m}'
+            )
         else:
             return m
 

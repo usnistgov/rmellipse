@@ -99,7 +99,7 @@ def test_covcats_collisions():
     m2 = m1.copy()
     m1.assign_categories([m1.umech_id[0]], ['Type'], ['B'])
 
-    prop = RMEProp(sensitivity=True, montecarlo_sims=2, vectorize=False)
+    prop = RMEProp(sensitivity=True, montecarlo_sims=0, vectorize=False)
 
     # both at the same time
     @prop.propagate
@@ -420,13 +420,16 @@ def test_combine():
     b = prop.combine(a)
     assert (a.cov == b.cov).all()
 
-    b = prop.combine(a, a)
+    # this should fail because there are not enough
+    # monte carlo trials
+    with pytest.raises(AttributeError):
+        b = prop.combine(a, a)
 
     with pytest.raises(ValueError):
         prop.combine()
 
 
 if __name__ == '__main__':
-    test_sample_distributions()
-    test_combine()
+    # test_combine()
+    test_covcats_collisions()
     pass

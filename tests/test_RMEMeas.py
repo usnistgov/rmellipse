@@ -530,7 +530,7 @@ def test_indexing():
 
     raised = False
     try:
-        test.usel(mcsamples=[0])
+        test.usel(sample_id=[0])
     except ValueError:
         raised = True
     assert raised
@@ -547,9 +547,9 @@ def test_indexing():
     # no cov samples
     usel = test.usel(umech_id=[])
     assert len(usel.umech_id) == 0
-    usel = test.usel(mcsamples=[2, 3])
+    usel = test.usel(sample_id=[2, 3])
     assert usel.mc.shape[0] == 3  # nominal plus 2 samples
-    usel = test.usel(umech_id=[], mcsamples=[2, 3])
+    usel = test.usel(umech_id=[], sample_id=[2, 3])
     assert usel.mc.shape[0] == 3 and len(usel.umech_id) == 0
 
 
@@ -670,8 +670,11 @@ def test_create_empty_categories():
 
 
 if __name__ == '__main__':
-    test_add_umech()
-    test_assign_categories()
+    # test_interp()
+    test_indexing()
+    test_nom()
+    # test_add_umech()
+    # test_assign_categories()
     # test_from_dist()
     # test_overload()
     # test_h5_encoding()

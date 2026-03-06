@@ -238,12 +238,12 @@ class RMEProp(propagators.Propagator):
         # of
         if uobjs.RMEMeas._if_quacks(m) and m.mc is not None:
             # otherwise randomly sample the distribution
-            distlength = len(m.mc.coords['umech_id'])
+            distlength = len(m.mc.coords['sample_id'])
             index = np.random.randint(1, distlength, (montecarlo_trials))
             index = np.append(0, index)
-            d = m.mc.isel(umech_id=index)
+            d = m.mc.isel(sample_id=index)
             # reset sampling index
-            d = d.assign_coords({'umech_id': np.arange(0, len(index))})
+            d = d.assign_coords({'sample_id': np.arange(0, len(index))})
             return d
         # if its got no MC data, just sample the nominal over and over again
         elif uobjs.RMEMeas._if_quacks(m) and m.mc is None:
@@ -467,63 +467,48 @@ class RMEProp(propagators.Propagator):
                 mc_output = process_fcn(*mc_args, **mc_kwargs)
             else:
                 mcargsi = [
-                    a.sel(umech_id=0) if hasattr(a, 'umech_id') else a for a in mc_args
+                    a.sel(sample_id=0) if hasattr(a, 'sample_id') else a
+                    for a in mc_args
                 ]
                 mckwi = {
-                    k: a.sel(umech_id=0) if hasattr(a, 'umech_id') else a
+                    k: a.sel(sample_id=0) if hasattr(a, 'sample_id') else a
                     for a, k in mc_kwargs.items()
                 }
                 mc_output = process_fcn(*mcargsi, **mckwi)
-                if hasattr(mc_output, 'umech_id'):
+                if hasattr(mc_output, 'sample_id'):
                     for i in range(1, montecarlo_trials + 1):
                         mcargsi = [
-                            a.sel(umech_id=i) if hasattr(a, 'umech_id') else a
+                            a.sel(sample_id=i) if hasattr(a, 'sample_id') else a
                             for a in mc_args
                         ]
                         mckwi = {
-                            k: a.sel(umech_id=i) if hasattr(a, 'umech_id') else a
+                            k: a.sel(sample_id=i) if hasattr(a, 'sample_id') else a
                             for a, k in mc_kwargs.items()
                         }
                         out = process_fcn(*mcargsi, **mckwi)
-                        mc_output = xr.concat([mc_output, out], 'umech_id')
+                        mc_output = xr.concat([mc_output, out], 'sample_id')
                 elif isinstance(mc_output, tuple) and any(
-                    [hasattr(co, 'umech_id') for co in mc_output]
+                    [hasattr(co, 'sample_id') for co in mc_output]
                 ):
                     for i in range(1, montecarlo_trials + 1):
                         mcargsi = [
-                            a.sel(umech_id=i) if hasattr(a, 'umech_id') else a
+                            a.sel(sample_id=i) if hasattr(a, 'sample_id') else a
                             for a in mc_args
                         ]
                         mckwi = {
-                            k: a.sel(umech_id=i) if hasattr(a, 'umech_id') else a
+                            k: a.sel(sample_id=i) if hasattr(a, 'sample_id') else a
                             for a, k in mc_kwargs.items()
                         }
                         proc_out = process_fcn(*mcargsi, **mckwi)
                         mc_output = [
                             (
-                                xr.concat([co, po], 'umech_id')
-                                if hasattr(po, 'umech_id')
+                                xr.concat([co, po], 'sample_id')
+                                if hasattr(po, 'sample_id')
                                 else co
                             )
                             for co, po in zip(mc_output, proc_out)
                         ]
                     mc_output = tuple(mc_output)
-
-                #                 # if the output is an RMEMeas object
-                # if uobjs.RMEMeas._if_quacks(cov_output):
-                #     for i, p in enumerate(param_set):
-                #         covargsi = [a.sel(umech_id=p) if hasattr(a, 'umech_id') else a for a in cov_args]
-                #         covkwi = {k: a.sel(umech_id=p) if hasattr(a, 'umech_id') else a for a, k in cov_kwargs.items()}
-                #         cov_output = xr.concat([cov_output, process_fcn(*covargsi, **covkwi)], 'umech_id')
-                #     cov_output = cov_output.assign_coords(umech_id=['nominal'] + param_set)
-                # # if the output is a tuple, and contains RMEMeas objects
-                # elif isinstance(cov_output,tuple) and any([uobjs.RMEMeas._if_quacks(co) for co in cov_output]):
-                #     for i, p in enumerate(param_set):
-                #         covargsi = [a.sel(umech_id=p) if hasattr(a, 'umech_id') else a for a in cov_args]
-                #         covkwi = {k: a.sel(umech_id=p) if hasattr(a, 'umech_id') else a for a, k in cov_kwargs.items()}
-                #         proc_out = process_fcn(*covargsi, **covkwi)
-                #         cov_output = [xr.concat([co, po], 'umech_id') if uobjs.RMEMeas._if_quacks(po) else co for co,po in zip(cov_output, proc_out)]
-                #     cov_output = tuple(cov_output)
 
         # otherwise just run the function
         elif montecarlo_trials:
@@ -582,11 +567,13 @@ class RMEProp(propagators.Propagator):
 
         # lambda function so I don't have to write things out twice
         def handle_output(cov, mc):
+            # if it doesn't have a umech_id attributes
+            # its not a RMEMeas so bounce it out, return
+            # just the covariance attribute because
+            # if no uncertainties the output is the same
             if not hasattr(cov, 'umech_id'):
                 return cov
 
-            # if it doesn't have a umech_id attributes
-            # its not a RMEMeas so bounce it out
             return uobjs.RMEMeas(
                 name=name, cov=cov, mc=mc, covcats=covcats, covdofs=covdofs
             )
@@ -1061,35 +1048,30 @@ class RMEProp(propagators.Propagator):
         montecarlo_trials: int = 0,
         combine_across_dim=False,
     ):
-        raise (
-            NotImplementedError(
-                "Monte Carlo combine not implemented yet. Please read 'Monte Carlo sampling bias in the microwave uncertainty framework'"
-            )
-        )
-        # mc_avg = None
-        # if montecarlo_trials:
-        #     if combine_across_dim is False:
-        #         resampled = [
-        #             RMEProp._sample_distribution(montecarlo_trials, m)
-        #             for m in measurements
-        #         ]
-        #         stacked = xr.concat(resampled, dim='measurements')
-        #         mc_avg = stacked.mean(dim='measurements')
+        mc_avg = None
+        if montecarlo_trials:
+            if combine_across_dim is False:
+                resampled = [
+                    RMEProp._sample_distribution(montecarlo_trials, m)
+                    for m in measurements
+                ]
+                stacked = xr.concat(resampled, dim='measurements')
+                mc_avg = stacked.mean(dim='measurements')
 
-        #     else:  # We assume measurements length is one
-        #         assert len(measurements) == 1
-        #         resampled = RMEProp._sample_distribution(
-        #             montecarlo_trials, measurements[0]
-        #         )
-        #         mc_avg = stacked.mean(dim=combine_across_dim)
+            else:  # We assume measurements length is one
+                assert len(measurements) == 1
+                resampled = RMEProp._sample_distribution(
+                    montecarlo_trials, measurements[0]
+                )
+                mc_avg = stacked.mean(dim=combine_across_dim)
 
-        #     weights = np.random.normal(size=(err.shape[0], montecarlo_trials))
-        #     monte_typea = np.array(
-        #         [np.dot(err.T, weights[:, i]) for i in range(montecarlo_trials)]
-        #     ).T
-        #     monte_typea = monte_typea.reshape(mc_avg[1:, ...].shape)
-        #     mc_avg[1:, ...] += monte_typea
-        # return mc_avg
+            weights = np.random.normal(size=(err.shape[0], montecarlo_trials))
+            monte_typea = np.array(
+                [np.dot(err.T, weights[:, i]) for i in range(montecarlo_trials)]
+            ).T
+            monte_typea = monte_typea.reshape(mc_avg[1:, ...].shape)
+            mc_avg[1:, ...] += monte_typea
+        return mc_avg
 
     @staticmethod
     def _generate_error_vectors(
@@ -1346,11 +1328,11 @@ class RMEProp(propagators.Propagator):
 
         # TODO: implement combine
         avgmc = None
-        # avgmc = RMEProp._montecarlo_combine(
-        #     measurements_hg,
-        #     err,
-        #     montecarlo_trials=self.settings['montecarlo_sims'],
-        # )
+        avgmc = RMEProp._montecarlo_combine(
+            measurements_hg,
+            err,
+            montecarlo_trials=self.settings['montecarlo_sims'],
+        )
 
         mc_runtime = time.time() - t0
         t0 = time.time()

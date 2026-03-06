@@ -27,7 +27,7 @@ def test_sample_distributions():
     assert sampled == flt
     sampled = RMEProp._sample_distribution(10, m)
     # shoul return 1 + number of samples (acounting for nominal)
-    assert len(sampled.umech_id) == 11
+    assert len(sampled.sample_id) == 11
 
 
 def test_MIMO_vectorized():
@@ -427,5 +427,6 @@ def test_combine():
 
 
 if __name__ == '__main__':
+    test_sample_distributions()
     test_combine()
     pass

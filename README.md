@@ -19,7 +19,6 @@ Please see the [documentation](https://pages.nist.gov/rmellipse-ipages).
 
 - libhdf5-dev
 - gnome-keyring
-- gcc compiler (optional for RMEModel)
 
 ### Dependencies
 
@@ -34,31 +33,6 @@ Or with pip:
 
 ```
 pip install git+https://github.com/usnistgov/rmellipse@stable
-```
-
-### Compiled Libraries
-
-This package includes a C extension random number generator used in the
-``rmellipse.uobjects._rmemodel`` submodule. You can use the package without compiling the libraries, but you will get an error if you try
-to import anything that relies on it. 
-
-We would like this compilation or linking to these C libraries to happen automatically when you install the python package, however for the time being this must be done manually.
-
-To compile these libraries, please do the following:
-
-1. Install the gcc compiler for your OS
-    * This is OS dependent, but here are instructions to install it on [VS Code](https://code.visualstudio.com/docs/cpp/config-mingw)
-2. CD into the `src/rmellipse/uobjects/rng_stream`
-3. Run one of the compilation commands based on your OS
-
-In Windows:
-```console
-gcc -shared -fPIC -o libRngStream.dll RngStream.c
-```
-
-On Posix:
-```console
-gcc -shared -fPIC -o libRngStream.so RngStream.c
 ```
 
 ## Developer Tools
@@ -137,17 +111,6 @@ tools/profile.sh <path/to/script.py>
 
 ## Acknowledgements
 The development of RMEllipse is partially funded through the [CHIPS Metrology program](https://www.nist.gov/chips/research-development-programs/metrology-program). Our goal is to use it to disseminate RF calibration and uncertainty analysis techniques to monitor RF power delivered to plasma etching and deposition tools used in semiconductor manufacturing.
-
-This library includes a random number generator RngStreams based on the MRG32ka RNG from references [1] and [2] below. 
-
-[1] P. L'Ecuyer, ``Good Parameter Sets for Combined Multiple Recursive Random Number Generators'', 
-Operations Research, 47, 1 (1999), 159--164.
-See https://www-labs.iro.umontreal.ca/~lecuyer/myftp/papers/opres-combmrg2-1999.pdf
-
-[2] P. L'Ecuyer, R. Simard, E. J. Chen, and W. D. Kelton, 
-``An Objected-Oriented Random-Number Package with Many Long Streams and Substreams'', 
-Operations Research, 50, 6 (2002), 1073--1075
-See https://www-labs.iro.umontreal.ca/~lecuyer/myftp/papers/streams00.pdf
 
 ## Authors
 

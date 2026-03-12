@@ -1,6 +1,13 @@
 image: python:3.12.4
 
 .build-env: &build-env
+  - apt-get update -y
+  # compile the .so
+  - apt-get install -y g++ cmake make git
+  - cd src/rmellipse/uobjects/rng_stream
+  - gcc -shared -fPIC -o libRngStream.so RngStream.c
+  # go back to root directory and install
+  - cd -
   - pip install uv
   - uv sync
 

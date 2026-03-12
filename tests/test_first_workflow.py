@@ -5,8 +5,6 @@ import rmellipse.workflows._cli_sync as sync
 import rmellipse.workflows.archive_interface
 import pytest
 import shutil
-import checksumdir
-import os
 from pathlib import Path
 
 TEST_DIR = Path(__file__).parents[0]

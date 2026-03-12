@@ -371,126 +371,6 @@ class AnnotatedArray(xr.DataArray):
 
         return cls(**kwargs)
 
-    @classmethod
-    def zeros_from(
-        cls,
-        prototype: 'AnnotatedArray',
-        drop_dims: list[str] = None,
-        rename_dims: Mapping | dict = None,
-        use_coords: Mapping | dict = None,
-        reorder: bool = True,
-        validate: bool = False,
-        attrs: Mapping | dict = None,
-    ) -> 'AnnotatedArray':
-        """
-        Generate a new zeros array based on a prototype array.
-
-        Dimensions that are mapped from the prototype array to the outout
-        array are cast into the correct type. Otherwise, dimensions are
-        inserted in the expected place.
-
-        Parameters
-        ----------
-        prototype : AnnotatedArray
-            Prototype array.
-        drop_dims : list[str], optional
-            Drop these dimensions. The default is None.
-        rename_dims : Mapping | dict, optional
-            Mapping of dimensions on the prototype array that should be
-            converted to dimensions of this type of array. The default is None.
-        use_coords : Mapping | dict, optional
-            Additional dimensions required for the new type, key is
-            the dimension name and value is the new coordinate to use for
-            that dimension.
-        reorder : bool, optional
-            Automatically try to reorder dimensions to conform
-            to the specification.
-        validate : bool, optional
-            If true, validate after creation. Default is False
-        attrs : Mapping | dict, optional
-            If provided, supply metadata to be used as attributes.
-
-        Returns
-        -------
-        zeros : AnnotatedArray
-            Zeros array in the new format.
-
-        """
-        if use_coords is None:
-            use_coords = {}
-        # make a shallow copy of the add dims
-        use_coords = {k: v for k, v in use_coords.items()}
-
-        # drop dimensons
-        # add dimensions that were forgotten
-        out = xr.zeros_like(prototype, dtype=cls.schema['dtype'])
-
-        # drop the dimensions no longer needed
-        if drop_dims:
-            sel_dict = {k: 0 for k in drop_dims}
-            out = out.isel(sel_dict, drop=True)
-
-        # rename dimensions as requested
-        if rename_dims:
-            out = out.rename(rename_dims)
-
-        # see what dimensions are missing and create them.
-        # If they have fixed values use those, otherwise get them from the
-        # add coords field.
-        for d in cls.schema['dims']:
-            if d == '...':
-                continue
-            # if it already exists, make it match the schema
-            crd_schema = cls.schema['coords'][d]
-            crd_dtype = crd_schema['dtype']
-            if d in out.dims and 'values' in crd_schema:
-                # if dimension is already present
-                # assign the expected fixed coordinates
-                fixed_crd_values = np.array(crd_schema['values'], dtype=crd_dtype)
-                assign_coords = {d: fixed_crd_values}
-                out = out.assign_coords(assign_coords)
-
-            # it doesn't exist and has a set value, make it
-            elif d not in out.dims and 'values' in crd_schema:
-                # if dimension is already present
-                # assign the expected fixed coordinates
-                fixed_crd_values = np.array(crd_schema['values'], dtype=crd_dtype)
-                expand_input = {d: fixed_crd_values}
-                out = out.expand_dims(expand_input)
-
-            # if the dimension doesnt exist, create it with coordinates
-            elif d not in out.dims and d in use_coords:
-                err_msg = f'coordinate for dimension {d} is required for new {cls.__name__} and coordinate wasnt supplied in use_coords or present in prototype array.'
-                if not use_coords:
-                    raise ValueError(err_msg)
-                try:
-                    expand_input = {d: use_coords[d]}
-                except KeyError as e:
-                    raise ValueError(err_msg) from e
-
-                out = out.expand_dims(expand_input)
-                use_coords.pop(d)
-
-            # if the dimension already exists, use it and assign coords
-            elif d not in out.coords and d in use_coords:
-                out = out.assign_coords({d: use_coords[d]})
-
-        # sort the dimensions into the spec
-        if reorder:
-            spec = [d if d != '...' else ... for d in cls.schema['dims']]
-            out = out.transpose(*spec)
-
-        out = cls.from_dataarray(out)
-
-        if attrs:
-            for a in attrs:
-                out.attrs[a] = attrs[a]
-
-        if validate:
-            out.validate()
-
-        return out
-
 
 class ArraySchema(dict):
     """
@@ -1218,8 +1098,7 @@ class ArrayClassRegistry:
             _description_, by default None
         loader_type : str, optional
             Specify the type of loader (e.g. csv like, HDF5, group_saveable).
-            If not provided, '' is used.
-
+            If notprovided, '' is used.
         schema : dict | Mapping
                 Schema to use
 

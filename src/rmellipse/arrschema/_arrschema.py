@@ -3,27 +3,22 @@ Tools for annotating, saving, loading, converting array-like data.
 """
 
 import xarray as xr
-import numpy as _np
-import uuid
 import numpy as np
+import uuid
 import copy
-from typing import Mapping, Any, Tuple, Self
+from types import EllipsisType
+from typing import Mapping, Any, Tuple, Self, Callable
 from pathlib import Path
 import yaml
 import json
-import importlib
+import importlib.util
 import sys
 import jsonschema
+from jsonschema.exceptions import ValidationError as JsonSchemaValidationError
 import dict_hash
 import inspect
 import os
 
-
-# delete accessors before redefining, avoids a warning
-try:
-    del xr.DataArray.dfm
-except AttributeError:
-    pass
 
 from typing import TYPE_CHECKING
 
@@ -50,17 +45,12 @@ __all__ = [
 def _allowed_shape_spec(s: object):
     if isinstance(s, int):
         return True
-    elif s in ALLOWED_SHAPE_SPECS:
+    if isinstance(s, type(...)):
+        return True
+    elif isinstance(s, str) and s in ALLOWED_SHAPE_SPECS:
         return True
     else:
         return False
-
-
-def _atomic_str(dtype: str):
-    """
-    Validate and return a string according to an atomic type.
-    """
-    return _np.dtype(dtype)
 
 
 def convert_h5attrs_to_json_types(attrs: dict) -> dict:
@@ -77,6 +67,8 @@ def convert_h5attrs_to_json_types(attrs: dict) -> dict:
 
 def _lazy_import_module(name):
     spec = importlib.util.find_spec(name)
+    if spec is None or spec.loader is None:
+        raise ModuleNotFoundError()
     loader = importlib.util.LazyLoader(spec.loader)
     spec.loader = loader
     module = importlib.util.module_from_spec(spec)
@@ -131,7 +123,7 @@ class AnnotatedArray(xr.DataArray):
         self,
         path: str | Path,
         *saver_args,
-        saver_type: str = None,
+        saver_type: str | None = None,
         validate_schema: bool = True,
         verbose: bool = False,
         **saver_kwargs,
@@ -244,7 +236,7 @@ class AnnotatedArray(xr.DataArray):
         cls,
         path: Path | str,
         *load_args,
-        loader_type: str = None,
+        loader_type: str | None = None,
         validate_schema: bool = True,
         verbose=False,
         **load_kwargs,
@@ -372,6 +364,24 @@ class AnnotatedArray(xr.DataArray):
         return cls(**kwargs)
 
 
+class CoordinateSchema(dict):
+    def __init__(
+        self,
+        values: list | None,
+        dtype: str | type[float] | None = None,
+        units: str | None = None,
+    ):
+        self.update(
+            {
+                k: v
+                for k, v in zip(
+                    ('values', 'dtype', 'units'), (values, np.dtype(dtype).str, units)
+                )
+                if v
+            }
+        )
+
+
 class ArraySchema(dict):
     """
     Specialized dict subclass to describe the shape an array.
@@ -380,13 +390,13 @@ class ArraySchema(dict):
     def __init__(
         self,
         name: str,
-        shape: tuple[str | int],
-        dims: tuple[str],
-        dtype: str,
-        units: Mapping | str = None,
-        coords: Mapping = None,
-        uid: str = None,
-        attrs_schema: Mapping = None,
+        shape: tuple[str | int | EllipsisType, ...],
+        dims: tuple[str | EllipsisType, ...],
+        dtype: str | type[float] | type[complex],
+        units: str | None = None,
+        coords: Mapping = {},
+        uid: str | None = None,
+        attrs_schema: Mapping | None = None,
     ):
         """
         Initialize an ArraySchema.
@@ -395,16 +405,16 @@ class ArraySchema(dict):
         ----------
         name : str
             Name of the array structure.
-        shape : tuple[str  |  int]
+        shape : tuple[str | int | EllipsisType, ...]
             Shape of structure. Ellipses indicate arbitrary dimensions,
             letters indicate a required dimension of unknown length, and
             integers indicate a required dimension of a required length.
-        dims : tuple[str]
+        dims : tuple[str | EllipsisType, ...]
             Names assigned to dimensions specified by shape. Any required
             dimension must be names, and arbitrary dimensions must also be
             ellipses.
-        dtype : str
-            Type string, corresponds to numpy's dtype (e.g. f8, c8, u8, etc)
+        dtype : str | type[float]
+            Type must be parseable by numpy's dtype (e.g. f8, c8, u8, etc)
         units : Mapping, optional
             Mapping of units to the array structure. If the whole structure
             has a single unit, then a string can be passed. Optionally, a
@@ -436,112 +446,63 @@ class ArraySchema(dict):
             schema doesn't follow the specification for an array schema.
         """
         dict.__init__(self)
-        # check that the shape and dims make sense
+
+        # replace Ellipsis with "..." to ensure compatibility with sorting and JSON
+        shape = tuple('...' if s == Ellipsis else s for s in shape)
+        dims = tuple('...' if d == Ellipsis else d for d in dims)
+
+        # validate shape/dims/dtype
         if len(shape) != len(dims):
             raise Exception('shape and dims length must match')
-        shape = list(copy.copy(shape))
-        dims = list(copy.copy(dims))
-        # replace ellipses with strings to make it
-        # more compatable with json
-        shape_lookup = {}
-        for spec_tuple in (shape, dims):
-            for i, s in enumerate(spec_tuple):
-                if s == ...:
-                    spec_tuple[i] = '...'
-        # check that shape and dimensions
-        # make sense and agree with eachother
-        for i, (s, d) in enumerate(zip(shape, dims)):
-            shape_lookup[d] = s
-            # can only used valid shape specifications
-            if not _allowed_shape_spec(s):
-                raise Exception(f'Shape spec {s} must be a letter or an ellipses')
-            if not isinstance(d, str) and d != ...:
-                raise ValueError('Dimensions names must be strings or ...')
-
-            # if one has an ..., the other must too
-            s_unspecd = s in UNSPECIFIED_SPECS
-            d_unspecd = d in UNSPECIFIED_SPECS
-            if s_unspecd ^ d_unspecd:
-                raise ValueError(
-                    'unspecified shapes specs (...) must have unspecified dimension names. Specified shapes must have specified dimension names.'
+        if any([not _allowed_shape_spec(s) for s in shape]):
+            raise Exception('shape must be a letter or ...')
+        if any(
+            [
+                not isinstance(
+                    d,
+                    (
+                        str,
+                        type(Ellipsis),
+                    ),
                 )
+                for d in dims
+            ]
+        ):
+            raise Exception('dims must be str or ...')
+        if any([(s == '...') ^ (d == '...') for s, d in zip(shape, dims)]):
+            raise Exception(
+                'unspecified shapes specs (...) must have unspecified dimension names. Specified shapes must have specified dimension names.'
+            )
+        dtype = np.dtype(dtype).str
 
-        # check that the dtype str is valid
-        dtype = str(np.dtype(dtype))
-
-        # check that the coordinates are valid
+        # validate coords and make CoordinateSchemas for each
+        shape_lookup = dict(zip(dims, shape))
         out_coords = {}
-        if coords is not None:
-            for c, crd in coords.items():
-                try:
-                    cunits = coords[c]['units']
-                except KeyError:
-                    cunits = None
-                if cunits is not None and not isinstance(cunits, str):
-                    for cui in cunits:
-                        if not isinstance(crd['units'], str):
-                            raise ValueError(
-                                'Coordinates can have only a single unit (i.e. must be a string.)'
-                            )
-
-                cshape = (shape_lookup[c],)
-                cdims = (c,)
-                cschema = ArraySchema(
-                    name=d, dims=cdims, shape=cshape, dtype=crd['dtype'], units=cunits
+        for coord_name, coord in coords.items():
+            coord_schema = CoordinateSchema(
+                coord.get('values'),
+                np.dtype(coord.get('dtype')).str,
+                coord.get('units'),
+            )
+            if (
+                coord_schema.get('values', False)
+                and isinstance(shape_lookup[coord_name], int)
+                and len(coord_schema.get('values') or []) != shape_lookup[coord_name]
+            ):
+                raise ValueError(
+                    f'Coord values {coord_name} length do not match dimension spec {shape_lookup[coord_name]}'
                 )
-                if 'values' in crd:
-                    if len(crd['values']) != shape_lookup[c]:
-                        raise ValueError(
-                            f'Coord values {c} length do not match dimension spec {shape_lookup[c]}'
-                        )
-                    cschema['values'] = crd['values']
+            out_coords[coord_name] = coord_schema
 
-                # require that the coordinate dimension shapes match
-                out_coords[c] = cschema
-        else:
-            coords = {}
-
-        # check that the units mapping is valid
-        if isinstance(units, str):
-            units = units
-        elif units is not None:
-            if len(units) > 1:
-                raise Exception('Only 1 unit dimension is allowed')
-            if len(units) == 0:
-                raise ValueError(f'Must supply exactly 1 unit dimension {units}')
-            udims = list(units.keys())
-            # replace any ... with strings
-            # for json compatability
-            for ud in udims:
-                if ud in UNSPECIFIED_SPECS:
-                    units['...'] = units[ud]
-                    units.pop(ud)
-            # check that its valied
-            for ud in units:
-                if ud not in dims:
-                    raise ValueError(f'Unit dimension {ud} not in dims.')
-                # if its a string, then its a global unit
-                if isinstance(units[ud], str):
-                    pass
-                else:
-                    # if ud is defined in coords,
-                    # make sure the lengths
-
-                    if ud not in coords:
-                        raise ValueError(
-                            'If providing multiple units for a unit dimensin, that dimension must have defined coordinates.'
-                        )
-
-                    if len(units[ud]) != len(coords[ud]['values']):
-                        raise ValueError(
-                            f'Unit dimension values {ud} array must match length of the matching coordinates.'
-                        )
+        # units should be specified.
+        if not isinstance(units, str):
+            Exception('Units must be specified for top level data, if unitless: "arb"')
 
         if attrs_schema is None:
             attrs_schema = {}
 
-        out = {
-            'uid': str(uid),
+        out: dict[str, Any] = {
+            'uid': uid,
             'name': name,
             'shape': tuple(shape),
             'dims': tuple(dims),
@@ -551,14 +512,9 @@ class ArraySchema(dict):
             'attrs_schema': attrs_schema,
         }
 
-        if units is None:
-            out.pop('units')
-
         if uid is None:
             out.pop('uid')
-            hash = dict_hash.sha256(out)
-            out['uid'] = hash
-
+            out['uid'] = dict_hash.sha256(out)
         self.update(out)
 
     def validate(
@@ -612,7 +568,7 @@ class ArraySchema(dict):
                     )
 
         # check that the static types match
-        if self['dtype'] != _atomic_str(arr.dtype):
+        if self['dtype'] != np.dtype(arr.dtype):
             raise ValidationError(
                 f'dtype {arr.dtype} doesnt match expected {self["dtype"]} for : \n {arr}'
             )
@@ -627,7 +583,7 @@ class ArraySchema(dict):
                     )
 
             # check that dtypes match for coordinates
-            if coord['dtype'] != _atomic_str(arr.coords[cname].dtype):
+            if coord['dtype'] != np.dtype(arr.coords[cname].dtype):
                 raise ValidationError(
                     f'dtype {arr.coords[cname].dtype} doesnt match expected {coord["dtype"]} for : \n {arr}'
                 )
@@ -635,7 +591,7 @@ class ArraySchema(dict):
         # validate the metadata schema
         try:
             jsonschema.validate(dict(arr.attrs), schema=self['attrs_schema'])
-        except jsonschema.exceptions.ValidationError as e:
+        except JsonSchemaValidationError as e:
             msg = 'Failed to validate attrs schema : \n ' + str(e)
             raise ValidationError(msg) from e
 
@@ -669,7 +625,7 @@ class ArrayClassRegistry:
         return getattr(self, key)
 
     def find_schema(
-        self, schema_name: str = None, schema_uid: str = None
+        self, schema_name: str | None = None, schema_uid: str | None = None
     ) -> ArraySchema:
         """
         Find a schema.
@@ -726,9 +682,9 @@ class ArrayClassRegistry:
     def import_saver(
         self,
         schema_name=None,
-        schema_uid: str = None,
-        extension: str = None,
-        saver_type: str = None,
+        schema_uid: str | None = None,
+        extension: str | None = None,
+        saver_type: str | None = None,
         verbose: bool = False,
     ):
         """
@@ -765,9 +721,9 @@ class ArrayClassRegistry:
     def import_loader(
         self,
         schema_name=None,
-        schema_uid: str = None,
-        extension: str = None,
-        loader_type: str = None,
+        schema_uid: str | None = None,
+        extension: str | None = None,
+        loader_type: str | None = None,
         verbose: bool = False,
     ):
         """
@@ -803,12 +759,12 @@ class ArrayClassRegistry:
     def _import_serializer(
         self,
         loader_or_saver: str,
-        schema_name=None,
-        schema_uid: str = None,
-        extension: str = None,
-        serializer_type: str = None,
+        schema_name: str | None = None,
+        schema_uid: str | None = None,
+        extension: str | None = None,
+        serializer_type: str | None = None,
         verbose: bool = False,
-    ) -> callable:
+    ) -> Callable:
         """
         Get a loader function for a particular schema.
 
@@ -888,6 +844,11 @@ class ArrayClassRegistry:
             use_importmap = importmap[0]
             schema = self.find_schema(schema_uid=use_importmap['schema_uid'])
 
+        if use_importmap is None:
+            raise ValueError(
+                'Never found a value for use_importmap inside _arrchema.py::ArrayClassRegistry::_import_serializer'
+            )
+
         # we figured out what function we should be using
         # import it in, cache it for later, and return a
         # pointer to the function
@@ -909,10 +870,10 @@ class ArrayClassRegistry:
         self,
         loader_or_saver: str,
         funspec: str,
-        extension: str,
+        extension: str | list[str],
         serial_type: str,
-        schema_name: str = None,
-        schema_uid: str = None,
+        schema_name: str | None = None,
+        schema_uid: str | None = None,
     ):
         """
         Add a serializing function (loader or saver)
@@ -951,7 +912,9 @@ class ArrayClassRegistry:
 
         # add to the extension lookup
         if isinstance(extension, str):
-            extension = [extension]
+            extension_list = [extension]
+        else:
+            extension_list = extension
 
         if schema_name is None and schema_uid is None:
             raise ValueError('Must provide either name or uid.')
@@ -968,7 +931,7 @@ class ArrayClassRegistry:
             'funspec': funspec,
             'schema_uid': schema['uid'],
             f'{loader_or_saver}_type': serial_type,
-            'extension': extension,
+            'extension': extension_list,
         }
 
         if schema['uid'] in loaders_or_savers_dict.keys():
@@ -979,7 +942,7 @@ class ArrayClassRegistry:
             loaders_or_savers_dict[schema['uid']] = {serial_type: load_map}
 
         # add to the extension lookup table
-        for e in extension:
+        for e in extension_list:
             if e in self._extension_lookup:
                 self._extension_lookup[f'{loader_or_saver}s'][e].append(load_map)
             else:
@@ -1020,9 +983,9 @@ class ArrayClassRegistry:
 
     def import_converter(
         self,
-        input_schema_uid: str = None,
-        output_schema_uid: str = None,
-    ) -> callable:
+        input_schema_uid: str | None = None,
+        output_schema_uid: str | None = None,
+    ) -> Callable:
         """
         Add a converting functiom between two schema.
 
@@ -1124,12 +1087,18 @@ class ArrayClassRegistry:
             path = Path(schema)
             if path.suffix == '.json':
                 loader = json.load
-            if path.suffix == '.yaml' or path.suffix == '.yml':
+            elif path.suffix == '.yaml' or path.suffix == '.yml':
                 loader = yaml.safe_load
+            else:
+                raise ValueError(
+                    'path suffix was not .json .yaml or .yml for ArrayClassRegistry::add_schema'
+                )
             with open(path, 'r') as f:
-                schema = loader(f)
+                schema_dictlike = loader(f)
+        else:
+            schema_dictlike = schema
         # make it a real schema
-        schema = ArraySchema(**schema)
+        schema = ArraySchema(**schema_dictlike)
 
         # add it to the registry
         uid = schema['uid']
@@ -1141,6 +1110,6 @@ class ArrayClassRegistry:
         else:
             self._named_lookup[schema['name']] = [schema]
 
-    def add_class(self, class_to_add: AnnotatedArray, schema: ArraySchema):
+    def add_class(self, class_to_add: type[AnnotatedArray], schema: ArraySchema):
         self.add_schema(schema)
         self.classes[schema['uid']] = class_to_add

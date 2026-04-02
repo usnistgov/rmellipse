@@ -32,6 +32,7 @@ __all__ = ['RMEMeas', 'RMEMeasFormatError']
 
 UMECHID_DTYPE = np.dtype('object')
 RMELLIPSE_NAMESPACE = uuid.UUID('c421f33f-4b1c-4f15-a2a6-896cd39430b1')
+MC_DIM_NAME = 'sample_id'
 
 
 class RMEMeasFormatError(Exception):
@@ -129,8 +130,8 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             of the DataArray, where the first index of axis 0 is the nominal
             data set, and the rest of the indexes are samples of the distribution.
 
-            The first dimension must be called 'umech_id', and the
-            first labels of the 'parameter_dimensions' must start at 0 and
+            The first dimension must be called 'sample_id', and the
+            first labels of the 'sample_id' must start at 0 and
             count up by 1 (i,e typical integer based indexing).
             The default is None.
         covdofs : xr.DataArray, optional
@@ -192,6 +193,15 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         self.cast_covcats()
         # enforce rule on name of uncertainty/montecarlo dimensions
         # self._validate_conventions()
+
+        # rename the mc dimensiont o support old data sets
+        if mc is not None:
+            # rename an mc array with 'umech_id' as 'sample_id
+            # to support old datasets
+            try:
+                self.mc = self.mc.rename({'umech_id': 'sample_id'})
+            except ValueError:
+                pass
 
         # add attributes as children so they get saved into hdf5 formats
         self.add_child(key='cov', data=self.cov, is_big_object=True)
@@ -325,10 +335,10 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         # check that covdofs has umech_id
         if self.mc is not None:
             try:
-                self.mc.umech_id
+                self.mc.sample_id
             except AttributeError as exec:
                 raise RMEMeasFormatError(
-                    'covdofs doesnt have dimension called umech_id'
+                    'covdofs doesnt have dimension called sample_id'
                 ) from exec
 
         if self.cov is not None:
@@ -342,13 +352,13 @@ class RMEMeas(uobj.UObj, GroupSaveable):
                 )
 
         if self.mc is not None:
-            if self.mc.dims[0] != 'umech_id':
+            if self.mc.dims[0] != 'sample_id':
                 raise RMEMeasFormatError(
-                    'First dimension of a RMEMeas object mc DataArray MUST be called "umech_id"'
+                    'First dimension of a RMEMeas object mc DataArray MUST be called "sample_id"'
                 )
-            if self.mc.coords['umech_id'][0] != 0:
+            if self.mc.coords['sample_id'][0] != 0:
                 raise RMEMeasFormatError(
-                    'mc DataArray "umech_id" dim must have an integer coordinate set starting from 0'
+                    'mc DataArray "sample_id" dim must have an integer coordinate set starting from 0'
                 )
 
         try:
@@ -510,9 +520,9 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             nom, std = choose_mean_nom(vals, nom, std)
             vals[0] = nom
             dims = list(vals.shape)
-            dims[0] = 'umech_id'
+            dims[0] = MC_DIM_NAME
             mc = xr.DataArray(
-                data=vals, dims=dims, coords={'umech_id': np.arange(0, samples + 1)}
+                data=vals, dims=dims, coords={MC_DIM_NAME: np.arange(0, samples + 1)}
             )
 
         if dist == 'uniform' or dist == 'rectangular':
@@ -528,14 +538,16 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             nom, std = choose_mean_nom(vals, nom, std)
             vals[0] = nom
             dims = list(vals.shape)
-            dims[0] = 'umech_id'
+            dims[0] = MC_DIM_NAME
             mc = xr.DataArray(
-                data=vals, dims=dims, coords={'umech_id': np.arange(0, samples + 1)}
+                data=vals, dims=dims, coords={MC_DIM_NAME: np.arange(0, samples + 1)}
             )
 
+        cov_dims = [cd for cd in dims]
+        cov_dims[0] = 'umech_id'
         cov = xr.DataArray(
             np.array([nom, nom + std]),
-            dims=dims,
+            dims=cov_dims,
             coords={'umech_id': ['nominal', mechanism_name]},
         )
 
@@ -686,6 +698,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             cov = cov.rename({'parameter_locations': 'umech_id'})
         if mc is not None and mc.dims[0] == 'parameter_locations':
             mc = mc.rename({'parameter_locations': 'umech_id'})
+            mc = mc.rename({'umech_id': 'sample_id'})
         if covdofs is not None and covdofs.dims[0] == 'parameter_locations':
             covdofs = covdofs.rename({'parameter_locations': 'umech_id'})
         if covcats is not None and covcats.dims[0] == 'parameter_locations':
@@ -803,8 +816,8 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         ]
         cov = xr.concat(cov, dim='umech_id')
         cov = cov.assign_coords(umech_id=umechids)
-        mc = xr.concat(mc, dim='umech_id')
-        mc = mc.assign_coords(umech_id=np.arange(mc.shape[0]))
+        mc = xr.concat(mc, dim='sample_id')
+        mc = mc.assign_coords(sample_id=np.arange(mc.shape[0]))
 
         return cls(dummy.name, cov, mc)
 
@@ -987,11 +1000,13 @@ class RMEMeas(uobj.UObj, GroupSaveable):
 
         """
         if self.mc is None:
-            self.mc = self.cov.loc[['nominal'], ...].copy()
-            self.mc = self.mc.assign_coords({'umech_id': [0]})
-        ind = len(self.mc.umech_id)
-        new_sample = sample.expand_dims({'umech_id': [ind]})
-        self.mc = xr.concat([self.mc, new_sample], dim='umech_id')
+            self.mc = (
+                self.cov.loc[['nominal'], ...].copy().rename({'umech_id': 'sample_id'})
+            )
+            self.mc = self.mc.assign_coords({'sample_id': [0]})
+        ind = len(self.mc.sample_id)
+        new_sample = sample.expand_dims({'sample_id': [ind]})
+        self.mc = xr.concat([self.mc, new_sample], dim='sample_id')
 
     def add_umech(
         self,
@@ -999,7 +1014,6 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         value: xr.DataArray,
         dof: float = np.inf,
         category: dict = {'Type': 'B'},
-        use_uuid: str = None,
         add_uid=None,
     ):
         """
@@ -1023,32 +1037,16 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             mechanisms. E.g. {'Type':'B','Origin':'Datasheet'}. The default
             is {'Type':'B'}.
         add_uid: bool, optional
-            Will be deprecated, uids are used automatically now.
-        use_uuid : str, optional
-            Can optionally provide a UUID for th emechanism, otherwise one
-            will be generated
+            Append a UID to name to guarantee uniqueness.
+
 
         Returns
         -------
         None.
 
         """
-        if add_uid is not None:
-            warnings.warn(
-                'add_uid is deprecated and will be removed in 0.5.0, all umech_ids will be assigned as a uid moving. This is included to avoid breaking existing code.',
-                DeprecationWarning,
-                stacklevel=2,  # Ensures the warning points to the caller's location
-            )
-
-        umech_id_meta_name = name
-        category.update({'Name': 'umech_id_meta_name'})
-        # this is the umech_id, it was called name here before
-        # because it used to be a concatenation, so now it
-        # is ge
-        if use_uuid is None:
-            name = str(uuid.uuid4())
-        else:
-            name = str(uuid.UUID(use_uuid))
+        if add_uid:
+            name += str(uuid.uuid4())
 
         if name in self.umech_id:
             raise ValueError('Linear mechanisms name ' + name + ' already exists')
@@ -1110,14 +1108,14 @@ class RMEMeas(uobj.UObj, GroupSaveable):
 
         """
         try:
-            return self.cov[0, ...].drop_vars('umech_id')
-        except TypeError:
+            return self.cov.sel(umech_id='nominal', drop=True)
+        except (TypeError, AttributeError):
             pass
         except ValueError as exec:
             raise RMEMeasFormatError('no umech_id in cov') from exec
         try:
-            return self.mc[0, ...].drop_vars('umech_id')
-        except TypeError:
+            return self.mc.sel(sample_id=0, drop=True)
+        except (TypeError, AttributeError, KeyError):
             pass
         except ValueError as exec:
             raise RMEMeasFormatError('no umech_id in mc') from exec
@@ -1276,7 +1274,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         except TypeError:
             covunc = None
         try:
-            mcunc = k * self.mc.std(dim='umech_id')
+            mcunc = k * self.mc.std(dim='sample_id')
         except (AttributeError, TypeError):
             mcunc = None
         return _uncoutput(covunc, mcunc)
@@ -1665,7 +1663,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         return out
 
     def usel(
-        self, umech_id: Iterable[str] = None, mcsamples: Iterable[int] = None
+        self, umech_id: Iterable[str] = None, sample_id: Iterable[int] = None
     ) -> 'RMEMeas':
         """
         Get a view into specific uncertainty mechanisms or Monte Carlo samples.
@@ -1674,14 +1672,14 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         ----------
         umech_id : iter[str], optional
             Linear uncertainty mechanisms to look at. The default is None.
-        mcsamples : iter[int], optional
+        sample_id : iter[int], optional
             Monte Carlo samples to look at. The default is None.
 
         Raises
         ------
         ValueError
             If 'nominal' is passed to umech_id, or 0 is passed to
-            the mcsamples. Those represent the nominal values and are
+            the sample_id. Those represent the nominal values and are
             always included by default, since an uncertainty object should
             always have a nominal value.
 
@@ -1728,15 +1726,21 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         elif umechs is not None:
             raise ValueError('umech_id not recognized, must be iterable')
 
-        if mcsamples or isinstance(mcsamples, list):
-            if 0 in mcsamples:
+        if sample_id or isinstance(sample_id, list):
+            if 0 in sample_id:
                 raise ValueError(
                     '0 index always included (it is the nominal), dont pass it.'
                 )
-            keep = np.append([0], np.array(mcsamples, dtype=int))
-            mc = self.mc.isel(umech_id=keep)
-        elif mcsamples is not None:
+            keep = np.append([0], np.array(sample_id, dtype=int))
+            mc = self.mc.isel(sample_id=keep)
+        elif sample_id is not None:
             raise ValueError('mcsamples not recognized, must be iterable')
+        # make sure nominal is first
+        uid_sorted = np.append(
+            cov.umech_id[cov.umech_id == 'nominal'],
+            cov.umech_id[cov.umech_id != 'nominal'],
+        )
+        cov = cov.sel(umech_id=uid_sorted)
         out = RMEMeas(self.name, cov, mc, covdofs, covcats)
 
         return out
@@ -1833,11 +1837,12 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             View into indexed RMEMeas object.
 
         """
-        forbid = 'umech_id'
-        if indexers_kwargs and forbid in indexers_kwargs:
-            raise ValueError(' Cannot index into umech_id here')
-        if indexers and forbid in indexers:
-            raise ValueError(' Cannot index into umech_id here')
+        forbid = ['umech_id', 'sample_id']
+        for f in forbid:
+            if indexers_kwargs and f in indexers_kwargs:
+                raise ValueError(f' Cannot index into {f} here')
+            if indexers and f in indexers:
+                raise ValueError(f' Cannot index into {f} here')
 
         kwargs = dict(indexers=indexers, method=method, tolerance=tolerance)
         cov = self.cov.sel(**kwargs, **indexers_kwargs)
@@ -1897,11 +1902,12 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             View into indexed RMEMeas object.
 
         """
-        forbid = 'umech_id'
-        if indexers_kwargs and forbid in indexers_kwargs:
-            raise ValueError(' Cannot index into umech_id here')
-        if indexers and forbid in indexers:
-            raise ValueError(' Cannot index into umech_id here')
+        forbid = ['umech_id', 'sample_id']
+        for f in forbid:
+            if indexers_kwargs and f in indexers_kwargs:
+                raise ValueError(f' Cannot index into {f} here')
+            if indexers and f in indexers:
+                raise ValueError(f' Cannot index into {f} here')
 
         kwargs = dict(indexers=indexers, drop=drop, missing_dims=missing_dims)
 
@@ -2093,14 +2099,17 @@ class RMEMeas(uobj.UObj, GroupSaveable):
 
         def eval(arr):
             output = None
-            for i, u in enumerate(arr.umech_id):
-                coeffs = [arr.sel(umech_id=u, param=p).values for p in arr.param]
+            use_dim = 'umech_id'
+            if use_dim not in arr.coords:
+                use_dim = 'sample_id'
+            for i, u in enumerate(arr.coords[use_dim]):
+                coeffs = [arr.sel({use_dim: u, 'param': p}).values for p in arr.param]
                 values = func(coords, *coeffs)
                 # preallocate output
                 if output is None:
                     output = (
                         xr.zeros_like(values)
-                        .expand_dims({'umech_id': arr.umech_id}, axis=0)
+                        .expand_dims({use_dim: arr.coords[use_dim]}, axis=0)
                         .copy()
                     )
                 output[i, ...] = values

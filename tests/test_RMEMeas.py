@@ -551,6 +551,7 @@ def test_indexing():
     assert usel.mc.shape[0] == 3  # nominal plus 2 samples
     usel = test.usel(umech_id=[], sample_id=[2, 3])
     assert usel.mc.shape[0] == 3 and len(usel.umech_id) == 0
+    assert 'nominal' not in usel.umech_id
 
 
 def test_make_umechs_unique():
@@ -572,9 +573,9 @@ def test_add_umech():
 
     uid = str(uuid.uuid4())
     m = make_example_meas()
-    m.add_umech('tes1', m.nom, use_uuid=uid)
+    m.add_umech('tes1', m.nom)
     with pytest.raises(ValueError):
-        m.add_umech('tes1', m.nom, use_uuid=uid)
+        m.add_umech('tes1', m.nom)
     m.add_umech('test2', m.cov[0, ...])
     m.add_umech('test3', m.cov[[0], ...])
 

@@ -1014,7 +1014,6 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         value: xr.DataArray,
         dof: float = np.inf,
         category: dict = {'Type': 'B'},
-        use_uuid: str = None,
         add_uid=None,
     ):
         """
@@ -1038,32 +1037,16 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             mechanisms. E.g. {'Type':'B','Origin':'Datasheet'}. The default
             is {'Type':'B'}.
         add_uid: bool, optional
-            Will be deprecated, uids are used automatically now.
-        use_uuid : str, optional
-            Can optionally provide a UUID for th emechanism, otherwise one
-            will be generated
+            Append a UID to name to guarantee uniqueness.
+
 
         Returns
         -------
         None.
 
         """
-        if add_uid is not None:
-            warnings.warn(
-                'add_uid is deprecated and will be removed in 0.5.0, all umech_ids will be assigned as a uid moving. This is included to avoid breaking existing code.',
-                DeprecationWarning,
-                stacklevel=2,  # Ensures the warning points to the caller's location
-            )
-
-        umech_id_meta_name = name
-        category.update({'Name': 'umech_id_meta_name'})
-        # this is the umech_id, it was called name here before
-        # because it used to be a concatenation, so now it
-        # is ge
-        if use_uuid is None:
-            name = str(uuid.uuid4())
-        else:
-            name = str(uuid.UUID(use_uuid))
+        if add_uid:
+            name += str(uuid.uuid4())
 
         if name in self.umech_id:
             raise ValueError('Linear mechanisms name ' + name + ' already exists')
@@ -1125,14 +1108,14 @@ class RMEMeas(uobj.UObj, GroupSaveable):
 
         """
         try:
-            return self.cov[0, ...].drop_vars('umech_id')
-        except TypeError:
+            return self.cov.sel(umech_id='nominal', drop=True)
+        except (TypeError, AttributeError):
             pass
         except ValueError as exec:
             raise RMEMeasFormatError('no umech_id in cov') from exec
         try:
-            return self.mc[0, ...].drop_vars('sample_id')
-        except TypeError:
+            return self.mc.sel(sample_id=0, drop=True)
+        except (TypeError, AttributeError, KeyError):
             pass
         except ValueError as exec:
             raise RMEMeasFormatError('no umech_id in mc') from exec
@@ -1752,6 +1735,12 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             mc = self.mc.isel(sample_id=keep)
         elif sample_id is not None:
             raise ValueError('mcsamples not recognized, must be iterable')
+        # make sure nominal is first
+        uid_sorted = np.append(
+            cov.umech_id[cov.umech_id == 'nominal'],
+            cov.umech_id[cov.umech_id != 'nominal'],
+        )
+        cov = cov.sel(umech_id=uid_sorted)
         out = RMEMeas(self.name, cov, mc, covdofs, covcats)
 
         return out

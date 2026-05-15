@@ -320,11 +320,11 @@ class RMEProp(propagators.Propagator):
                 cov_output = process_fcn(*cov_args, **cov_kwargs)
             else:
                 covargsi = [
-                    a.sel(umech_id=['nominal']) if hasattr(a, 'umech_id') else a
+                    a.sel(umech_id='nominal') if hasattr(a, 'umech_id') else a
                     for a in cov_args
                 ]
                 covkwi = {
-                    k: a.sel(umech_id=['nominal']) if hasattr(a, 'umech_id') else a
+                    k: a.sel(umech_id='nominal') if hasattr(a, 'umech_id') else a
                     for a, k in cov_kwargs.items()
                 }
                 cov_output = process_fcn(*covargsi, **covkwi)

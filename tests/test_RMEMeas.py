@@ -671,14 +671,14 @@ def test_create_empty_categories():
 
 
 if __name__ == '__main__':
-    # test_interp()
+    test_interp()
     test_indexing()
     test_nom()
-    # test_add_umech()
-    # test_assign_categories()
-    # test_from_dist()
-    # test_overload()
-    # test_h5_encoding()
-    # test_validate_conventions()
-    # a = np.array(1)
+    test_add_umech()
+    test_assign_categories()
+    test_from_dist()
+    test_overload()
+    test_h5_encoding()
+    test_validate_conventions()
+    # a = np.array(1)s
     # print(a.size)

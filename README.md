@@ -5,34 +5,18 @@ Rocky Mountain Ellipse (RME) is a software package designed to provide an explic
 
 2. RMEMeas and RMEProp, Python classes for correlated uncertainty propagation using [XArray](https://docs.xarray.dev/en/stable/).
 
-3. A command line tool for producing, releasing, and managing datasets stored and obtained from a [CDCS](https://www.nist.gov/itl/ssd/information-systems-group/configurable-data-curation-system-cdcs)  based data archive.
-
 
 Please see the [documentation](https://pages.nist.gov/rmellipse-ipages).
 
-> [!NOTE]  
-> RMEllipse is still in development. We expect to make changes that will break backward compatibility. Also, there are known bugs that we have not fixed yet. Specifically, we plan to re-write the Monte-Carlo uncertainty propagation algorithm in RMEProp. Please check back for updates. When we increment the version to 1.0, we expect that that version will be stable. 
+> [!NOTE]
+> RMEllipse is still in development. We expect to make changes that will break backward compatibility. Also, there are known bugs that we have not fixed yet. Specifically, we plan to re-write the Monte-Carlo uncertainty propagation algorithm in RMEProp. Please check back for updates. When we increment the version to 1.0, we expect that that version will be stable.
 
 ## Installation
 
-### Prerequisites:
-
-- libhdf5-dev
-- gnome-keyring
-
-### Dependencies
-
-
-Install the most recent stable build with [uv](https://docs.astral.sh/uv/):
+Install with pip
 
 ```
-uv add git+https://github.com/usnistgov/rmellipse --branch stable
-```
-
-Or with pip:
-
-```
-pip install git+https://github.com/usnistgov/rmellipse@stable
+pip install rmellipse
 ```
 
 ## Developer Tools

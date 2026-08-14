@@ -1,61 +1,36 @@
 # -*- coding: utf-8 -*-
 """
-Defining Array Schema
-=====================
+Defining ArraySchema and AnnotatedArray's
+=========================================
+ArraySchema are dictionary objects that describe the requirements of
+an array structure. AnnotatedArray are xarray.DataArray's that conform
+to a given ArraySchema.
 
-Array schema are json documents that act as metadata describing the
-structure of array-like data. The submodule provides some python bindings
-for generating the schema in python.
-
-See
 """
-
-# %%
-# Make a Registry
-# ---------------
-#
-# First make a registry to store a collection of schema you want to
-# use. We will also import some example functions including in the
-# rmellipse package, as well as the json package to format the
-# json documents.
 
 import rmellipse.arrschema as arrschema
 import rmellipse.arrschema.examples as examples
 import xarray as xr
 import numpy as np
-import json
-
-REGISTRY = arrschema.ArrayClassRegistry()
 
 # %%
-# We will define a basic schema of an arry with arbitrary shape
-# made of floats called "float_zeros". When the schema is made with
-# the arrschema function a uid is automatically added. Then we
-# add it to the registry.
-
-# a schema is just a dictionary that specifies
-# what the expected structure of a dataset is
-float_zeros_schema = arrschema.ArraySchema(
-    name='float_zeros', shape=(...,), dims=(...,), dtype=float
-)
+# For a simple example, we will define a basic schema of an array with arbitrary shape
+# made of floats called "float_zeros".
 
 
-# you can use that dictionary to generate a
-# python class object within the context of a registry
 class FloatZeros(arrschema.AnnotatedArray):
-    registry = REGISTRY
-    schema = float_zeros_schema
-
-
-print(FloatZeros)
+    schema = arrschema.ArraySchema(
+        name='float_zeros', shape=(...,), dims=(...,), dtype=float
+    )
 
 
 # %%
 # Validation
 # ----------
 #
-# Requires that the array conforms to the
-# AnnotatedArray subclass specification.
+# ArraySchema aren't enforced at runtime, but you
+# can check manually by calling the validate() method
+# on something you've cast into a Schema.
 
 # cast an array into the type to check it conforms
 # to the specification,
@@ -71,71 +46,76 @@ try:
 except arrschema.ValidationError as e:
     print('caught error: \n', e)
 
-# succesfully validated datasets store the associated schema in the metadata
-print(my_data.attrs['ARRSCHEMA'])
-
 # %%
-# Loaders and Savers
-# ------------------
+# Schema with Coordinates
+# -----------------------
 #
-# Array schema provide a system for organizing and envoking different
-# encoding and decoding functions for various schema. Often times
-# we work with a single in memory representation of a particular object,
-# but may need to be able to read/write to and from multiple different
-# methods of storing that data on disc. We do this by associating
-# a loader/saver with a function using a module spec, and related
-# file extensions.
+# You can specifiy the requirements of the
+# coordinates as well. This example
+# defines the structure of a 2 x 2 matrix
+# with a time coordinate. Using letters to label
+# shapes of dimensions indicate an arbitrary length,
+# using integers to label shapes indicate a fixed length.
+# For coordinates, if specific values are expected, those can
+# be set with the a list of values.
 
-# supply the module pathspec to the function
-REGISTRY.add_loader(
-    'rmellipse.arrschema.examples:load_group_saveable',
-    ['.h5', '.hdf5'],
-    loader_type='group_saveable',
-    schema=FloatZeros.schema,
-)
 
-REGISTRY.add_saver(
-    'rmellipse.arrschema.examples:save_group_saveable',
-    ['.h5', '.hdf5'],
-    saver_type='group_saveable',
-    schema=FloatZeros.schema,
-)
+class TimeDomain2x2(arrschema.AnnotatedArray):
+    schema = arrschema.ArraySchema(
+        name='TimeDomain2x2',
+        shape=('N', 2, 2),
+        dims=('time', 'row', 'col'),
+        dtype=float,
+        coords={
+            'time': {'dtype': float},
+            'row': {'values': [0, 1], 'dtype': int},
+            'col': {'values': [0, 1], 'dtype': int},
+        },
+    )
 
-# %%
-
-# Encoding and decoding functions are expected have function signatures
-# that look like ``fun(path, data, *args, **kwargs)``
-
-my_data.save('example.h5', 'my_data_name')
-my_data_read = FloatZeros.load('example.h5', group='my_data_name')
-print(my_data_read)
 
 # %%
-# Conversion
-# ----------
+# Casting and Validating
+# ----------------------
 #
-# Converters can be assigned as well. Converters are functions that take in
-# a single data set with an associated schema, and returns a new data set
-# with an associated schema.
+# To use a schema cast a DataArray in the AnnotatedArray
+# class. Arrays are not validated at runtime, and can
+# be manually checked with the validate method after
+# casting.
 
-# define a new format we care about
+# cast an array into the type to check it conforms
+# to the specification,
+my_data = xr.DataArray(np.zeros((4, 4), dtype=float))
+my_data = FloatZeros(my_data)
 
-int_zeros_schema = arrschema.ArraySchema(
-    name='int_zeros', shape=(...,), dims=(...,), dtype=int
-)
+try:
+    my_data.validate()
+except arrschema.ValidationError as e:
+    print('caught error: \n', e)
+
+# %%
+# Annotating Functions
+# --------------------
+#
+# Once the schema has been defined, you can use it
+# to annotate functions for clear documentation.
 
 
-class IntZeros(arrschema.AnnotatedArray):
-    registry = REGISTRY
-    schema = int_zeros_schema
+class Matrix2x2(arrschema.AnnotatedArray):
+    schema = arrschema.ArraySchema(
+        name='Matrix2x2',
+        shape=(2, 2),
+        dims=('row', 'col'),
+        dtype=float,
+        coords={
+            'row': {'values': [0, 1], 'dtype': int},
+            'col': {'values': [0, 1], 'dtype': int},
+        },
+    )
 
 
-REGISTRY.add_converter(
-    'rmellipse.arrschema.examples:convert_float_to_int',
-    input_schema=FloatZeros.schema,
-    output_schema=IntZeros.schema,
-)
-
-converted = my_data.convert_to(IntZeros)
-
-print(converted)
+def timedomain_average_(data: TimeDomain2x2) -> Matrix2x2:
+    time_average = data.mean(dim='time')
+    out = Matrix2x2(time_average)
+    out.validate()
+    return out

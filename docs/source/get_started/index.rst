@@ -7,7 +7,4 @@ This guide aims to provide a starting guide for using Rocky Mountain Ellipse.
    :maxdepth: 4
 
    install/index.rst
-   configure_archives/index.rst
-   first_workflow/index.rst
-   manage_requirements/index.rst
    arrayschema/index.rst

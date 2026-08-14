@@ -150,6 +150,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             of 'B'. If a mechanism doesn't have a category, it should be an empty
             string.
         """
+
         # init as a RMEMeas object
         uobj.UObj.__init__(self)
         if name is None:
@@ -190,7 +191,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         # is always the correct U36
         self.cast_umechids()
         # enforce the use of string meatadata
-        self.cast_covcats()
+        # self.cast_covcats()
         # enforce rule on name of uncertainty/montecarlo dimensions
         # self._validate_conventions()
 
@@ -208,6 +209,18 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         self.add_child(key='mc', data=self.mc, is_big_object=True)
         self.add_child(key='covdofs', data=self.covdofs)
         self.add_child(key='covcats', data=self.covcats)
+
+    def __getattr__(self, n):
+        try:
+            return self.cov.coords[n]
+        except KeyError:
+            ...
+        if self.mc is not None:
+            try:
+                return self.mc.coords[n]
+            except KeyError:
+                ...
+        raise AttributeError(f'{n} doesnt exists on cov or mc')
 
     @property
     def covdofs(self):
@@ -293,10 +306,6 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         else:
             return False
 
-    def cast_covcats(self):
-        if self.covcats is not None:
-            self.covcats = self.covcats.astype(str).astype(object)
-
     def cast_umechids(self):
         """
         Cast any umech_id dimensions to the correct type.
@@ -310,13 +319,16 @@ class RMEMeas(uobj.UObj, GroupSaveable):
                     raise RMEMeasFormatError(f'{attr} missing umech_id') from e
                 except AttributeError as e:
                     raise RMEMeasFormatError(f'{attr} has no coordinates.') from e
-                setattr(
-                    self,
-                    attr_name,
-                    attr.assign_coords(
-                        {'umech_id': attr.coords['umech_id'].astype(str).astype(object)}
-                    ),
-                )
+                # cast objects of umech_id as string
+                # in case they are loaded in as bytes accidentally
+                if attr_dtype == np.dtype('O'):
+                    setattr(
+                        self,
+                        attr_name,
+                        attr.assign_coords(
+                            {'umech_id': attr.coords['umech_id'].astype(str)}
+                        ),
+                    )
 
     def _validate_conventions(self):
         """
@@ -413,6 +425,8 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             A RMEMeas object with only nominal values.
 
         """
+        if not isinstance(nom, xr.DataArray):
+            nom = xr.DataArray(nom)
         cov = nom.expand_dims({'umech_id': ['nominal']})
         out = RMEMeas(name=name, cov=cov)
         # these are special GROUP_SAVEABLE keys
@@ -1006,7 +1020,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             self.mc = self.mc.assign_coords({'sample_id': [0]})
         ind = len(self.mc.sample_id)
         new_sample = sample.expand_dims({'sample_id': [ind]})
-        self.mc = xr.concat([self.mc, new_sample], dim='sample_id')
+        self.mc = xr.concat([self.mc, new_sample], dim='sample_id', join='override')
 
     def add_umech(
         self,
@@ -1060,9 +1074,14 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             v = value.expand_dims({'umech_id': [name]}).copy()
         else:
             v = value.assign_coords({'umech_id': [name]})
-        self.cov = xr.concat([self.cov, v], dim='umech_id')
+
+        self.cov = xr.concat(
+            [self.cov, v], dim='umech_id', join='override', coords='minimal'
+        )
         dofs = xr.DataArray([dof], dims=('umech_id'), coords={'umech_id': [name]})
-        self.covdofs = xr.concat([self.covdofs, dofs], dim='umech_id')
+        self.covdofs = xr.concat(
+            [self.covdofs, dofs], dim='umech_id', join='override', coords='minimal'
+        )
 
         # add extra row to the category for the new mechanism
         # if no mechanisms, initialize first row
@@ -1080,14 +1099,18 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             new_row = xr.full_like(self.covcats[[0], ...], '').assign_coords(
                 {'umech_id': [name]}
             )
-            self.covcats = xr.concat([self.covcats, new_row], dim='umech_id')
+            self.covcats = xr.concat(
+                [self.covcats, new_row],
+                dim='umech_id',
+                join='override',
+                coords='minimal',
+            )
 
         # assign categories to new row
         cats = list(category.keys())
         designations = list(category.values())
         n = len(cats)
         self.assign_categories([name] * n, cats, designations)
-        self.cast_umechids()
 
         return name
 
@@ -1401,8 +1424,10 @@ class RMEMeas(uobj.UObj, GroupSaveable):
                 empty_col(c) for c in categories if c not in self.covcats.categories
             ]
             if len(new_cols) > 0:
-                new_cols = xr.concat(new_cols, dim='categories')
-                self.covcats = xr.concat([self.covcats, new_cols], dim='categories')
+                new_cols = xr.concat(new_cols, dim='categories', join='override')
+                self.covcats = xr.concat(
+                    [self.covcats, new_cols], dim='categories', join='override'
+                )
 
     def group_combine_mechanisms(
         self, deg: bool = False, rad: bool = False
@@ -1487,7 +1512,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             )
 
         # concatenate things
-        new_cov = xr.concat(new, 'umech_id')
+        new_cov = xr.concat(new, 'umech_id', join='override')
         newdofs = newdofs.sel(umech_id=new_cov.umech_id[1:])
         if self.mc is None:
             new_mc = None

@@ -1,5 +1,0 @@
-first-workflow-v0.1.5:
-  host: ../ignored_archive
-  name: first-workflow
-  version: 0.1.5
-  workspace: Global Public Workspace

@@ -133,7 +133,7 @@ extensions = [
     'autoapi.extension',
     'sphinx_gallery.gen_gallery',
     # 'numpydoc',
-    'sphinx_click',
+    # 'sphinx_click',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
 ]

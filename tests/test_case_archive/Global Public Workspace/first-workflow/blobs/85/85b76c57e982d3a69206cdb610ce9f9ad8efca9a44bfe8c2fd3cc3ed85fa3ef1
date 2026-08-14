@@ -1,3 +1,0 @@
-requires-env:
-  # declare environment variable requirements
-  - MY_PROJECT_ENV_VARIABLE

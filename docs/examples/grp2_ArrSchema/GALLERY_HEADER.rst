@@ -1,4 +1,4 @@
-Using Array Schema in Python
-----------------------------
+ArraySchema and AnnotatedArray
+------------------------------
 
-Some examples for using Array Schema in Python
+Some examples for using Array Schema in Python.

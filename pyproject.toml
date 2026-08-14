@@ -32,7 +32,6 @@ members = [
 # jobs run wth this package,
 # all dependencies should be on there.
 [[tool.uv.index]]
-name = "pytorch"
 url = "https://pypi.org/simple"
 default = true
 
@@ -40,7 +39,7 @@ default = true
 name = "rmellipse"
 dynamic = ["version"]
 authors = [
-  {name="Daniel Cole Gray", email="daniel.c.gray@nist.gov" },
+  {name="Daniel C. Gray", email="daniel.c.gray@nist.gov" },
   {name = "Zenn C. Roberts",email = "zenn.roberts@nist.gov"},
   {name ="Aaron M. Hagerstrom", email = "aaron.hagerstrom@nist.gov"},
 
@@ -60,18 +59,8 @@ dependencies = [
   "h5py>=3.11.0",
   "scipy>=1.15.2",
   "xarray>=2025.3.1",# <2025.6.0",
-  "click>=8.2.1",
-  "pyyaml>=6.0.2",
   "jsonschema>=4.25.0",
-  "cdcs>=0.2.6",
-  "h5netcdf>=1.6.4",
-  "tqdm>=4.67.1",
-  "keyring>=25.6.0",
-  "semver>=3.0.4",
-  "python-dotenv>=1.2.1",
   "gitpython>=3.1.45",
-  "psutil>=7.1.2",
-  "dict-hash>=1.3.7",
 ]
 license-files = ["LICENSE.md"]
 
@@ -87,7 +76,6 @@ dev = [
     "sphinx==7.4.0",
     "sphinx-autoapi==3.6.0",
     "sphinx-gallery==0.17.0",
-    "sphinx-click>=6.0.0",
     "snakeviz>=2.2.2",
     "sphinx-multiversion>=0.2.4",
     "pre-commit>=4.3.0",

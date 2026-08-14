@@ -10,5 +10,4 @@ data formats within a python-library. It assumes you have read the
    :maxdepth: 4
 
    introduction.rst
-   write_a_schema.rst
 

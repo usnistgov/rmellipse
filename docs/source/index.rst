@@ -28,7 +28,6 @@ Table of Contents
    get_started/index.rst
    auto_examples/index.rst
    for_contributors/index.rst
-   cli/index.rst
 
 Indices and tables
 ==================

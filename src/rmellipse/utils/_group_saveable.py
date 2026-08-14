@@ -24,13 +24,66 @@ import uuid
 import sys
 import importlib
 import numpy
-import xarray
+import xarray as xr
 from abc import ABC
 from typing import Union, NewType, Callable  # , TypeVar , abstractmethod
+from rmellipse.arrschema import AnnotatedArray
 import h5py
+import warnings
+from pathlib import Path
 
 # define what is part of the exposed API
-__all__ = ['load_object', 'save_object', 'GroupSaveable']
+__all__ = [
+    'load_object',
+    'save_object',
+    'load_file',
+    'save_file',
+    'GroupSaveable',
+    'MissingSchemaWarning',
+]
+
+
+def save_file(path: str | Path, saveable: 'GroupSaveable', **save_object_kwargs):
+    """
+    Save a GroupSaveable object to a file.
+
+    Overwrites the target file if it already exists.
+
+    Parameters
+    ----------
+    path : str | Path
+        File to save to.
+    saveable : GroupSaveable
+        GroupSaveable object.
+    **save_object_kwargs : any
+        Any additional key word arguments that may be passed off to save_object.
+    """
+    name = Path(path).stem
+    with h5py.File(path, 'w') as f:
+        save_object(f, name, saveable, **save_object_kwargs)
+
+
+def load_file(path: str | Path, saveable: 'GroupSaveable', **load_object_kwargs):
+    """
+    Load a GroupSaveable object from a file.
+
+    Follows the convention if there must be a single GroupSaveable
+    object at the root of the file.
+
+    Parameters
+    ----------
+    path : str | Path
+        File to read.
+    **load_object_kwargs : any
+        Any additional key word arguments that may be passed off to load_object.
+    """
+
+    with h5py.File(path, 'r') as f:
+        groups = [g for g in f]
+        if len(groups) > 1 or len(groups) < 1:
+            raise ValueError('Expected only one group in root of {path}.')
+        group = f[groups[0]]
+        load_object(group, **load_object_kwargs)
 
 
 class GROUP_SAVEABLE(ABC):
@@ -73,7 +126,7 @@ SLICE_SAVEABLE = slice
 FUNCTION_SAVEABLE = Callable
 
 # data array saveables are data arrays
-DATAARRAY_SAVEABLE = xarray.DataArray
+DATAARRAY_SAVEABLE = xr.DataArray
 
 SAVEABLE = Union[
     GROUP_SAVEABLE,
@@ -410,8 +463,15 @@ def save_dataarray_saveable(
         dataset.attrs[k] = v
     dataset.attrs['save_type'] = 'DATAARRAY_SAVEABLE'
     dataset.attrs['is_big_object'] = True
-    dataset.attrs['__class__.__module__'] = o.__class__.__module__
-    dataset.attrs['__class__.__name__'] = o.__class__.__name__
+    dataset.attrs['__class__.__module__'] = xr.DataArray.__module__
+    dataset.attrs['__class__.__name__'] = xr.DataArray.__name__
+    # Annotated Arrays are a special case
+    # that should be saved as xarray objects
+    # and the annotation layer is recorded down
+    # so it can be potentially loaded in after the fact
+    if isinstance(o, AnnotatedArray):
+        dataset.attrs['__annotatedarray__.__module__'] = o.__class__.__module__
+        dataset.attrs['__annotatedarray__.__name__'] = o.__class__.__name__
     return dataset
 
 
@@ -677,6 +737,10 @@ def load_dataset_saveable(
     return o
 
 
+class MissingSchemaWarning(UserWarning, RuntimeWarning):
+    pass
+
+
 def load_dataarray_saveable(
     data_set, dataset_class: type, vlen_object_encoding: type = str
 ) -> DATAARRAY_SAVEABLE:
@@ -721,6 +785,49 @@ def load_dataarray_saveable(
         o = dataset_class(vals, dims=dims, coords=coords)
         for k in data_set.attrs:
             o.attrs[k] = data_set.attrs[k]
+    # print(data_set.name)
+
+    if '__annotatedarray__.__module__' in o.attrs:
+        o = try_to_cast_annnotated_array(o)
+
+    return o
+
+
+def custom_formatwarning(msg, category, filename, lineno, line=None):
+    # Return your clean, custom string format
+    return f'[{category.__name__}] {msg}\n'
+
+
+# Override the default formatting behavior
+
+
+def try_to_cast_annnotated_array(o: object):
+    old_format = warnings.formatwarning
+    warnings.formatwarning = custom_formatwarning
+    try:
+        module_name = o.attrs['__annotatedarray__.__module__']
+        class_name = o.attrs['__annotatedarray__.__name__']
+    except KeyError as e:
+        warnings.warn(
+            f"Failed to determine type of AnnotatedArray for '{e}' returning as DataArray."
+        )
+
+    try:
+        module = importlib.import_module(o.attrs['__annotatedarray__.__module__'])
+        array_class = getattr(module, o.attrs['__annotatedarray__.__name__'])
+        out = array_class(o)
+        o = out
+    except Exception as e:
+        msg = f"""Failed to cast DataArray into subclass of AnnotatedArray {class_name} due to {type(e).__name__}: {e}.
+         Likely the original module where the annotation is defined isn't present.
+         Loading object as generic DataArray. Expected module is {module_name}."""
+        msg = ' '.join([a.strip() for a in msg.split('\n')])
+        warnings.warn(
+            msg,
+            MissingSchemaWarning,
+        )
+
+    warnings.formatwarning = old_format
     return o
 
 

@@ -6,7 +6,8 @@ from pathlib import Path
 import xarray as xr
 import numpy as np
 import h5py
-
+from pydantic import BaseModel
+from typing import Literal
 import rmellipse.arrschema as arrschema
 from rmellipse.utils import load_object, save_object, save_file, load_file
 
@@ -16,12 +17,13 @@ ARRAY_SAMPLES = LOCALS / 'arrsamples'
 MUTABLE = LOCALS / 'mutable'
 TEST_FILES = LOCALS / 'const'
 
-empty_float_schema = arrschema.ArraySchema('empty', (...,), (...,), float)
+
+class TouchStoneMeta(BaseModel):
+    frequency_units: Literal['GHz', 'Hz']
 
 
 class S2PRI(arrschema.AnnotatedArray):
     schema = arrschema.ArraySchema(
-        name='s2p_ri',
         shape=(..., 'N', 8),
         dims=(..., 'frequency', 'col'),
         dtype=float,
@@ -44,31 +46,20 @@ class S2PRI(arrschema.AnnotatedArray):
                 'dtype': 'U8',
             },
         },
-        attrs_schema={
-            'type': 'object',
-            'properties': {
-                'frequency_units': {
-                    'enum': ['GHz', 'Hz'],
-                }
-            },
-            'required': ['frequency_units'],
-        },
+        attrs=TouchStoneMeta,
     )
 
 
 class Zeros(arrschema.AnnotatedArray):
-    schema = arrschema.ArraySchema(name='zeros', shape=(...,), dims=(...,), dtype=float)
+    schema = arrschema.ArraySchema(shape=(...,), dims=(...,), dtype=float)
 
 
 class ZerosComplex(arrschema.AnnotatedArray):
-    schema = arrschema.ArraySchema(
-        name='ZEROS_COMPLEX', shape=(...,), dims=(...,), dtype=complex
-    )
+    schema = arrschema.ArraySchema(shape=(...,), dims=(...,), dtype=complex)
 
 
 class Float2By2(arrschema.AnnotatedArray):
     schema = arrschema.ArraySchema(
-        name='float_2by2',
         shape=(3, ..., 2, 2),
         dims=('d0', ..., 'd1', 'd2'),
         dtype=float,
@@ -107,7 +98,7 @@ def test_arrschema_groupsaveable():
         ...
 
     save_file(MUTABLE / 'arrschema_groupsaveable_file.h5', zeros)
-    load_file(MUTABLE / 'arrschema_groupsaveable_file.h5', zeros)
+    new_zeros = load_file(MUTABLE / 'arrschema_groupsaveable_file.h5')
 
 
 def test__allowed_shape_spec():
@@ -121,48 +112,35 @@ def test__allowed_shape_spec():
 
 # testing ArraySchema class
 def test_array_schema_init():
-    basic_schema = arrschema.ArraySchema(
-        name='float_zeros', shape=(...,), dims=(...,), dtype=float
-    )
-    assert basic_schema['name'] == 'float_zeros'
-    assert basic_schema['shape'] == ('...',)
-    assert basic_schema['dims'] == ('...',)
-    assert basic_schema['dtype'] == np.dtype(float).str
-    assert basic_schema['coords'] == {}
-    assert basic_schema['attrs_schema'] == {}
+    basic_schema = arrschema.ArraySchema(shape=(...,), dims=(...,), dtype=float)
 
-    basic_schema = arrschema.ArraySchema(
-        name='float_zeros', shape=('...',), dims=(...,), dtype=float
-    )
-    assert basic_schema['name'] == 'float_zeros'
     assert basic_schema['shape'] == ('...',)
     assert basic_schema['dims'] == ('...',)
-    assert basic_schema['dtype'] == np.dtype(float).str
+    assert basic_schema['dtype'] is float
     assert basic_schema['coords'] == {}
-    assert basic_schema['attrs_schema'] == {}
+
+    basic_schema = arrschema.ArraySchema(shape=('...',), dims=(...,), dtype=float)
+
+    assert basic_schema['shape'] == ('...',)
+    assert basic_schema['dims'] == ('...',)
+    assert basic_schema['dtype'] is float
+    assert basic_schema['coords'] == {}
 
     with pytest.raises(Exception):
         # mismatched shape and dims length
-        arrschema.ArraySchema(name='test', shape=('N', 'M'), dims=('M',), dtype=float)
+        arrschema.ArraySchema(shape=('N', 'M'), dims=('M',), dtype=float)
     with pytest.raises(Exception):
         # shape needs to be a letter or a number
-        arrschema.ArraySchema(
-            name='test', shape=('NM', 'M'), dims=('N', 'M'), dtype=float
-        )
+        arrschema.ArraySchema(shape=('NM', 'M'), dims=('N', 'M'), dtype=float)
     with pytest.raises(Exception):
         # dims needs to be an ellipse or string (typechecking should handle this)
-        arrschema.ArraySchema(name='test', shape=('N', 'M'), dims=(4, 'M'), dtype=float)
+        arrschema.ArraySchema(shape=('N', 'M'), dims=(4, 'M'), dtype=float)
     with pytest.raises(Exception):
         # shape and dims have to have ... in same place
-        arrschema.ArraySchema(name='test', shape=(...,), dims=('M',), dtype=float)
-    with pytest.raises(Exception):
-        # dtype has to be valid
-        arrschema.ArraySchema(
-            name='test', shape=(...,), dims=(...,), dtype='hello world'
-        )
+        arrschema.ArraySchema(shape=(...,), dims=('M',), dtype=float)
+
     with pytest.raises(Exception):
         arrschema.ArraySchema(
-            name='test',
             shape=(..., 'N', 2),
             dims=(..., 'frequency', 're_im'),
             dtype=float,
@@ -180,7 +158,6 @@ def test_array_schema_init():
         )
     with pytest.raises(Exception):
         arrschema.ArraySchema(
-            name='test',
             shape=(..., 'N', 3),  # should be 2
             dims=(..., 'frequency', 're_im'),
             dtype=float,
@@ -200,7 +177,6 @@ def test_array_schema_init():
 
 def test_array_schema_validate():
     s2p_ri = arrschema.ArraySchema(
-        name='s2p_ri',
         shape=(..., 2, 8),
         dims=(..., 'frequency', 'col'),
         dtype=float,
@@ -262,7 +238,6 @@ def convert_int_to_float(zeros):
 def test_from_dataarray():
     class FloatE3E22(arrschema.AnnotatedArray):
         schema = arrschema.ArraySchema(
-            name='float_e_3_e_2_2',
             shape=(..., 3, ..., 2, 2),
             dims=(..., 'd0', ..., 'd1', 'd2'),
             dtype=float,
@@ -274,12 +249,12 @@ def test_from_dataarray():
         )
 
     data = xr.DataArray(np.random.randn(1, 3, 1, 2, 2))
+
     with pytest.raises(ValueError):
         FloatE3E22.from_dataarray(data)
 
     class Float3E22(arrschema.AnnotatedArray):
         schema = arrschema.ArraySchema(
-            name='float_e_3_e_2_2',
             shape=(3, ..., 2, 2),
             dims=('d0', ..., 'd1', 'd2'),
             dtype=float,
@@ -298,20 +273,109 @@ def test_from_dataarray():
     data_annotated = Float3E22.from_dataarray(data)
 
 
-if __name__ == '__main__':
-    test_arrschema_groupsaveable()
+def test_no_dtype():
+    class Generic(arrschema.AnnotatedArray):
+        schema = arrschema.ArraySchema(shape=(...,), dims=(...,))
 
-    print('ZEROS LIKE \n ============')
-    test_as_xr_schema()
-    import json
+    # these should both be allowed since
+    # no type was specified
+    a_str = Generic('asdasd')
+    a_flt = Generic(1)
+    a_str.validate()
+    a_flt.validate()
 
-    # print(json.dumps(ZerosComplex.schema, indent=True))
-    # This saves an annotated array using a schema defined
-    # in this module, so if I were to try and read it in from anywhere else it should fail.
-    zeros = ZerosComplex.from_dataarray(
-        xr.DataArray(np.zeros((4, 4), dtype='f8')),
+    a = Generic.zeros_from(a_str)
+    print(a)
+
+
+def test_empty():
+    # mixed required an dunrequired dimensions
+    class Float3E22(arrschema.AnnotatedArray):
+        schema = arrschema.ArraySchema(
+            shape=(3, ..., 2, 2),
+            dims=('d0', ..., 'd1', 'd2'),
+            dtype=float,
+            coords={
+                'd0': {'dtype': float},
+                'd1': {'values': [0, 1], 'dtype': int},
+                'd2': {'dtype': int},
+            },
+        )
+
+    new = Float3E22.zeros(d0=[1, 2, 3], d2=[1, 2])
+
+    # add an extra dimension
+    new = Float3E22.zeros(d0=[1, 2, 3], e11=[1], d2=[1, 2])
+    print(new)
+
+
+def test_zeros_like():
+    # schema with 2by2
+    print('zeros arbitrary 3,2,2')
+    # should work
+    output = Float2By2.zeros_from(
+        xr.DataArray(np.zeros((3, 2, 2), dtype='f4')),
+        rename_dims={'dim_0': 'd0', 'dim_1': 'd1', 'dim_2': 'd2'},
+        use_coords={'d0': [1, 2, 3], 'd1': [1, 2], 'd2': [1, 2]},
     )
-    with h5py.File(TEST_FILES / 'arrschema_groupsaveable.h5', 'w') as f:
-        save_object(f, 'zeros', zeros)
-        read = load_object(f['zeros'])
-        ...
+    output.validate()
+
+    # failed for missing coordinate that isn't in proto array
+
+    output = Float2By2.zeros_from(
+        xr.DataArray(np.zeros((3, 2, 2), dtype='f4')),
+        rename_dims={'dim_0': 'd0', 'dim_1': 'd1', 'dim_2': 'd2'},
+        use_coords={
+            'd0': [1, 2, 3],
+            'd1': [1, 2],
+        },
+    )
+    output.validate()
+
+    out = S2PRI.zeros_from(
+        xr.DataArray(np.zeros((3, 2, 8), dtype='f4')),
+        rename_dims={'dim_0': 'blarg', 'dim_1': 'frequency', 'dim_2': 'col'},
+        attrs={'frequency_units': 'Hz'},
+    )
+
+    out.validate()
+
+
+def test_string_dtype():
+    class Strings(arrschema.AnnotatedArray):
+        schema = arrschema.ArraySchema(shape=(...,), dims=(...,), dtype=str)
+
+    # these should both be allowed since
+    # no type was specified
+    Strings('a').validate()
+    Strings('aaasdasdasdasd').validate()
+
+    # save_file(MUTABLE / 'dummy.h5', a_str)
+    # load_file(MUTABLE / 'dummy.h5')
+
+    # a  = Generic.zeros_from(a_str)
+    # print(a)
+
+
+if __name__ == '__main__':
+    test_empty()
+    test_string_dtype()
+    test_array_schema_init()
+    test_from_dataarray()
+    # test_arrschema_groupsaveable()
+    # test_zeros_like()
+    # test_no_dtype()
+    # print('ZEROS LIKE \n ============')
+    # test_as_xr_schema()
+    # import json
+
+    # # print(json.dumps(ZerosComplex.schema, indent=True))
+    # # This saves an annotated array using a schema defined
+    # # in this module, so if I were to try and read it in from anywhere else it should fail.
+    # zeros = ZerosComplex.from_dataarray(
+    #     xr.DataArray(np.zeros((4, 4), dtype='f8')),
+    # )
+    # with h5py.File(TEST_FILES / 'arrschema_groupsaveable.h5', 'w') as f:
+    #     save_object(f, 'zeros', zeros)
+    #     read = load_object(f['zeros'])
+    #     ...

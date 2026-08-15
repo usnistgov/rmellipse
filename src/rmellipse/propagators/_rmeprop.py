@@ -3,10 +3,6 @@ Microwave Uncertainty Framework (RME) propagators.Propagator Definition module.
 
 This RME propagators.Propagator is used for propagating RMEMeas objects, and is based
 on the xarray package.
-
-Created on Tue Jun  4 14:04:58 2024
-
-@author: dcg2
 """
 
 # These need to be imported this way to delay access
@@ -19,7 +15,11 @@ import time
 import uuid
 import warnings
 from functools import wraps
-from typing import Union
+from typing import Union, Callable, ParamSpec, TypeVar
+
+# Define type variables to capture original signatures dynamically
+P = ParamSpec('P')  # Captures arguments (*args, **kwargs)
+R = TypeVar('R')  # Captures the return type
 
 
 class RMEProp(propagators.Propagator):

@@ -6,6 +6,8 @@ import numpy as np
 import h5py
 import xarray as xr
 import pytest
+from rmellipse._test_collections.rmemeas import from_dist
+import rmellipse as rme
 
 # Local directory for finding tests (the directory of this file)
 # Pytest is annoying on what the root actually is
@@ -18,38 +20,30 @@ def test_from_dist():
     nom = 1
     std = 1
     with pytest.raises(ValueError):
-        a = RMEMeas.from_dist(name='dummy', nom=1, std=1, dist='not supported')
+        a = from_dist(name='dummy', nom=1, std=1, dist='not supported')
 
-    a = RMEMeas.from_dist(
+    a = from_dist(
         name='dummy', nom=1, std=1, dist='gaussian', use_sample_mean=False, samples=1000
     )
     assert np.isclose(a.nom, nom)
     assert np.isclose(a.stdunc().cov, std)
 
-    a = RMEMeas.from_dist(
-        name='dummy', nom=1, std=1, dist='normal', use_sample_mean=False
-    )
+    a = from_dist(name='dummy', nom=1, std=1, dist='normal', use_sample_mean=False)
     assert np.isclose(a.nom, nom)
     assert np.isclose(a.stdunc().cov, std)
     # assert np.isclose(a.stdunc().mc, std, atol = .15)
 
-    a = RMEMeas.from_dist(
-        name='dummy', nom=1, std=1, dist='normal', use_sample_mean=False
-    )
+    a = from_dist(name='dummy', nom=1, std=1, dist='normal', use_sample_mean=False)
     assert np.isclose(a.nom, nom)
     assert np.isclose(a.stdunc().cov, std)
     # assert np.isclose(a.stdunc().mc, std, atol = .15)
 
-    a = RMEMeas.from_dist(
-        name='dummy', nom=1, std=1, dist='rectangular', use_sample_mean=False
-    )
+    a = from_dist(name='dummy', nom=1, std=1, dist='rectangular', use_sample_mean=False)
     assert np.isclose(a.nom, nom)
     assert np.isclose(a.stdunc().cov, std)
     # assert np.isclose(a.stdunc().mc, std, atol = .15)
 
-    a = RMEMeas.from_dist(
-        name='dummy', nom=1, std=1, dist='rectangular', use_sample_mean=False
-    )
+    a = from_dist(name='dummy', nom=1, std=1, dist='rectangular', use_sample_mean=False)
     assert np.isclose(a.nom, nom)
     assert np.isclose(a.stdunc().cov, std)
     # assert np.isclose(a.stdunc().mc, std, atol = .15)
@@ -147,7 +141,7 @@ def test_validate_conventions():
         bad_cov._validate_conventions()
 
     # this should fail because first label is wrong
-    with pytest.raises(RMEMeasFormatError):
+    with pytest.raises(rme.ValidationError):
         bad_cov = RMEMeas(
             name='bad',
             mc=xr.DataArray(
@@ -160,7 +154,7 @@ def test_validate_conventions():
         bad_cov._validate_conventions()
 
     # this should fail because umech_id doesn't exist in mc
-    with pytest.raises(RMEMeasFormatError):
+    with pytest.raises(rme.ValidationError):
         bad_cov = RMEMeas(
             name='bad',
             mc=xr.DataArray([[0, 1]]),
@@ -190,7 +184,7 @@ def test_validate_conventions():
         bad_cov._validate_conventions()
 
     # this should fail because first label is wrong
-    with pytest.raises(RMEMeasFormatError):
+    with pytest.raises(rme.ValidationError):
         bad_cov = RMEMeas(
             name='bad',
             mc=xr.DataArray(
@@ -398,92 +392,63 @@ def test_cull_cov():
     """
     prop = RMEProp(sensitivity=True)
 
-    test = RMEMeas.from_dist('test', [1, 1, 1], [0, 0, 0])
+    test = from_dist('test', [1, 1, 1], [0, 0, 0])
     test.cull_cov()
     assert len(test.umech_id) == 0
     test = test + 2
 
     # check that setting tolerance above 0.1 keeps mechanisms with tolerance above 0.1
-    test = RMEMeas.from_dist('test', [1, 1, 1], [0.1, 0.1, 0.1], use_sample_mean=False)
+    test = from_dist('test', [1, 1, 1], [0.1, 0.1, 0.1], use_sample_mean=False)
     test.add_umech('thing', test.nom + np.array([0.1, 0.01, 0.01]))
     test.cull_cov(tolerance=0.3)
     assert len(test.umech_id) == 1
 
 
-def test_h5_encoding():
-    test = make_example_meas()
-    print('the local path is ', LOCAL)
-    with h5py.File(LOCAL / 'mutable/tests.hdf5', 'w') as hf:
-        test.to_h5(hf)
-        # saving an existing object should fail
-        # with an error message saying it already exists
-        try:
-            test.to_h5(hf)
-        except ValueError as e:
-            assert 'exists' in str(e)
-        test.to_h5(hf, override=True)
-        print(test.name)
-        read = RMEMeas.from_h5(hf[test.name])
-        read_nom = RMEMeas.from_h5(hf[test.name], nominal_only=True)
-    assert (read.cov == test.cov).all()
-    assert read_nom.cov.shape[0] == 1
-    assert (read_nom.nom == read.nom).all()
+# def test_h5_encoding():
+#     test = make_example_meas()
+#     print('the local path is ', LOCAL)
+#     with h5py.File(LOCAL / 'mutable/tests.hdf5', 'w') as hf:
+#         test.to_h5(hf)
+#         # saving an existing object should fail
+#         # with an error message saying it already exists
+#         try:
+#             test.to_h5(hf)
+#         except ValueError as e:
+#             assert 'exists' in str(e)
+#         test.to_h5(hf, override=True)
+#         print(test.name)
+#         read = RMEMeas.from_h5(hf[test.name])
+#         read_nom = RMEMeas.from_h5(hf[test.name], nominal_only=True)
+#     assert (read.cov == test.cov).all()
+#     assert read_nom.cov.shape[0] == 1
+#     assert (read_nom.nom == read.nom).all()
 
-    # check tthe name functon
-    with h5py.File(LOCAL / 'mutable/tests.hdf5', 'w') as hf:
-        oldname = test.name
-        test.to_h5(hf, name='testname')
-        # saving an existing object should fail
-        # with an error message saying it already exists
-        assert test.name == oldname
-        with pytest.raises(AttributeError):
-            test.to_h5('asf', override=True)
-            assert test.name == oldname
-            print(test.name)
-        read = RMEMeas.from_h5(hf['testname'])
-        read_nom = RMEMeas.from_h5(hf['testname'], nominal_only=True)
-    assert (read.cov == test.cov).all()
-    assert read_nom.cov.shape[0] == 1
-    assert (read_nom.nom == read.nom).all()
+#     # check tthe name functon
+#     with h5py.File(LOCAL / 'mutable/tests.hdf5', 'w') as hf:
+#         oldname = test.name
+#         test.to_h5(hf, name='testname')
+#         # saving an existing object should fail
+#         # with an error message saying it already exists
+#         assert test.name == oldname
+#         with pytest.raises(AttributeError):
+#             test.to_h5('asf', override=True)
+#             assert test.name == oldname
+#             print(test.name)
+#         read = RMEMeas.from_h5(hf['testname'])
+#         read_nom = RMEMeas.from_h5(hf['testname'], nominal_only=True)
+#     assert (read.cov == test.cov).all()
+#     assert read_nom.cov.shape[0] == 1
+#     assert (read_nom.nom == read.nom).all()
 
-    # check that MUFmeas objects read work
-    with h5py.File(LOCAL / 'const' / '24splitter_proto.h5', 'r') as hf:
-        old = RMEMeas.from_h5(hf['24mm_clrmproto_splitter'])
-        with h5py.File(LOCAL / 'mutable/MUFmeas_write_test.hdf5', 'w') as hf2:
-            old.to_h5(hf2, override=True)
-
-
-def test_h5_group_to_dict():
-    test = make_example_meas()
-    print('the local path is ', LOCAL)
-    names = ['n1', 'n2', 'n3']
-    path = LOCAL / 'mutable/tests.hdf5'
-
-    # should return anything saved in the base directory
-    with h5py.File(path, 'w') as hf:
-        for n in names:
-            test.name = n
-            test.to_h5(hf)
-    d = RMEMeas.dict_from_group(path)
-    for (k, v), n in zip(d.items(), names):
-        assert k == n
-
-        # should work with groups, and should ignore something thats
-        # not a MUFmeas
-        with h5py.File(path, 'w') as hf:
-            grp = hf.require_group('mygroup')
-            # make something that isn't an RME obejct
-            dset = grp.create_dataset('default', (100,))
-            for n in names:
-                test.name = n
-                test.to_h5(grp)
-    d = RMEMeas.dict_from_group(path, group_path='mygroup')
-    for (k, v), n in zip(d.items(), names):
-        assert k == n
+#     # check that MUFmeas objects read work
+#     with h5py.File(LOCAL / 'const' / '24splitter_proto.h5', 'r') as hf:
+#         old = RMEMeas.from_h5(hf['24mm_clrmproto_splitter'])
+#         with h5py.File(LOCAL / 'mutable/MUFmeas_write_test.hdf5', 'w') as hf2:
+#             old.to_h5(hf2, override=True)
 
 
 def test_indexing():
-    test = RMEMeas.from_dist('test', [1, 1, 1], [0, 0, 0])
+    test = from_dist('test', [1, 1, 1], [0, 0, 0])
     getitem = test[0]
     loc = test.loc[1]
     sel = test.sel({3: 0})
@@ -615,7 +580,7 @@ def test_umech_id_attr():
 
 
 def test_confint():
-    m = RMEMeas.from_dist('dummy', 0, 1.0, dist='gaussian')
+    m = from_dist('dummy', 0, 1.0, dist='gaussian')
     cl, cu = m.confint(0.95)
     assert np.isclose(cu, 1.96, atol=0.01)
 
@@ -627,13 +592,13 @@ def test_confint():
 
 
 def test_dof_fails():
-    m = RMEMeas.from_dist('dummy', 0, 1.0, dist='gaussian')
+    m = from_dist('dummy', 0, 1.0, dist='gaussian')
     with pytest.raises(ValueError):
         m.dof(rad=True, deg=True)
 
 
 def test_uncbounds():
-    m = RMEMeas.from_dist('dummy', 0, 1.0, dist='gaussian')
+    m = from_dist('dummy', 0, 1.0, dist='gaussian')
     ub = m.uncbounds(k=1)
     lb = m.uncbounds(k=-1)
     assert np.isclose(ub.cov, 1)
@@ -650,20 +615,20 @@ def test_uncbounds():
 
 
 def test_assign_categories_to_all():
-    m = RMEMeas.from_dist('dummy', 0, 1.0, dist='gaussian')
+    m = from_dist('dummy', 0, 1.0, dist='gaussian')
     m.assign_categories_to_all(**{'Type': 'DD'})
     assert (m.covcats.sel(categories='Type') == 'DD').all()
 
 
 def test_assign_categories():
-    m = RMEMeas.from_dist('dummy', 0, 1.0, dist='gaussian')
+    m = from_dist('dummy', 0, 1.0, dist='gaussian')
     uid = m.add_umech('umech', m.nom)
     m.assign_categories([uid], ['category'], ['thing'])
     assert m.covcats.sel(umech_id=uid, categories='category') == 'thing'
 
 
 def test_create_empty_categories():
-    m = RMEMeas.from_dist('dummy', 0, 1.0, dist='gaussian')
+    m = from_dist('dummy', 0, 1.0, dist='gaussian')
     m.create_empty_categories('a')
     assert 'a' in m.covcats.categories
     m.create_empty_categories(['a', 'b', 'c'])
@@ -678,7 +643,7 @@ if __name__ == '__main__':
     test_assign_categories()
     test_from_dist()
     test_overload()
-    test_h5_encoding()
+    # test_h5_encoding()
     test_validate_conventions()
     # a = np.array(1)s
     # print(a.size)

@@ -1,0 +1,123 @@
+datasets:
+  my-input: inputs/input-file.txt
+  my-output: results/output-file.txt
+project:
+  .env:
+    /attrs/: {}
+    /bpid/: 680e18d51592bb8ddcabe2158d459e20d1c2f9ec63082146c20a6c9cb333b676
+    /bytes/: 122
+    /file-type/: misc
+    /item/: File
+    /path/: .env
+  .gitignore:
+    /attrs/: {}
+    /bpid/: 4981d33cd7f575f1d15ffd1cbc0c13b8e1716d67c699c2a69577d37ab8c9baf5
+    /bytes/: 30
+    /file-type/: misc
+    /item/: File
+    /path/: .gitignore
+  __pycache__:
+    /attrs/: {}
+    /item/: Directory
+    /path/: __pycache__
+    copy_file.cpython-313.pyc:
+      /attrs/: {}
+      /bpid/: c943bb5181190bde9ee97547d3fbc8fdc23a0d2864d1dff77cccb277faefbe89
+      /bytes/: 767
+      /file-type/: misc
+      /item/: File
+      /path/: __pycache__/copy_file.cpython-313.pyc
+  copy_file.py:
+    /attrs/: {}
+    /bpid/: 9eb9a1b1b03ca6547d5b074d62a707543b9c6973305be9cebfbcdac1981b6616
+    /bytes/: 267
+    /file-type/: misc
+    /item/: File
+    /path/: copy_file.py
+  data_env:
+    /attrs/: {}
+    /item/: Directory
+    /path/: data_env
+  first-workflow.rme.yml:
+    /attrs/: {}
+    /bpid/: e1aa9bd469628255c57f471dd30a9191445cae0bfbb7aac7515322ea35d3e284
+    /bytes/: 850
+    /file-type/: misc
+    /item/: File
+    /path/: first-workflow.rme.yml
+  inputs:
+    /attrs/: {}
+    /item/: Directory
+    /path/: inputs
+  results:
+    .gitignore:
+      /attrs/: {}
+      /bpid/: 240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d
+      /bytes/: 14
+      /file-type/: misc
+      /item/: File
+      /path/: results/.gitignore
+    /attrs/: {}
+    /item/: Directory
+    /path/: results
+    output-file.txt:
+      /attrs/: {}
+      /bpid/: e71bcaa3de3d2df18e38a901cbe9dab87f6ea78402f099e5bb036965f90545d4
+      /bytes/: 8
+      /file-type/: misc
+      /item/: File
+      /path/: results/output-file.txt
+  rmeproject.yml:
+    /attrs/: {}
+    /bpid/: 393bb7937b95adf95930a6938542bd367efab0850ec9fb6372b8ba191ec0fa7d
+    /bytes/: 87
+    /file-type/: misc
+    /item/: File
+    /path/: rmeproject.yml
+  second-workflow.rme.yml:
+    /attrs/: {}
+    /bpid/: 65491f2f91e6d686eb8c55cabb82afad753a65d2046c74d4b5dfbf2f989e77b7
+    /bytes/: 1015
+    /file-type/: misc
+    /item/: File
+    /path/: second-workflow.rme.yml
+requirements: []
+title: first-workflow-v0.1.5
+title_versionless: first-workflow
+version: 0.1.5
+workflow:
+  data_pointers:
+    inputs/input-file.txt:
+      name: inputs/input-file.txt
+      path: inputs/input-file.txt
+    results/output-file.txt:
+      name: results/output-file.txt
+      path: results/output-file.txt
+  edges:
+    copy-file, results/output-file.txt:
+      nodes:
+      - copy-file
+      - results/output-file.txt
+    inputs/input-file.txt, copy-file:
+      nodes:
+      - inputs/input-file.txt
+      - copy-file
+  jobs:
+    copy-file:
+      commands:
+      - echo hello READER
+      - uv run copy_file.py inputs/input-file.txt results/output-file.txt
+      - echo copied file to results/output-file.txt
+      inputs:
+      - inputs/input-file.txt
+      name: copy-file
+      outputs:
+      - results/output-file.txt
+  release:
+    ignores:
+    - inputs/*
+    includes:
+    - results/output-file.txt
+    title: first-workflow
+    version: 0.1.5
+workflow_config_path: first-workflow

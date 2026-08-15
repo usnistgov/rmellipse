@@ -5,6 +5,7 @@ import h5py as h5
 import numpy as np
 import xarray as xr
 from rmellipse.uobjects import RMEMeas
+from rmellipse._test_collections.rmemeas import from_dist
 
 LOCAL = Path(__file__).parents[0]
 MUTABLE_DIR = LOCAL / 'mutable'
@@ -192,7 +193,7 @@ def test_slice():
 def test_rmemeas():
     import rmellipse.uobjects as obj
 
-    a0 = obj.RMEMeas.from_dist('a', 1, 1)
+    a0 = from_dist('a', 1, 1)
     with h5.File(TEST_FILE, 'a') as f:
         save_object(f, a0.name, a0)
         a1 = load_object(f['a'], load_big_objects=True)
@@ -203,8 +204,8 @@ def test_rmemeas():
 def test_rmemeas_list():
     import rmellipse.uobjects as obj
 
-    a0 = obj.RMEMeas.from_dist('a', 1, 1)
-    b0 = obj.RMEMeas.from_dist('a', 1, 1)
+    a0 = from_dist('a', 1, 1)
+    b0 = from_dist('a', 1, 1)
 
     my_list = [a0, b0]
     with h5.File(TEST_FILE, 'a') as f:
@@ -221,14 +222,13 @@ def test_rmemeas_list():
 def test_rmemeas_dict():
     import rmellipse.uobjects as obj
 
-    a0 = obj.RMEMeas.from_dist('a', 1, 1)
-    b0 = obj.RMEMeas.from_dist('b', 1, 1)
+    a0 = from_dist('a', 1, 1)
+    b0 = from_dist('b', 1, 1)
 
     my_dict = {a0.name: a0, b0.name: b0}
     with h5.File(TEST_FILE, 'a') as f:
         save_object(f, 'my_d', my_dict)
         myd = load_object(f['my_d'], load_big_objects=True)
-        a1 = RMEMeas.from_h5(f['my_d']['a'])
 
     for ai, bi in zip(my_dict.values(), myd.values()):
         print(bi.name, ai.name)

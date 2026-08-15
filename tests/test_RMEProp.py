@@ -11,7 +11,7 @@ from rmellipse._test_collections.rmemeas import make_example_meas
 import numpy as np
 import xarray as xr
 import pytest
-
+from rmellipse._test_collections.rmemeas import from_dist
 # import h5py
 
 
@@ -150,7 +150,7 @@ def test_common_grid_interp_common():
 
 def setup_VI(N=5):
     """Get 2 measurements to test things with"""
-    V = RMEMeas.from_dist(
+    V = from_dist(
         name='voltage',
         nom=2,
         std=0.01,
@@ -159,7 +159,7 @@ def setup_VI(N=5):
         use_sample_mean=False,
     )
 
-    I = RMEMeas.from_dist(
+    I = from_dist(
         name='current',
         nom=1.5,
         std=0.01,

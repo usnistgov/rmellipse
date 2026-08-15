@@ -63,7 +63,7 @@ def save_file(path: str | Path, saveable: 'GroupSaveable', **save_object_kwargs)
         save_object(f, name, saveable, **save_object_kwargs)
 
 
-def load_file(path: str | Path, saveable: 'GroupSaveable', **load_object_kwargs):
+def load_file(path: str | Path, **load_object_kwargs):
     """
     Load a GroupSaveable object from a file.
 

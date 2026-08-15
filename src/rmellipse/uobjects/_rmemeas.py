@@ -6,8 +6,8 @@ RMEMeas objects are the
 
 # These need to be imported this way to delay access
 # to the underlying classes to avoid a circular import error
-import rmellipse.uobjects as uobj
 import rmellipse.propagators as propagators
+from rmellipse.arrschema import AnnotatedArray, ArraySchema
 import warnings
 from rmellipse.utils import GroupSaveable, load_object
 import h5py
@@ -20,15 +20,23 @@ import uuid
 from rmellipse.utils import MUFMeasParser
 
 # from rmellipse.utils import console_graphics
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from collections import namedtuple
-from typing import Sequence
+from typing import TypeVar, Any
+
 
 # umechdim = 'umechs'
 
-_uncoutput = namedtuple('RMEUncTuple', 'cov mc')
 
-__all__ = ['RMEMeas', 'RMEMeasFormatError']
+__all__ = [
+    'CovarianceDataArray',
+    'CovarianceDOFMetadata',
+    'CovarianceStrMetadata',
+    'MonteCarloDataArray',
+    'RMEMeas',
+    'RMEMeasFormatError',
+    'RMEUncTuple',
+]
 
 UMECHID_DTYPE = np.dtype('object')
 RMELLIPSE_NAMESPACE = uuid.UUID('c421f33f-4b1c-4f15-a2a6-896cd39430b1')
@@ -80,23 +88,100 @@ def _angle_diff(phase1: xr.DataArray, phase2: xr.DataArray, deg=False) -> xr.Dat
     return out
 
 
-class RMEMeas(uobj.UObj, GroupSaveable):
+class CovarianceDataArray(AnnotatedArray):
     """
-    Class that stores monte-carlo and linear sensitivity uncertainty information.
+    Store data with linear uncertainty mechanisms.
+
+    The first label of the umech_id coordinate is
+    expected to be 'nominal', and represents the
+    nominal (i.e. expected value) of the data set.
+    Each label of the umech_id coordinate after that
+    represents the nominal dataset perturbed by 1 standard
+    deviation of that uncertainty mechanism, where the label
+    is a universally unique ID that identifies the
+    uncertainty mechanism.
+    """
+
+    schema = ArraySchema(
+        shape=('N', ...),
+        dims=('umech_id', ...),
+        coords={'umech_id': {'dtype': str}},
+    )
+
+
+class MonteCarloDataArray(AnnotatedArray):
+    """
+    Store data with monte carlo samples.
+
+    The first label of the sample_id coordinate is
+    the expected value of the distribution the data set.
+
+    Each sample_id after that represents a sample
+    from the underlying probability distribution.
+    """
+
+    schema = ArraySchema(
+        shape=('N', ...),
+        dims=('sample_id', ...),
+        coords={'sample_id': {'dtype': int}},
+    )
+
+
+class CovarianceStrMetadata(AnnotatedArray):
+    """
+    Stores metadata about linearuncertainty mechanisms.
+
+    The 'nominal' should not be included in the umech_id dim.
+    """
+
+    schema = ArraySchema(
+        shape=('N', 'M'),
+        dims=('umech_id', 'categories'),
+        dtype=str,
+        coords={'umech_id': {'dtype': str}, 'categories': {'dtype': str}},
+    )
+
+
+class CovarianceDOFMetadata(AnnotatedArray):
+    """
+    Stores degrees of freedom of linearuncertainty mechanisms.
+
+    The 'nominal' should not be included in the umech_id dim.
+    """
+
+    schema = ArraySchema(
+        shape=('N',),
+        dims=('umech_id',),
+        dtype=float,
+        coords={'umech_id': {'dtype': str}},
+    )
+
+
+RMEUncTuple = namedtuple('RMEUncTuple', 'cov mc')
+
+
+A = TypeVar('A')
+
+
+class RMEMeas[A](GroupSaveable):
+    """
+    Class that stores data along with uncertainties.
+
+    Stores linear uncertainties in the cov attribute and
+    montecarlo uncertainties in the cov attribute.
 
     Used with the rmellipse.RMEProp propagator.
-
     """
 
     def __init__(
         self,
-        name: str = None,
-        cov: xr.DataArray = None,
-        mc: xr.DataArray = None,
-        covdofs: xr.DataArray = None,
-        covcats: xr.DataArray = None,
+        name: str | None = None,
+        cov: A | CovarianceDataArray = None,
+        mc: A | MonteCarloDataArray | None = None,
+        covdofs: xr.DataArray | CovarianceDOFMetadata | None = None,
+        covcats: xr.DataArray | CovarianceStrMetadata | None = None,
         parent: GroupSaveable = None,
-        attrs: dict = None,
+        attrs: dict | None = None,
     ):
         """
         Initialize a RMEMeas object.
@@ -112,7 +197,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         ----------
         name : str, optional
             Name of RMEMeas object. The default is 'RMEMeas'.
-        cov : xr.DataArray, optional
+        cov : A | CovarianceDataArray, optional
             Covariance data for linear sensitivity analysis. Copies of data set
             are stored along the first dimension (axis 0) of the DataArray, where
             the first index of axis 0 is the nominal data set, and the rest of
@@ -124,7 +209,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             'nominal'. The remaining labels for the 'umech_id'
             coordinate should be strings corresponding the the uncertainty
             mechanism. The default is None.
-        mc : xr.DataArray, optional
+        mc : A | MonteCarloDataArray, optional
             Montecarlo trials. Samples of the data
             sets distribution are stored along the first dimension (axis 0)
             of the DataArray, where the first index of axis 0 is the nominal
@@ -152,7 +237,6 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         """
 
         # init as a RMEMeas object
-        uobj.UObj.__init__(self)
         if name is None:
             name = attrs['name']
         if attrs is None:
@@ -162,9 +246,9 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         GroupSaveable.__init__(self, name=name, parent=parent, attrs=attrs)
 
         # assumes first dimension are uncertainty mechanisms
-        self.name = name  # name of the mechanism
-        self.cov = cov  # name of the covariance
-        self.mc = mc  # name of the montecarlo data
+        self.name: str = name  # name of the mechanism
+        self.cov: A | CovarianceDataArray = cov  # name of the covariance
+        self.mc: A | MonteCarloDataArray | None = mc  # name of the montecarlo data
         self.covdofs = covdofs
         self.covcats = covcats
 
@@ -175,7 +259,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             covdofs = xr.DataArray(
                 covdofs, dims=('umech_id'), coords={'umech_id': self.umech_id}
             )
-        self.covdofs = covdofs
+        self.covdofs: CovarianceDOFMetadata = covdofs
 
         # default to assigning type b category to anything uncategorized
         if cov is not None and covcats is None:
@@ -185,10 +269,9 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             values = np.ones((len(self.umech_id), 1)).astype(UMECHID_DTYPE)
             values[...] = 'B'
             covcats = xr.DataArray(values, dims=dims, coords=coords)
-        self.covcats = covcats
+        self.covcats: CovarianceStrMetadata = covcats
 
-        # enforce that the umech_id dimension
-        # is always the correct U36
+        # enforce that the umech_id dimension handles strings properly
         self.cast_umechids()
         # enforce the use of string meatadata
         # self.cast_covcats()
@@ -203,6 +286,8 @@ class RMEMeas(uobj.UObj, GroupSaveable):
                 self.mc = self.mc.rename({'umech_id': 'sample_id'})
             except ValueError:
                 pass
+            MonteCarloDataArray(mc).validate()
+        CovarianceDataArray(self.cov).validate()
 
         # add attributes as children so they get saved into hdf5 formats
         self.add_child(key='cov', data=self.cov, is_big_object=True)
@@ -444,352 +529,16 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         return out
 
     @classmethod
-    def from_dist(
-        cls,
-        name: str,
-        nom: float,
-        std: float,
-        dist='gaussian',
-        mechanism_name: str = None,
-        samples: float = 100,
-        categories: dict[str] = {'Type': 'B'},
-        use_sample_mean: bool = False,
-    ) -> 'RMEMeas':
-        """
-        Generate a RMEMeas object from a probability distribution.
-
-        Will be deprecated in V0.5. Please use RMEmodel instead.
-
-        Parameters
-        ----------
-        name : str
-            Name of the object.
-        nom : float
-            Expected value of the distribution.
-        std : float
-            Standard deviation of the distribution.
-        dist : str, {'gaussian', 'normal', 'uniform', 'rectangular'}
-            Name of the distribution to use. Supports 'gaussian' or 'uniform'.
-            The default is 'gaussian'.
-        mechanism_name : str, optional
-            What to name the linear uncertainty mechanisms associated with the
-            distribution. The default is None.
-        samples : float, optional
-            How many monte-carlo samples to draw from. The default is 100.
-        categories : dict[str], optional
-            What to categorize the linear uncertainty mechanism as
-            Should be {category:value} pairs. The default is {'Type':'B'}.
-        use_sample_mean_std : bool, optional
-            If true, uses the mean and standard deviation of random samples drawn
-            from the defined distribution for the linear sensitivity analysis and
-            as the nominal and standard uncertainty values. If False, uses the provided nominal and
-            standard deviation of the distribution. The default is True.
-
-        Raises
-        ------
-        Exception
-            Unsupported distribution.
-
-        Returns
-        -------
-        'RMEMeas'
-            RMEMeas based on defined distribution.
-
-        """
-        warnings.warn(
-            DeprecationWarning(
-                'RMEmeas.from_dist will be deprecated in V0.5. Please use RMEmodel instead.'
-            )
-        )
-        # try:
-        #     dummy = nom[0]
-        #     std = nom[0]
-        #     # raise Exception('Function doesnt currently support arrays as inputs.')
-        # except TypeError:
-        #      pass
-        nom = np.array(nom)
-        std = np.array(std)
-        if mechanism_name is None:
-            mechanism_name = name + '_' + dist
-
-        # make the covariance
-        supported = ['gaussian', 'normal', 'uniform', 'rectangular']
-        if dist not in supported:
-            raise ValueError('Distribution not supported.')
-
-        def choose_mean_nom(vals, nom, std):
-            if use_sample_mean:
-                nom = np.mean(vals[1:, ...], axis=0)
-                std = np.std(vals[1:, ...], axis=0, ddof=1)
-            return nom, std
-
-        # make the montecarlo distributions
-        if dist == 'gaussian' or dist == 'normal':
-
-            def f(n, s):
-                return np.random.normal(loc=n, scale=s)
-
-            f = np.vectorize(f)
-            vals = np.array([f(nom, std) for i in range(samples + 1)])
-            nom, std = choose_mean_nom(vals, nom, std)
-            vals[0] = nom
-            dims = list(vals.shape)
-            dims[0] = MC_DIM_NAME
-            mc = xr.DataArray(
-                data=vals, dims=dims, coords={MC_DIM_NAME: np.arange(0, samples + 1)}
-            )
-
-        if dist == 'uniform' or dist == 'rectangular':
-            diff = np.sqrt(std**2 * 12) / 2
-            low = nom - diff
-            high = nom + diff
-
-            def f(h, l):
-                return np.random.uniform(low=l, high=h)
-
-            f = np.vectorize(f)
-            vals = np.array([f(high, low) for i in range(samples + 1)])
-            nom, std = choose_mean_nom(vals, nom, std)
-            vals[0] = nom
-            dims = list(vals.shape)
-            dims[0] = MC_DIM_NAME
-            mc = xr.DataArray(
-                data=vals, dims=dims, coords={MC_DIM_NAME: np.arange(0, samples + 1)}
-            )
-
-        cov_dims = [cd for cd in dims]
-        cov_dims[0] = 'umech_id'
-        cov = xr.DataArray(
-            np.array([nom, nom + std]),
-            dims=cov_dims,
-            coords={'umech_id': ['nominal', mechanism_name]},
-        )
-
-        covcats = np.full((1, len(categories)), '').astype(object)
-        for i, (c, v) in enumerate(categories.items()):
-            covcats[:, i] = str(v)
-        coords = {'umech_id': [mechanism_name], 'categories': list(categories.keys())}
-        dims = ('umech_id', 'categories')
-        covcats = xr.DataArray(covcats, dims=dims, coords=coords)
-        # {name:categories}
-
-        return cls(name, cov, mc, covcats=covcats)
-
-    @classmethod
-    def dict_from_group(
-        cls, file: str, group_path: str = None, verbose: bool = False
-    ) -> dict['RMEMeas']:
-        """
-        Read any RMEMeas objects saved in an hdf5 group.
-
-        Parameters
-        ----------
-        file : str
-            path to the hdf5 file.
-        group_path : str, optional
-            path to group. The default is None.
-        verbose : bool , optional
-            If True, prints information about attempts to read
-            files. The default is False.
-
-        Returns
-        -------
-        dict['RMEMeas']
-            Dictionary where keys are names of the RMEMeas objects and values
-            are the RMEMeas objects themselves.
-
-        """
-        import h5py
-
-        data = {}
-        with h5py.File(file, 'r') as f:
-            if group_path is not None:
-                g = f[group_path]
-            else:
-                g = f
-            for name in g:
-                try:
-                    isRME = 'RMEMeas' == g[name].attrs['__class__.__name__']
-                except KeyError:
-                    isRME = False
-                if isRME:
-                    data[name] = cls.from_h5(g[name])
-        return data
-
-    @classmethod
-    def from_h5(
-        cls, group: h5py.Group, nominal_only: bool = False, keep_attrs: bool = True
-    ) -> 'RMEMeas':
-        """
-        Read a RMEMeas object from HDF5.
-
-        Parameters
-        ----------
-        group:
-            HDF5 Group object
-        nominal_only: bool, optional
-            If true, will only load the nominal value of the data set. Saves
-            time and memory if you don't need that data.
-        keep_attrs: bool, optional
-            If true, copies over all metadata in attrs. Otherwise, only
-            keeps metadata required for class instantiation.
-
-        Returns
-        -------
-        RMEMeas
-            RMEMeas object.
-
-        """
-        warnings.warn(
-            'from_h5() is deprecated and will be removed in 0.5.0, use rmellipse.utils.load_object instead.',
-            DeprecationWarning,
-            stacklevel=2,  # Ensures the warning points to the caller's location
-        )
-        class_name = group.attrs['__class__.__name__']
-        if class_name == 'RMEMeas':
-            umech_dim = 'umech_id'
-        elif class_name == 'MUFmeas':
-            umech_dim = 'parameter_locations'
-        else:
-            raise AttributeError('group ', group, ' isnt RMEMeas object')
-
-        if not nominal_only:
-            cov = load_object(group['cov'], load_big_objects=True)
-            mc = load_object(group['mc'], load_big_objects=True)
-
-            covdofs = None
-            covcats = None
-            try:
-                covdofs = load_object(group['covdofs'], load_big_objects=True)
-                covcats = load_object(group['covcats'], load_big_objects=True)
-
-            except KeyError:
-                print(
-                    'no covdofs/covcats. Possibly trying to read an earlier version of format'
-                )
-
-            name = group.attrs['name']
-        else:
-            things = {'cov': [], 'mc': []}
-            for k in things.keys():
-                data_set = group[k]
-                if data_set.attrs['__class__.__name__'] != 'NoneType':
-                    print(data_set.attrs['__class__.__name__'])
-                    vals = np.array(data_set['values'][[0], ...])
-
-                    dims = []
-                    i = 0
-                    getting_dims = True
-                    while getting_dims:
-                        try:
-                            dims.append(data_set['values'].attrs['dim' + str(i)])
-                            i += 1
-                        except KeyError:
-                            getting_dims = False
-                    coords = {}
-                    for k2 in dims:
-                        coords[k2] = np.array(data_set[k2])
-                        if coords[k2].dtype == np.dtype('O'):
-                            coords[k2] = coords[k2].astype(str)
-                    coords[umech_dim] = [coords[umech_dim][0]]
-                    thing = xr.DataArray(vals, dims=dims, coords=coords)
-
-                    try:
-                        thing.dfm.dataformat = data_set.attrs['dataformat']
-                    except KeyError:
-                        pass
-                    things[k] = thing
-                else:
-                    things[k] = None
-            cov = things['cov']
-            mc = things['mc']
-            covcats = None
-            covdofs = None
-            name = group.attrs['name']
-
-        # assign names to support old datasets
-        if cov is not None and cov.dims[0] == 'parameter_locations':
-            cov = cov.rename({'parameter_locations': 'umech_id'})
-        if mc is not None and mc.dims[0] == 'parameter_locations':
-            mc = mc.rename({'parameter_locations': 'umech_id'})
-            mc = mc.rename({'umech_id': 'sample_id'})
-        if covdofs is not None and covdofs.dims[0] == 'parameter_locations':
-            covdofs = covdofs.rename({'parameter_locations': 'umech_id'})
-        if covcats is not None and covcats.dims[0] == 'parameter_locations':
-            covcats = covcats.rename({'parameter_locations': 'umech_id'})
-
-        out = cls(name=name, cov=cov, mc=mc, covdofs=covdofs, covcats=covcats)
-        if keep_attrs:
-            for k in group.attrs:
-                out.attrs[k] = group.attrs[k]
-        else:
-            out.attrs['unique_id'] = group.attrs['unique_id']
-        # rename incase it's an old one with MUFmeas
-        out.attrs['__class__.__name__'] = 'RMEMeas'
-        return out
-
-    def to_h5(
-        self,
-        group: h5py.Group,
-        override: bool = False,
-        name: str = None,
-        verbose: bool = False,
-    ):
-        """
-        Save to an hdf5 object. Wrapper for the group_saveable method 'save'.
-
-        Parameters
-        ----------
-        group : h5py.Group
-            hdf5 group to save under.
-        override: bool,
-            if True, will delete the group object being saved to if it already
-            exists. Default is false.
-        name:str,
-            If provided will change Name of RMEMeas object prior to saving.
-            Equivalent to calling self.name = name prior to calling save.
-
-        Returns
-        -------
-        None.
-
-        """
-        warnings.warn(
-            'to_h5() is deprecated and will be removed in 0.5.0, use rmellipse.utils.save_object instead.',
-            DeprecationWarning,
-            stacklevel=2,  # Ensures the warning points to the caller's location
-        )
-        try:
-            oldname = self.name
-            if name is not None:
-                self.name = name
-
-            if override:
-                try:
-                    self.save(group, verbose=verbose)
-                except (OSError, ValueError) as e:
-                    # if a file already exists raise an error
-                    if 'name already exists' in str(e):
-                        del group[self.name]
-                        self.save(group, verbose=verbose)
-            else:
-                self.save(group, verbose=verbose)
-            self.name = oldname
-        except Exception as e:
-            self.name = oldname
-            raise e from e
-
-    @classmethod
     def from_xml(
         cls,
         path: str,
         from_csv: callable,
-        old_dir: str = None,
-        new_dir: str = None,
+        old_dir: str | None = None,
+        new_dir: str | None = None,
         verbose: bool = False,
     ) -> 'RMEMeas':
         """
-        Read a legacy xml MUFmeas object (xml .meas format).
+        Read an XML file from the Microwave Uncertainty Framework.
 
         covcats and covdofs metadata will be loaded as the default values.
 
@@ -800,12 +549,12 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         from_csv : callable
             Read function, takes a path to a copy of the data file and returns
             an xarray object.
-        old_dir : str, optional
+        old_dir : str | None, optional
             Name of old path stored in xml file. Will be swapped with new_dir
             if provided. Old XML format isn't portable, and the paths
             need to be manually swapped when the files are moved around.
             The default is None.
-        new_dir : str, optional
+        new_dir : str | None, optional
             Path string to replace old_dir with. The default is None.
 
         Raises
@@ -841,7 +590,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         to_csv: callable,
         data_extension: str,
         header_extension: str = '.meas',
-        header_directory: str = None,
+        header_directory: str | None = None,
     ):
         """
         Save to a the Microwave Uncertainty Framework Format.
@@ -861,7 +610,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
         header_extension : str, optional
             What to save the xml header file extension as.
             The default is '.meas'.
-        header_directory : str, optional
+        header_directory : str | None, optional
             Location in which to store the header file. If None, defaults
             to the target_directory. Default is None.
 
@@ -1300,7 +1049,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             mcunc = k * self.mc.std(dim='sample_id')
         except (AttributeError, TypeError):
             mcunc = None
-        return _uncoutput(covunc, mcunc)
+        return RMEUncTuple(covunc, mcunc)
 
     def uncbounds(self, k: float = 1, deg: bool = False, rad: bool = False):
         """
@@ -1339,7 +1088,7 @@ class RMEMeas(uobj.UObj, GroupSaveable):
             mcout = None
         else:
             mcout = n + umc
-        return _uncoutput(covout, mcout)
+        return RMEUncTuple(covout, mcout)
 
     def assign_categories(
         self, mechanisms: list[str], categories: list[str], designation: list[str]

@@ -136,9 +136,19 @@ extensions = [
     # 'sphinx_click',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
+    'myst_parser',
 ]
 if multiversioned is not None:
     extensions.append('sphinx_multiversion')
+
+
+# myst_parser, renders markdown documents
+# mostly used to use the README content as the landing page
+
+myst_enable_extensions = [
+    'alert',  # Enables GitHub-style > [!NOTE] callouts
+    # Add other extensions you need here (e.g., "colon_fence", "dollarmath")
+]
 
 # napoleon settings
 # napoleon_include_init_with_doc = True

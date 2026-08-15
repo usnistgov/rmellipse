@@ -7,7 +7,135 @@ Created on Wed Apr 16 13:36:50 2025
 
 import numpy as np
 import xarray as xr
-from rmellipse.uobjects import RMEMeas
+import warnings
+from rmellipse.uobjects._rmemeas import RMEMeas, MC_DIM_NAME
+
+
+def from_dist(
+    name: str,
+    nom: float,
+    std: float,
+    dist='gaussian',
+    mechanism_name: str = None,
+    samples: float = 100,
+    categories: dict[str] = {'Type': 'B'},
+    use_sample_mean: bool = False,
+) -> 'RMEMeas':
+    """
+    Generate a RMEMeas object from a probability distribution.
+
+    Will be deprecated in V0.5. Please use RMEmodel instead.
+
+    Parameters
+    ----------
+    name : str
+        Name of the object.
+    nom : float
+        Expected value of the distribution.
+    std : float
+        Standard deviation of the distribution.
+    dist : str, {'gaussian', 'normal', 'uniform', 'rectangular'}
+        Name of the distribution to use. Supports 'gaussian' or 'uniform'.
+        The default is 'gaussian'.
+    mechanism_name : str, optional
+        What to name the linear uncertainty mechanisms associated with the
+        distribution. The default is None.
+    samples : float, optional
+        How many monte-carlo samples to draw from. The default is 100.
+    categories : dict[str], optional
+        What to categorize the linear uncertainty mechanism as
+        Should be {category:value} pairs. The default is {'Type':'B'}.
+    use_sample_mean_std : bool, optional
+        If true, uses the mean and standard deviation of random samples drawn
+        from the defined distribution for the linear sensitivity analysis and
+        as the nominal and standard uncertainty values. If False, uses the provided nominal and
+        standard deviation of the distribution. The default is True.
+
+    Raises
+    ------
+    Exception
+        Unsupported distribution.
+
+    Returns
+    -------
+    'RMEMeas'
+        RMEMeas based on defined distribution.
+
+    """
+
+    # try:
+    #     dummy = nom[0]
+    #     std = nom[0]
+    #     # raise Exception('Function doesnt currently support arrays as inputs.')
+    # except TypeError:
+    #      pass
+    nom = np.array(nom)
+    std = np.array(std)
+    if mechanism_name is None:
+        mechanism_name = name + '_' + dist
+
+    # make the covariance
+    supported = ['gaussian', 'normal', 'uniform', 'rectangular']
+    if dist not in supported:
+        raise ValueError('Distribution not supported.')
+
+    def choose_mean_nom(vals, nom, std):
+        if use_sample_mean:
+            nom = np.mean(vals[1:, ...], axis=0)
+            std = np.std(vals[1:, ...], axis=0, ddof=1)
+        return nom, std
+
+    # make the montecarlo distributions
+    if dist == 'gaussian' or dist == 'normal':
+
+        def f(n, s):
+            return np.random.normal(loc=n, scale=s)
+
+        f = np.vectorize(f)
+        vals = np.array([f(nom, std) for i in range(samples + 1)])
+        nom, std = choose_mean_nom(vals, nom, std)
+        vals[0] = nom
+        dims = list(vals.shape)
+        dims[0] = MC_DIM_NAME
+        mc = xr.DataArray(
+            data=vals, dims=dims, coords={MC_DIM_NAME: np.arange(0, samples + 1)}
+        )
+
+    if dist == 'uniform' or dist == 'rectangular':
+        diff = np.sqrt(std**2 * 12) / 2
+        low = nom - diff
+        high = nom + diff
+
+        def f(h, l):
+            return np.random.uniform(low=l, high=h)
+
+        f = np.vectorize(f)
+        vals = np.array([f(high, low) for i in range(samples + 1)])
+        nom, std = choose_mean_nom(vals, nom, std)
+        vals[0] = nom
+        dims = list(vals.shape)
+        dims[0] = MC_DIM_NAME
+        mc = xr.DataArray(
+            data=vals, dims=dims, coords={MC_DIM_NAME: np.arange(0, samples + 1)}
+        )
+
+    cov_dims = [cd for cd in dims]
+    cov_dims[0] = 'umech_id'
+    cov = xr.DataArray(
+        np.array([nom, nom + std]),
+        dims=cov_dims,
+        coords={'umech_id': ['nominal', mechanism_name]},
+    )
+
+    covcats = np.full((1, len(categories)), '').astype(object)
+    for i, (c, v) in enumerate(categories.items()):
+        covcats[:, i] = str(v)
+    coords = {'umech_id': [mechanism_name], 'categories': list(categories.keys())}
+    dims = ('umech_id', 'categories')
+    covcats = xr.DataArray(covcats, dims=dims, coords=coords)
+    # {name:categories}
+
+    return RMEMeas(name, cov, mc, covcats=covcats)
 
 
 def make_example_meas(

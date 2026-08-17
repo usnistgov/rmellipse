@@ -105,7 +105,7 @@ class CovarianceDataArray(AnnotatedArray):
     schema = ArraySchema(
         shape=('N', ...),
         dims=('umech_id', ...),
-        coords={'umech_id': {'dtype': str}},
+        coords={'umech_id': {'dtype': np.dtype('T')}},
     )
 
 
@@ -137,8 +137,11 @@ class CovarianceStrMetadata(AnnotatedArray):
     schema = ArraySchema(
         shape=('N', 'M'),
         dims=('umech_id', 'categories'),
-        dtype=str,
-        coords={'umech_id': {'dtype': str}, 'categories': {'dtype': str}},
+        dtype=np.dtype('T'),
+        coords={
+            'umech_id': {'dtype': np.dtype('T')},
+            'categories': {'dtype': np.dtype('T')},
+        },
     )
 
 
@@ -153,7 +156,7 @@ class CovarianceDOFMetadata(AnnotatedArray):
         shape=('N',),
         dims=('umech_id',),
         dtype=float,
-        coords={'umech_id': {'dtype': str}},
+        coords={'umech_id': {'dtype': np.dtype('T')}},
     )
 
 
@@ -393,7 +396,9 @@ class RMEMeas[A](GroupSaveable):
 
     def cast_umechids(self):
         """
-        Cast any umech_id dimensions to the correct type.
+        Cast any umech_id dimensions or other dimensions to the correct type.
+
+        Generally, umech_id and covcats should be 'T' (variable width strings).
         """
         for attr_name in ('covcats', 'covdofs', 'cov'):
             attr = getattr(self, attr_name)
@@ -406,14 +411,16 @@ class RMEMeas[A](GroupSaveable):
                     raise RMEMeasFormatError(f'{attr} has no coordinates.') from e
                 # cast objects of umech_id as string
                 # in case they are loaded in as bytes accidentally
-                if attr_dtype == np.dtype('O'):
+                if attr_dtype != np.dtype('T'):
                     setattr(
                         self,
                         attr_name,
                         attr.assign_coords(
-                            {'umech_id': attr.coords['umech_id'].astype(str)}
+                            {'umech_id': attr.coords['umech_id'].astype('T')}
                         ),
                     )
+                if self.covcats.dtype != np.dtype('T'):
+                    self.covcats = self.covcats.astype('T')
 
     def _validate_conventions(self):
         """
@@ -838,7 +845,7 @@ class RMEMeas[A](GroupSaveable):
             dims = ('umech_id', 'categories')
             cats = ['Type']
             coords = {'umech_id': self.umech_id, 'categories': cats}
-            values = np.ones((1, 1)).astype(str)
+            values = np.ones((1, 1)).astype('T')
             values[...] = 'B'
             self.covcats = xr.DataArray(values, dims=dims, coords=coords).assign_coords(
                 {'umech_id': [name]}
@@ -1231,7 +1238,9 @@ class RMEMeas[A](GroupSaveable):
             for g in groupings
         }
 
-        newdofs = xr.DataArray([], dims=('umech_id'), coords={'umech_id': []})
+        newdofs = xr.DataArray(
+            [], dims=('umech_id'), coords={'umech_id': np.array([], dtype='T')}
+        )
 
         try:
             unused_locs = groups.pop('Uncategorized')
@@ -1256,6 +1265,9 @@ class RMEMeas[A](GroupSaveable):
         # else, get the unused mechanisms, and copy their covariance categories
         if len(unused_locs) > 0:
             new.append(self.cov.sel(umech_id=unused_locs))
+            print('DELETE ME DEBUG')
+            print(newdofs.dtype, self.covdofs.dtype)
+            print(newdofs.umech_id.dtype, self.covdofs.umech_id.dtype)
             newdofs = xr.concat(
                 (newdofs, self.covdofs.loc[unused_locs]), dim='umech_id'
             )

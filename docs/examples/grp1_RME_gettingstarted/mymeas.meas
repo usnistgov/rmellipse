@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='us-ascii'?>
+<CorrectedMeasurement FileName=".\mymeas.meas" CreationTime="unknown" AssemblyVersion="unknown" UserName="unknown">
+    <MenuStripTextBoxes>
+      <CreatedByUserName Enabled="True" Text="unknown" />
+      <CreatedByProgram Enabled="True" Text="RockyMountainAdvanced" />
+      <CreatedByVersion Enabled="True" Text="uknonwn" />
+      <CreatedByDate Enabled="True" Text="unknown" />
+      <CreatedByFirstFileName Enabled="True" Text="unknown" />
+      <CreatedByUpdatedFileName Enabled="True" Text="unknown" />
+      <CreatedFromFirstFileName Enabled="True" Text="unknown" />
+      <CreatedFromUpdatedFileName Enabled="True" Text="unknown" />
+      <MyVersion Enabled="True" Text="unknown" />
+    </MenuStripTextBoxes>
+    <Controls>
+      <MeasurementName ControlType="System.Windows.Forms.TextBox" ControlText="mymeas" FullName="Me_SplitContainer2__MeasurementName" Enabled="True" Visible="True" />
+      <MeasurementDocumentation ControlType="System.Windows.Forms.TextBox" ControlText="unknown" FullName="Me_SplitContainer2__GroupBox5_MeasurementDocumentation" />
+      <MonteCarloPerturbedSParams ControlType="CustomFormControls.FLV_VariableDetailsList" FullName="Me_SplitContainer2__GroupBox3_Panel2_MonteCarloPerturbedSParams" Count="0" />
+      <MeasSParams ControlType="CustomFormControls.FLV_FixedDetailsList" FullName="Me_SplitContainer2__GroupBox2_Panel3_MeasSParams" Count="1">
+        <Item Index="0" Text="mymeas" Count="2">
+          <SubItem Index="0" Text="mymeas" />
+          <SubItem Index="1" Text=".//mymeas_Support//mymeas.csv" />
+        </Item>
+      </MeasSParams>
+      <PerturbedSParams ControlType="CustomFormControls.FLV_VariableDetailsListMeas" FullName="Me_SplitContainer2__GroupBox1_Panel1_PerturbedSParams" Count="1">
+        <Item Index="0" Text="mymeas_0" Count="3">
+          <SubItem Index="0" Text="mymeas_0" />
+          <SubItem Index="1" Text=".//mymeas_Support//Covariance//mymeas_0.csv" />
+          <SubItem Index="2" Text="my umech" />
+        </Item>
+      </PerturbedSParams>
+    </Controls>
+  </CorrectedMeasurement>
+  

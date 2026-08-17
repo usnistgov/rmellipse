@@ -61,18 +61,6 @@ def convert_h5attrs_to_json_types(attrs: dict) -> dict:
     return out
 
 
-def _lazy_import_module(name):
-    spec = importlib.util.find_spec(name)
-    if spec is None or spec.loader is None:
-        raise ModuleNotFoundError()
-    loader = importlib.util.LazyLoader(spec.loader)
-    spec.loader = loader
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    loader.exec_module(module)
-    return module
-
-
 class ValidationError(Exception):
     def __init__(self, *args, **kwargs):
         Exception.__init__(self, *args, **kwargs)
@@ -134,8 +122,10 @@ class AnnotatedArray(xr.DataArray):
         """
         new_shape_spec = cls.schema['shape']
         new_dims_spec = cls.schema['dims']
-        new_dtype = cls.schema['dtype']
-
+        if 'dtype' in cls.schema:
+            new_dtype = cls.schema['dtype']
+        else:
+            new_dtype = None
         # require that specified dimensions be uninterrupted
         # i.e. at most 1 unspecified, arbitrary dimensions
         unq_vals, unq_counts = np.unique(new_shape_spec, return_counts=True)
@@ -156,7 +146,12 @@ class AnnotatedArray(xr.DataArray):
             new = new.rename({old_dims[i]: di})
             if di in cls.schema['coords']:
                 crd_schema = cls.schema['coords'][di]
-                crd_dtype = crd_schema['dtype']
+                # cast into new dtype if available, other wise
+                # maintain original
+                if 'dtype' in crd_schema:
+                    crd_dtype = crd_schema['dtype']
+                else:
+                    crd_dtype = new.coords[di].dtype
                 if 'values' not in crd_schema:
                     new = new.assign_coords({di: new.coords[di].astype(crd_dtype)})
                 else:
@@ -175,7 +170,11 @@ class AnnotatedArray(xr.DataArray):
             new = new.rename({old_dims[-(i + 1)]: di})
             if di in cls.schema['coords']:
                 crd_schema = cls.schema['coords'][di]
-                crd_dtype = crd_schema['dtype']
+                # use schema's dtype
+                if 'dtype' in crd_schema:
+                    crd_dtype = crd_schema['dtype']
+                else:
+                    crd_dtype = new.coords[di].dtype
                 if 'values' not in crd_schema:
                     new = new.assign_coords({di: new.coords[di].astype(crd_dtype)})
                 else:
@@ -329,7 +328,7 @@ class AnnotatedArray(xr.DataArray):
 
         # initialize as zeros from the prototype
         # use the schemas dtype unless none is specified
-        if cls.schema['dtype'] is not None:
+        if 'dtype' in cls.schema and cls.schema['dtype'] is not None:
             out = xr.zeros_like(prototype, dtype=cls.schema['dtype'])
         else:
             out = xr.zeros_like(prototype)
@@ -498,10 +497,6 @@ class ArraySchema(dict):
                 'unspecified shapes specs (...) must have unspecified dimension names. Specified shapes must have specified dimension names.'
             )
 
-        # None indicates no type requirement
-        # if dtype is not None:
-        #     dtype = np.dtype(dtype)
-
         # validate coords and make CoordinateSchemas for each
         shape_lookup = dict(zip(dims, shape))
         out_coords = {}
@@ -521,18 +516,26 @@ class ArraySchema(dict):
                 )
             out_coords[coord_name] = coord_schema
 
-        # units should be specified.
-        if not isinstance(units, str):
-            Exception('Units must be specified for top level data, if unitless: "arb"')
-
         out: dict[str, Any] = {
             'shape': tuple(shape),
             'dims': tuple(dims),
-            'dtype': dtype,
-            'units': units,
             'coords': out_coords,
-            'attrs': attrs,
         }
+
+        if units is not None:
+            # units should be specified.
+            if not isinstance(units, str):
+                Exception(
+                    'Units must be specified for top level data, if unitless: "arb"'
+                )
+            self.update(units=units)
+
+        if dtype is not None:
+            self.update(dtype=dtype)
+
+        if attrs is not None:
+            self.update(attrs=attrs)
+
         self.update(out)
 
     def validate(
@@ -589,7 +592,7 @@ class ArraySchema(dict):
                     )
 
         # check that the static types match
-        if self['dtype'] is not None and not can_cast_dtype(arr, self['dtype']):
+        if 'dtype' in self and not can_cast_dtype(arr, self['dtype']):
             raise ValidationError(
                 f'dtype {arr.dtype} not castable to  {self["dtype"]} for : \n {arr}'
             )
@@ -604,7 +607,7 @@ class ArraySchema(dict):
                     )
 
             # check that dtypes match for coordinates if a type is specified
-            if coord['dtype'] is not None and not can_cast_dtype(
+            if 'dtype' in coord and not can_cast_dtype(
                 arr.coords[cname], coord['dtype']
             ):
                 raise ValidationError(
@@ -612,7 +615,7 @@ class ArraySchema(dict):
                 )
 
         # validate the metadata schema
-        if self['attrs'] is not None:
+        if 'attrs' in self:
             try:
                 self['attrs'].model_validate(arr.attrs)
             except pydantic.ValidationError as e:

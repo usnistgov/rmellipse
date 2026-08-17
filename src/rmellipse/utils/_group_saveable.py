@@ -83,7 +83,8 @@ def load_file(path: str | Path, **load_object_kwargs):
         if len(groups) > 1 or len(groups) < 1:
             raise ValueError('Expected only one group in root of {path}.')
         group = f[groups[0]]
-        load_object(group, **load_object_kwargs)
+        out = load_object(group, **load_object_kwargs)
+    return out
 
 
 class GROUP_SAVEABLE(ABC):
@@ -390,7 +391,6 @@ def save_dataset_saveable(
     if verbose:
         print(o, type(o))
     if o is not None:
-        # try to just assign the dataset
         try:
             parent[name] = o
         except TypeError:
@@ -401,6 +401,9 @@ def save_dataset_saveable(
                 parent.create_dataset(name, o.shape, dtype=o.dtype, data=o)
             except Exception as e:
                 parent.create_dataset(name, o.shape, dtype=dt, data=o.astype('O'))
+
+        if hasattr(o, 'dtype'):
+            parent[name].attrs['dtype'] = o.dtype.char
 
     else:
         parent[name] = 'None'
@@ -491,7 +494,7 @@ def _save_ndarry(parent: GROUP, name: str, arr: numpy.ndarray) -> str:
             dt = h5py.special_dtype(vlen=str)
             parent.create_dataset(name, arr.shape, dtype=dt, data=arr)
     # save the datatype as a string
-    parent[name].attrs['dtype'] = str(dtype)
+    parent[name].attrs['dtype'] = arr.dtype.char
 
 
 def save_slice_saveable(
@@ -841,27 +844,17 @@ def _load_ndarray(h5dataset, vlen_object_encoding: numpy.dtype = str) -> numpy.n
     can be supplied if they represent some other object.
     """
 
-    data = numpy.array(h5dataset)
-    # if the dtype was defined
-    # use that
-    try:
-        recast_as_dtype = h5dataset.attrs['dtype']
-        recast = True
-    # otherwise use whatever encoding
-    # HDF5 hung onto
-    except KeyError:
-        dtype = data.dtype
-        # 'O' could be any variable length byte string
-        # typically strings, but the user needs to specify
-        # what this is supposed to be or it will be
-        # cast as a 'str' by default
-        if dtype == 'O':
-            recast_as_dtype = vlen_object_encoding
-            recast = True
-        else:
-            recast = False
-    if recast:
-        data = data.astype(recast_as_dtype)
+    if 'dtype' in h5dataset.attrs:
+        # try to have the h5py enginer do type conversions
+        # as it reads it in (faster)
+        try:
+            data = numpy.array(h5dataset, dtype=h5dataset.attrs['dtype'])
+        # if that fails, read it in then try to have numpy
+        # do the type conversion after it reads it in (slower)
+        except TypeError:
+            data = numpy.array(h5dataset).astype(h5dataset.attrs['dtype'])
+    else:
+        data = numpy.array(h5dataset, dtype=vlen_object_encoding)
     return data
 
 

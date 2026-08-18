@@ -844,6 +844,7 @@ def _load_ndarray(h5dataset, vlen_object_encoding: numpy.dtype = str) -> numpy.n
     can be supplied if they represent some other object.
     """
 
+    # if the dtype was recorded, use that
     if 'dtype' in h5dataset.attrs:
         # try to have the h5py enginer do type conversions
         # as it reads it in (faster)
@@ -853,8 +854,19 @@ def _load_ndarray(h5dataset, vlen_object_encoding: numpy.dtype = str) -> numpy.n
         # do the type conversion after it reads it in (slower)
         except TypeError:
             data = numpy.array(h5dataset).astype(h5dataset.attrs['dtype'])
+    # otherwise load it in and
+    # use the vlen object encoding
+    # which should be str (python strings) by default.
     else:
-        data = numpy.array(h5dataset, dtype=vlen_object_encoding)
+        data = numpy.array(h5dataset)
+        dtype = data.dtype
+        # 'O' could be any variable length byte string
+        # typically strings, but the user needs to specify
+        # what this is supposed to be or it will be
+        # cast as a 'str' by default
+        if dtype == 'O':
+            data = data.astype(vlen_object_encoding)
+
     return data
 
 

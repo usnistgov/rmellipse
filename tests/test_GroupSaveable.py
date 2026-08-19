@@ -1,4 +1,10 @@
-from rmellipse.utils import save_object, load_object, GroupSaveable
+from rmellipse.utils import (
+    save_object,
+    load_object,
+    GroupSaveable,
+    load_file,
+    save_file,
+)
 from pathlib import Path
 import pytest
 import h5py as h5
@@ -100,17 +106,35 @@ def test_lists():
 def test_datasets():
     import numpy as np
 
-    prims = [np.array([1, 2, 3]), np.array(['1', '2', '3']), np.array([True, False])]
+    dtypes = [
+        np.dtype('U'),
+        np.dtype(complex),
+        np.dtype(bool),
+        np.dtype('T'),
+        np.dtype(float),
+    ]
 
-    with h5.File(TEST_FILE, 'w') as f:
+    prims = [
+        np.array([1, 0, 1.1111111]),
+    ]
+
+    for dt in dtypes:
         for p in prims:
-            # print('saving ', p)
-            group = save_object(f, 'myobj', p, verbose=True)
-            read = load_object(group)
-
-            for pi, ri in zip(p, read):
+            sample = p.astype(dt)
+            save_file(TEST_FILE, sample)
+            read = load_file(TEST_FILE)
+            for pi, ri in zip(sample, read):
+                print('testing ', dt, '...')
                 assert pi == ri
-            del f['myobj']
+    # with h5.File(TEST_FILE, 'w') as f:
+    #     for p in prims:
+    #         # print('saving ', p)
+    #         group = save_object(f, 'myobj', p, verbose=True)
+    #         read = load_object(group)
+
+    #         for pi, ri in zip(p, read):
+    #             assert pi == ri
+    #         del f['myobj']
 
 
 def test_dicts():
@@ -250,8 +274,9 @@ def test_childless():
 if __name__ == '__main__':
     with h5.File(TEST_FILE, 'w') as f:
         pass
-    test_rmemeas()
-    test_rmemeas_list()
-    test_rmemeas_dict()
-    test_childless()
-    test_xrdataarrays()
+    # test_rmemeas()
+    # test_rmemeas_list()
+    # test_rmemeas_dict()
+    # test_childless()
+    # test_xrdataarrays()
+    test_datasets()

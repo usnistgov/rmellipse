@@ -127,7 +127,7 @@ def from_dist(
         coords={'umech_id': ['nominal', mechanism_name]},
     )
 
-    covcats = np.full((1, len(categories)), '').astype(object)
+    covcats = np.full((1, len(categories)), '').astype('T')
     for i, (c, v) in enumerate(categories.items()):
         covcats[:, i] = str(v)
     coords = {'umech_id': [mechanism_name], 'categories': list(categories.keys())}

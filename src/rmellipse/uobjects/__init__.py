@@ -4,5 +4,11 @@ Data with uncertainties correspond to propagators in
 ``rmellipse.propagators``
 """
 
-from ._uobjs import UObj
-from ._rmemeas import RMEMeas, RMEMeasFormatError
+from ._rmemeas import (
+    RMEMeas,
+    CovarianceDataArray,
+    CovarianceStrMetadata,
+    MonteCarloDataArray,
+    RMEMeasFormatError,
+    RMEUncTuple,
+)

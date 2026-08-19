@@ -1,10 +1,17 @@
-from rmellipse.utils import save_object, load_object, GroupSaveable
+from rmellipse.utils import (
+    save_object,
+    load_object,
+    GroupSaveable,
+    load_file,
+    save_file,
+)
 from pathlib import Path
 import pytest
 import h5py as h5
 import numpy as np
 import xarray as xr
 from rmellipse.uobjects import RMEMeas
+from rmellipse._test_collections.rmemeas import from_dist
 
 LOCAL = Path(__file__).parents[0]
 MUTABLE_DIR = LOCAL / 'mutable'
@@ -99,17 +106,35 @@ def test_lists():
 def test_datasets():
     import numpy as np
 
-    prims = [np.array([1, 2, 3]), np.array(['1', '2', '3']), np.array([True, False])]
+    dtypes = [
+        np.dtype('U'),
+        np.dtype(complex),
+        np.dtype(bool),
+        np.dtype('T'),
+        np.dtype(float),
+    ]
 
-    with h5.File(TEST_FILE, 'w') as f:
+    prims = [
+        np.array([1, 0, 1.1111111]),
+    ]
+
+    for dt in dtypes:
         for p in prims:
-            # print('saving ', p)
-            group = save_object(f, 'myobj', p, verbose=True)
-            read = load_object(group)
-
-            for pi, ri in zip(p, read):
+            sample = p.astype(dt)
+            save_file(TEST_FILE, sample)
+            read = load_file(TEST_FILE)
+            for pi, ri in zip(sample, read):
+                print('testing ', dt, '...')
                 assert pi == ri
-            del f['myobj']
+    # with h5.File(TEST_FILE, 'w') as f:
+    #     for p in prims:
+    #         # print('saving ', p)
+    #         group = save_object(f, 'myobj', p, verbose=True)
+    #         read = load_object(group)
+
+    #         for pi, ri in zip(p, read):
+    #             assert pi == ri
+    #         del f['myobj']
 
 
 def test_dicts():
@@ -192,7 +217,7 @@ def test_slice():
 def test_rmemeas():
     import rmellipse.uobjects as obj
 
-    a0 = obj.RMEMeas.from_dist('a', 1, 1)
+    a0 = from_dist('a', 1, 1)
     with h5.File(TEST_FILE, 'a') as f:
         save_object(f, a0.name, a0)
         a1 = load_object(f['a'], load_big_objects=True)
@@ -203,8 +228,8 @@ def test_rmemeas():
 def test_rmemeas_list():
     import rmellipse.uobjects as obj
 
-    a0 = obj.RMEMeas.from_dist('a', 1, 1)
-    b0 = obj.RMEMeas.from_dist('a', 1, 1)
+    a0 = from_dist('a', 1, 1)
+    b0 = from_dist('a', 1, 1)
 
     my_list = [a0, b0]
     with h5.File(TEST_FILE, 'a') as f:
@@ -221,14 +246,13 @@ def test_rmemeas_list():
 def test_rmemeas_dict():
     import rmellipse.uobjects as obj
 
-    a0 = obj.RMEMeas.from_dist('a', 1, 1)
-    b0 = obj.RMEMeas.from_dist('b', 1, 1)
+    a0 = from_dist('a', 1, 1)
+    b0 = from_dist('b', 1, 1)
 
     my_dict = {a0.name: a0, b0.name: b0}
     with h5.File(TEST_FILE, 'a') as f:
         save_object(f, 'my_d', my_dict)
         myd = load_object(f['my_d'], load_big_objects=True)
-        a1 = RMEMeas.from_h5(f['my_d']['a'])
 
     for ai, bi in zip(my_dict.values(), myd.values()):
         print(bi.name, ai.name)
@@ -250,8 +274,9 @@ def test_childless():
 if __name__ == '__main__':
     with h5.File(TEST_FILE, 'w') as f:
         pass
-    test_rmemeas()
-    test_rmemeas_list()
-    test_rmemeas_dict()
-    test_childless()
-    test_xrdataarrays()
+    # test_rmemeas()
+    # test_rmemeas_list()
+    # test_rmemeas_dict()
+    # test_childless()
+    # test_xrdataarrays()
+    test_datasets()

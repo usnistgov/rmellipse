@@ -3,10 +3,6 @@ Microwave Uncertainty Framework (RME) propagators.Propagator Definition module.
 
 This RME propagators.Propagator is used for propagating RMEMeas objects, and is based
 on the xarray package.
-
-Created on Tue Jun  4 14:04:58 2024
-
-@author: dcg2
 """
 
 # These need to be imported this way to delay access
@@ -19,7 +15,11 @@ import time
 import uuid
 import warnings
 from functools import wraps
-from typing import Union
+from typing import Union, Callable, ParamSpec, TypeVar
+
+# Define type variables to capture original signatures dynamically
+P = ParamSpec('P')  # Captures arguments (*args, **kwargs)
+R = TypeVar('R')  # Captures the return type
 
 
 class RMEProp(propagators.Propagator):
@@ -651,7 +651,7 @@ class RMEProp(propagators.Propagator):
         ]
         if len(cats) > 0:
             cats = xr.align(*cats, join='outer', fill_value='')
-            newcats = cats[0].astype(object)
+            newcats = cats[0].astype('T')
             # copy over indexes that are empty in the new one from the old ones
             # that are aligned
             msg = '\n'
@@ -696,7 +696,7 @@ class RMEProp(propagators.Propagator):
                                     + '\n'
                                 )
 
-                newcats.values[ind] += c.values[ind].astype(str).astype(object)
+                newcats.values[ind] += c.values[ind].astype('T')
             # loop over and assign
             # since mechnisms with the same name are supposed to be identical,
             # don't bother combining the two

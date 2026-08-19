@@ -1,0 +1,5 @@
+first-workflow-v0.1.5:
+  host: C:/code/rms/rocky-mountain-ellipse-public/tests/ignored_archive
+  name: first-workflow
+  version: 0.1.5
+  workspace: Global Public Workspace

@@ -74,7 +74,7 @@ dev = [
     "numpydoc==1.7.0",
     "pytest==8.3.3",
     "pytest-cov==6.1.1",
-    "sphinx>=8.0",
+    "sphinx>=8.0,<9",
     "sphinx-autoapi==3.6.0",
     "sphinx-gallery==0.17.0",
     "snakeviz>=2.2.2",
@@ -85,4 +85,5 @@ dev = [
     "ipython>=9.16.1",
     "spyder-kernels==3.1.*",
     "myst-parser>=5.1",
+    "sphinx-click"
 ]

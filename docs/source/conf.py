@@ -52,6 +52,9 @@ class VersionedTag:
         self.major = int(split[0])
         self.minor = int(split[1])
         self.patch = int(split[2])
+        # try to convert patch to a number
+        if '-' in tag:
+            raise ValueError
 
     def __repr__(self):
         return f'VersionTag({self.tag})'
@@ -111,8 +114,13 @@ plot_gallery = True
 
 try:
     tags = get_all_git_tags()
-    print(tags)
-    latest_minors = get_latest_minor_versions(get_all_git_tags())
+    print(
+        'All tags : ', tags + ['v99.99.99-alpha', 'v100.99.99-alpha.1']
+    )  # these should get filtered out
+    tags = [t for t in tags if '-' not in tags]
+    print('Filtered tags: ', tags)
+    latest_minors = get_latest_minor_versions(tags)
+    print('Minor Versions: ', latest_minors)
 
     # multiversioned documentation then use the
     # most up to date release tag

@@ -98,10 +98,15 @@ class RMEProp(propagators.Propagator):
             sensitivity=sensitivity,
             handle_common_grid_method=handle_common_grid_method,
             common_grid=common_grid,
-            common_coords=common_coords,
+            # Store independent top-level copies of mutable mapping settings.
+            common_coords=(
+                dict(common_coords) if common_coords is not None else None
+            ),
             vectorize=vectorize,
             verbose=verbose,
-            interp_kwargs=interp_kwargs,
+            interp_kwargs=(
+                dict(interp_kwargs) if interp_kwargs is not None else None
+            ),
         )
         """dict: Stores the current settings of the propagator."""
 
@@ -138,12 +143,11 @@ class RMEProp(propagators.Propagator):
         ]
         param_lists = args_param_lists + kwargs_param_lists
 
-        # get a set of all the parameter locations
+        # Deduplicate mechanism identifiers while preserving first-seen order.
         param_set = []
         for pl in param_lists:
             param_set += list(pl)
-        param_set = list(set(param_set))
-        return param_set
+        return list(dict.fromkeys(param_set))
 
     @staticmethod
     def _expand_umech_id_and_fill_nominal(
@@ -216,12 +220,11 @@ class RMEProp(propagators.Propagator):
 
     @staticmethod
     def _sample_distribution(montecarlo_trials: int, m):
-        """Sample the Monte Carlo distribution of an object.
+        """Select Monte Carlo trials from an object.
 
-        If m is an RMEMeas object, it samples the mc value and returns
-        it the new, resampled xarray object
-
-        If it is not an RMEMeas object, it just returns whatever was passed.
+        For an RMEMeas object, return the requested number of leading
+        stochastic trials with canonical ``sample_id`` coordinates. For any
+        other object, return the input unchanged.
 
         Parameters
         ----------
@@ -235,22 +238,20 @@ class RMEProp(propagators.Propagator):
         object
             xarray if m is an RMEMeas, type of m otherwise.
         """
-        # of
+        if not isinstance(montecarlo_trials, (int, np.integer)) or montecarlo_trials < 0:
+            raise ValueError('montecarlo_trials must be a non-negative integer')
+
         if uobjs.RMEMeas._if_quacks(m) and m.mc is not None:
-            n_available_samples = max(m.mc.sample_id)
-            if montecarlo_trials > n_available_samples:
+            # The sample_id dimension size is the number of stored trials.
+            n_available_trials = m.mc.sizes['sample_id']
+            if montecarlo_trials > n_available_trials:
                 raise ValueError(
-                    f'Cannot do {montecarlo_trials} monte carlo trials as dataset only has {n_available_samples} available samples: \n {m}'
+                    f'Cannot do {montecarlo_trials} monte carlo trials as dataset only has '
+                    f'{n_available_trials} available trials: \n {m}'
                 )
-            # otherwise randomly sample the distribution
-            distlength = len(m.mc.coords['sample_id'])
-            index = np.arange(1, montecarlo_trials + 1)
-            index = np.append(0, index)
-            d = m.mc.isel(sample_id=index)
-            # reset sampling index
-            d = d.assign_coords({'sample_id': np.arange(0, len(index))})
-            return d
-        # if its got no MC data, just sample the nominal over and over again
+            d = m.mc.isel(sample_id=slice(0, montecarlo_trials))
+            return d.assign_coords({'sample_id': np.arange(montecarlo_trials)})
+        # Monte Carlo propagation requires explicit stochastic data.
         elif uobjs.RMEMeas._if_quacks(m) and m.mc is None:
             raise AttributeError(
                 f'missing monte carlo data on RMEMeas object cannot do a monte carlo propagation:\n{m}'
@@ -323,9 +324,11 @@ class RMEProp(propagators.Propagator):
                     a.sel(umech_id='nominal') if hasattr(a, 'umech_id') else a
                     for a in cov_args
                 ]
+                # ``items()`` yields each keyword name and argument value;
+                # select uncertainty data from the value and retain its name.
                 covkwi = {
                     k: a.sel(umech_id='nominal') if hasattr(a, 'umech_id') else a
-                    for a, k in cov_kwargs.items()
+                    for k, a in cov_kwargs.items()
                 }
                 cov_output = process_fcn(*covargsi, **covkwi)
                 # print(cov_output)
@@ -338,7 +341,7 @@ class RMEProp(propagators.Propagator):
                         ]
                         covkwi = {
                             k: a.sel(umech_id=p) if hasattr(a, 'umech_id') else a
-                            for a, k in cov_kwargs.items()
+                            for k, a in cov_kwargs.items()
                         }
                         cov_output = xr.concat(
                             [cov_output, process_fcn(*covargsi, **covkwi)], 'umech_id'
@@ -357,7 +360,7 @@ class RMEProp(propagators.Propagator):
                         ]
                         covkwi = {
                             k: a.sel(umech_id=p) if hasattr(a, 'umech_id') else a
-                            for a, k in cov_kwargs.items()
+                            for k, a in cov_kwargs.items()
                         }
                         proc_out = process_fcn(*covargsi, **covkwi)
                         cov_output = [
@@ -446,16 +449,14 @@ class RMEProp(propagators.Propagator):
 
         """
         mc_output = None
-        RMEMeas_present = any(
-            [
-                uobjs.RMEMeas._if_quacks(o)
-                for o in list(process_args) + list(process_kwargs.items())
-            ]
-        )
-        # if doing montecarlo AND a RMEMeas is present, run the algo
-
         if process_kwargs is None:
             process_kwargs = {}
+        # Keyword values, not (key, value) tuples, may be uncertain inputs.
+        RMEMeas_present = any(
+            uobjs.RMEMeas._if_quacks(value)
+            for value in [*process_args, *process_kwargs.values()]
+        )
+        # if doing montecarlo AND a RMEMeas is present, run the algo
 
         if montecarlo_trials and RMEMeas_present:
             mc_args = [
@@ -470,40 +471,64 @@ class RMEProp(propagators.Propagator):
             if vectorize:
                 mc_output = process_fcn(*mc_args, **mc_kwargs)
             else:
+                # ``items()`` yields each keyword name and argument value;
+                # select one trial from the value and retain its name.
                 mcargsi = [
                     a.sel(sample_id=0) if hasattr(a, 'sample_id') else a
                     for a in mc_args
                 ]
                 mckwi = {
                     k: a.sel(sample_id=0) if hasattr(a, 'sample_id') else a
-                    for a, k in mc_kwargs.items()
+                    for k, a in mc_kwargs.items()
                 }
                 mc_output = process_fcn(*mcargsi, **mckwi)
                 if hasattr(mc_output, 'sample_id'):
-                    for i in range(1, montecarlo_trials + 1):
+                    if 'sample_id' not in mc_output.dims:
+                        mc_output = mc_output.expand_dims('sample_id')
+                    for i in range(1, montecarlo_trials):
                         mcargsi = [
                             a.sel(sample_id=i) if hasattr(a, 'sample_id') else a
                             for a in mc_args
                         ]
                         mckwi = {
                             k: a.sel(sample_id=i) if hasattr(a, 'sample_id') else a
-                            for a, k in mc_kwargs.items()
+                            for k, a in mc_kwargs.items()
                         }
                         out = process_fcn(*mcargsi, **mckwi)
+                        if hasattr(out, 'sample_id') and 'sample_id' not in out.dims:
+                            out = out.expand_dims('sample_id')
                         mc_output = xr.concat([mc_output, out], 'sample_id')
                 elif isinstance(mc_output, tuple) and any(
                     [hasattr(co, 'sample_id') for co in mc_output]
                 ):
-                    for i in range(1, montecarlo_trials + 1):
+                    mc_output = tuple(
+                        (
+                            co.expand_dims('sample_id')
+                            if hasattr(co, 'sample_id')
+                            and 'sample_id' not in co.dims
+                            else co
+                        )
+                        for co in mc_output
+                    )
+                    for i in range(1, montecarlo_trials):
                         mcargsi = [
                             a.sel(sample_id=i) if hasattr(a, 'sample_id') else a
                             for a in mc_args
                         ]
                         mckwi = {
                             k: a.sel(sample_id=i) if hasattr(a, 'sample_id') else a
-                            for a, k in mc_kwargs.items()
+                            for k, a in mc_kwargs.items()
                         }
                         proc_out = process_fcn(*mcargsi, **mckwi)
+                        proc_out = tuple(
+                            (
+                                po.expand_dims('sample_id')
+                                if hasattr(po, 'sample_id')
+                                and 'sample_id' not in po.dims
+                                else po
+                            )
+                            for po in proc_out
+                        )
                         mc_output = [
                             (
                                 xr.concat([co, po], 'sample_id')
@@ -578,6 +603,11 @@ class RMEProp(propagators.Propagator):
             if not hasattr(cov, 'umech_id'):
                 return cov
 
+            # RME structural dimensions are leading axes in constructed output.
+            if 'umech_id' in cov.dims and cov.dims[0] != 'umech_id':
+                cov = cov.transpose('umech_id', ...)
+            if mc is not None and 'sample_id' in mc.dims and mc.dims[0] != 'sample_id':
+                mc = mc.transpose('sample_id', ...)
             return uobjs.RMEMeas(
                 name=name, cov=cov, mc=mc, covcats=covcats, covdofs=covdofs
             )
@@ -754,6 +784,48 @@ class RMEProp(propagators.Propagator):
         )
 
         return covdofs
+
+    @staticmethod
+    def merge_categories(
+        mechanism_ids,
+        process_args,
+        process_kwargs,
+        sensitivity: bool = True,
+        verbose: bool = False,
+    ):
+        """Merge covariance-category metadata for uncertainty mechanisms.
+
+        This applies the same alignment and conflict rules used during
+        propagation.
+        """
+        return RMEProp._get_new_categories(
+            mechanism_ids,
+            process_args,
+            process_kwargs,
+            sensitivity=sensitivity,
+            verbose=verbose,
+        )
+
+    @staticmethod
+    def merge_covdofs(
+        mechanism_ids,
+        process_args,
+        process_kwargs,
+        sensitivity: bool = True,
+        verbose: bool = False,
+    ):
+        """Merge degree-of-freedom metadata for uncertainty mechanisms.
+
+        This applies the same alignment and aggregation rules used during
+        propagation.
+        """
+        return RMEProp._get_new_covdofs(
+            mechanism_ids,
+            process_args,
+            process_kwargs,
+            sensitivity=sensitivity,
+            verbose=verbose,
+        )
 
     def _run_propagation_algorithm(
         self,
@@ -1073,8 +1145,8 @@ class RMEProp(propagators.Propagator):
             monte_typea = np.array(
                 [np.dot(err.T, weights[:, i]) for i in range(montecarlo_trials)]
             ).T
-            monte_typea = monte_typea.reshape(mc_avg[1:, ...].shape)
-            mc_avg[1:, ...] += monte_typea
+            monte_typea = monte_typea.reshape(mc_avg.shape)
+            mc_avg[...] += monte_typea
         return mc_avg
 
     @staticmethod
@@ -1104,24 +1176,12 @@ class RMEProp(propagators.Propagator):
         # construct an array where rows represent measurmeents, column different data points
         if generate_across_dim is not False:
             assert len(measurements) == 1
-            nom_shape = (
-                measurements[0]
-                .nom.sel(
-                    {generate_across_dim: measurements[0].nom[generate_across_dim][0]}
-                )
-                .shape
-            )  # shape not including uncertainty mechanisms or flattening dim
-            nominals = np.array(
-                measurements[0]
-                .nom.sel(
-                    {
-                        generate_across_dim: measurements[0]
-                        .nom[generate_across_dim]
-                        .values
-                    }
-                )
-                .values.flatten()
-            )
+            nominal = measurements[0].nom
+            # Use the requested dimension as the observation axis and flatten
+            # all remaining dimensions into features for SVD.
+            nominal = nominal.transpose(generate_across_dim, ...)
+            nom_shape = nominal.shape[1:]
+            nominals = nominal.values.reshape(nominal.shape[0], -1)
             mu = np.mean(nominals, axis=0)
         else:
             nom_shape = measurements[
@@ -1168,7 +1228,8 @@ class RMEProp(propagators.Propagator):
         new_dims = ['umech_id'] + list(measurements[0].nom.dims)
         if generate_across_dim is not False:
             new_dims.remove(generate_across_dim)
-            coords.pop(generate_across_dim)
+            # Bare dimensions need not have a coordinate variable.
+            coords.pop(generate_across_dim, None)
 
         coords['umech_id'] = new_params
         type_a = xr.DataArray(type_a, coords=coords, dims=new_dims)

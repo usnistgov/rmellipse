@@ -4,11 +4,13 @@ Module for creating and interacting with RMEMeas objects.
 RMEMeas objects are the
 """
 
+import copy
+import warnings
+
 # These need to be imported this way to delay access
 # to the underlying classes to avoid a circular import error
 import rmellipse.propagators as propagators
-from rmellipse.arrschema import AnnotatedArray, ArraySchema
-import warnings
+from rmellipse.arrschema import AnnotatedArray, ArraySchema, ValidationError
 from rmellipse.utils import GroupSaveable, load_object
 import h5py
 import xarray as xr
@@ -111,13 +113,11 @@ class CovarianceDataArray(AnnotatedArray):
 
 class MonteCarloDataArray(AnnotatedArray):
     """
-    Store data with monte carlo samples.
+    Store stochastic Monte Carlo samples.
 
-    The first label of the sample_id coordinate is
-    the expected value of the distribution the data set.
-
-    Each sample_id after that represents a sample
-    from the underlying probability distribution.
+    Every entry along the ``sample_id`` coordinate is a sample from the
+    underlying probability distribution. Labels start at zero and count up by
+    one. The nominal value is stored separately in the covariance data.
     """
 
     schema = ArraySchema(
@@ -213,15 +213,13 @@ class RMEMeas[A](GroupSaveable):
             coordinate should be strings corresponding the the uncertainty
             mechanism. The default is None.
         mc : A | MonteCarloDataArray, optional
-            Montecarlo trials. Samples of the data
-            sets distribution are stored along the first dimension (axis 0)
-            of the DataArray, where the first index of axis 0 is the nominal
-            data set, and the rest of the indexes are samples of the distribution.
+            Monte Carlo trials. Every entry along the first dimension (axis 0)
+            is a stochastic sample of the data set's distribution; the nominal
+            data set is not duplicated in this array.
 
-            The first dimension must be called 'sample_id', and the
-            first labels of the 'sample_id' must start at 0 and
-            count up by 1 (i,e typical integer based indexing).
-            The default is None.
+            The first dimension must be called 'sample_id', and the labels of
+            'sample_id' must start at 0 and count up by 1 (i.e. typical integer
+            based indexing). The default is None.
         covdofs : xr.DataArray, optional
             DataArray that stores the degrees of freedom for each linear
             uncertainty mechanism in cov. It should be a 1 dimensional
@@ -239,11 +237,12 @@ class RMEMeas[A](GroupSaveable):
             string.
         """
 
-        # init as a RMEMeas object
+        # Own metadata independently and provide deterministic identity defaults.
+        attrs = copy.deepcopy(dict(attrs or {}))
         if name is None:
-            name = attrs['name']
-        if attrs is None:
-            attrs = {'name': name, 'is_big_object': True}
+            name = attrs.get('name', 'RMEMeas')
+        attrs.setdefault('name', name)
+        attrs.setdefault('is_big_object', True)
 
         # initialize as a group saveable thing
         GroupSaveable.__init__(self, name=name, parent=parent, attrs=attrs)
@@ -283,14 +282,27 @@ class RMEMeas[A](GroupSaveable):
 
         # rename the mc dimensiont o support old data sets
         if mc is not None:
-            # rename an mc array with 'umech_id' as 'sample_id
-            # to support old datasets
+            # Legacy Monte Carlo arrays may use 'umech_id' as the sample axis.
+            legacy_mc_axis = (
+                'sample_id' not in self.mc.dims and 'umech_id' in self.mc.dims
+            )
             try:
                 self.mc = self.mc.rename({'umech_id': 'sample_id'})
             except ValueError:
                 pass
-            MonteCarloDataArray(mc).validate()
-        CovarianceDataArray(self.cov).validate()
+            if legacy_mc_axis and not np.issubdtype(
+                self.mc.coords['sample_id'].dtype, np.integer
+            ):
+                # Integer coordinates distinguish sample indices from
+                # covariance mechanism labels.
+                raise ValidationError(
+                    'legacy Monte Carlo umech_id coordinates must be integers'
+                )
+            # Validate after normalizing the legacy dimension name.
+            MonteCarloDataArray(self.mc).validate()
+        # Covariance data is optional for empty or Monte Carlo-only objects.
+        if self.cov is not None:
+            CovarianceDataArray(self.cov).validate()
 
         # add attributes as children so they get saved into hdf5 formats
         self.add_child(key='cov', data=self.cov, is_big_object=True)
@@ -423,81 +435,96 @@ class RMEMeas[A](GroupSaveable):
                     self.covcats = self.covcats.astype('T')
 
     def _validate_conventions(self):
+        """Validate the structural conventions required by RME propagation.
+
+        Call :meth:`validate` after loading, before propagation, or after
+        in-place xarray edits that may affect array alignment.
         """
-        Check that cov and mc follow assumed conventions or organizing data.
-
-        Returns
-        -------
-        None.
-
-        Raises
-        ------
-        Exception:
-            If the RMEMeas properties violated a required convention.
-
-        """
-        # check that covdofs has umech_id
-        if self.mc is not None:
-            try:
-                self.mc.sample_id
-            except AttributeError as exec:
-                raise RMEMeasFormatError(
-                    'covdofs doesnt have dimension called sample_id'
-                ) from exec
-
+        mechanism_values = []
         if self.cov is not None:
-            if self.cov.dims[0] != 'umech_id':
+            if not isinstance(self.cov, xr.DataArray):
+                raise RMEMeasFormatError('cov must be an xarray.DataArray')
+            if not self.cov.dims or self.cov.dims[0] != 'umech_id':
                 raise RMEMeasFormatError(
-                    'First dimension of a RME meas object cov DataArray MUST be called "umech_id"'
+                    'First dimension of cov MUST be called "umech_id"'
                 )
-            if self.cov.coords['umech_id'][0] != 'nominal':
+            if 'umech_id' not in self.cov.coords:
+                raise RMEMeasFormatError('cov is missing its umech_id coordinate')
+            mechanism_values = [
+                str(value) for value in self.cov.coords['umech_id'].values
+            ]
+            if not mechanism_values or mechanism_values[0] != 'nominal':
                 raise RMEMeasFormatError(
-                    'First label of "umech_id" coordinate dimension MUST be called "nominal"'
+                    'First label of "umech_id" MUST be called "nominal"'
                 )
+            if len(mechanism_values) != len(set(mechanism_values)):
+                raise RMEMeasFormatError('cov umech_id labels must be unique')
 
         if self.mc is not None:
-            if self.mc.dims[0] != 'sample_id':
+            if not isinstance(self.mc, xr.DataArray):
+                raise RMEMeasFormatError('mc must be an xarray.DataArray')
+            if not self.mc.dims or self.mc.dims[0] != 'sample_id':
                 raise RMEMeasFormatError(
-                    'First dimension of a RMEMeas object mc DataArray MUST be called "sample_id"'
+                    'First dimension of mc MUST be called "sample_id"'
                 )
-            if self.mc.coords['sample_id'][0] != 0:
+            if 'umech_id' in self.mc.dims:
                 raise RMEMeasFormatError(
-                    'mc DataArray "sample_id" dim must have an integer coordinate set starting from 0'
+                    'mc cannot contain the reserved "umech_id" dimension'
+                )
+            sample_ids = np.asarray(self.mc.coords['sample_id'].values)
+            expected_ids = np.arange(self.mc.sizes['sample_id'])
+            if not np.issubdtype(sample_ids.dtype, np.integer) or not np.array_equal(
+                sample_ids, expected_ids
+            ):
+                raise RMEMeasFormatError(
+                    'mc sample_id coordinates must be consecutive integers starting at 0'
+                )
+            if self.mc.sizes['sample_id'] == 0:
+                raise RMEMeasFormatError(
+                    'mc must contain at least one stochastic sample or be None'
+                )
+            if self.cov is not None:
+                sample = self.mc.isel(sample_id=0, drop=True)
+                nominal_cov = self.cov.isel(umech_id=0, drop=True)
+                same_layout = (
+                    sample.dims == nominal_cov.dims
+                    and sample.shape == nominal_cov.shape
+                    and sample.coords.to_dataset().equals(
+                        nominal_cov.coords.to_dataset()
+                    )
+                )
+                if not same_layout:
+                    raise RMEMeasFormatError(
+                        'mc samples must have the same dimensions and coordinates '
+                        'as the cov nominal value'
+                    )
+
+        expected_mechanisms = mechanism_values[1:] if mechanism_values else []
+        for attribute_name in ('covdofs', 'covcats'):
+            metadata = getattr(self, attribute_name)
+            if metadata is None:
+                continue
+            if not isinstance(metadata, xr.DataArray):
+                raise RMEMeasFormatError(
+                    f'{attribute_name} must be an xarray.DataArray'
+                )
+            if not metadata.dims or metadata.dims[0] != 'umech_id':
+                raise RMEMeasFormatError(
+                    f'First dimension of {attribute_name} MUST be called "umech_id"'
+                )
+            actual = [
+                str(value) for value in metadata.coords['umech_id'].values
+            ]
+            if actual != expected_mechanisms:
+                raise RMEMeasFormatError(
+                    f'{attribute_name} umech_id coordinates must match cov '
+                    'mechanisms, excluding nominal'
                 )
 
-        try:
-            self.covcats.umech_id
-        except AttributeError as exec:
-            raise RMEMeasFormatError(
-                'covcats doesnt have dimension called umech_id'
-            ) from exec
-
-        if self.covcats is not None:
-            if self.covcats.dims[0] != 'umech_id':
-                raise RMEMeasFormatError(
-                    'First dimension of a RMEMeas object covcats DataArray MUST be called "umech_id"'
-                )
-            if not all(self.covcats.coords['umech_id'] == self.umech_id):
-                raise RMEMeasFormatError(
-                    'covcats DataArray "umech_id" coord must match cov umech_id'
-                )
-
-        try:
-            self.covdofs.umech_id
-        except AttributeError as exec:
-            raise RMEMeasFormatError(
-                'covdofs doesnt have dimension called umech_id'
-            ) from exec
-
-        if self.covdofs is not None:
-            if self.covdofs.dims[0] != 'umech_id':
-                raise RMEMeasFormatError(
-                    'First dimension of a RMEMeas object .covdofs DataArray MUST be called "umech_id"'
-                )
-            if not all(self.covdofs.coords['umech_id'] == self.umech_id):
-                raise RMEMeasFormatError(
-                    '.covdofs DataArray "umech_id" coord must match cov umech_id'
-                )
+    def validate(self):
+        """Validate this object in place and return it for fluent use."""
+        self._validate_conventions()
+        return self
 
     @classmethod
     def from_nom(cls, name: str, nom: xr.DataArray) -> 'RMEMeas':
@@ -578,16 +605,19 @@ class RMEMeas[A](GroupSaveable):
         dummy = MUFMeasParser(path)
         dummy.open_data(from_csv, old_base_dir=old_dir, new_base_dir=new_dir)
 
-        # put into our format
+        # The XML format stores nominal and Monte Carlo data separately;
+        # retain that separation in RMEMeas.
         cov = [dummy.nominal_data] + dummy.covariance_data
-        mc = [dummy.nominal_data] + dummy.montecarlo_data
         umechids = ['nominal'] + [
             d['parameter_location'] for d in dummy.covariance_dict
         ]
         cov = xr.concat(cov, dim='umech_id')
         cov = cov.assign_coords(umech_id=umechids)
-        mc = xr.concat(mc, dim='sample_id')
-        mc = mc.assign_coords(sample_id=np.arange(mc.shape[0]))
+
+        mc = None
+        if dummy.montecarlo_data:
+            mc = xr.concat(dummy.montecarlo_data, dim='sample_id')
+            mc = mc.assign_coords(sample_id=np.arange(mc.shape[0]))
 
         return cls(dummy.name, cov, mc)
 
@@ -642,7 +672,7 @@ class RMEMeas[A](GroupSaveable):
         if self.cov is not None:
             cov_data = [self.cov[i, ...] for i in range(1, self.cov.shape[0])]
         if self.mc is not None:
-            mc_data = [self.mc[i, ...] for i in range(1, self.mc.shape[0])]
+            mc_data = [self.mc[i, ...] for i in range(self.mc.shape[0])]
 
         # initialize data inside a dummy legacy object
         dummy.init_from_data(
@@ -769,14 +799,14 @@ class RMEMeas[A](GroupSaveable):
         None.
 
         """
-        if self.mc is None:
-            self.mc = (
-                self.cov.loc[['nominal'], ...].copy().rename({'umech_id': 'sample_id'})
-            )
-            self.mc = self.mc.assign_coords({'sample_id': [0]})
-        ind = len(self.mc.sample_id)
+        ind = 0 if self.mc is None else self.mc.sizes['sample_id']
         new_sample = sample.expand_dims({'sample_id': [ind]})
-        self.mc = xr.concat([self.mc, new_sample], dim='sample_id', join='override')
+        if self.mc is None:
+            self.mc = new_sample
+        else:
+            self.mc = xr.concat(
+                [self.mc, new_sample], dim='sample_id', join='override'
+            )
 
     def add_umech(
         self,
@@ -875,6 +905,10 @@ class RMEMeas[A](GroupSaveable):
         """
         Get the nominal values of the RMEMeas object.
 
+        Covariance data provides an explicit nominal value. If only Monte Carlo
+        data is available, return the sample mean of all stored stochastic
+        trials.
+
         Raises
         ------
         Exception
@@ -893,11 +927,11 @@ class RMEMeas[A](GroupSaveable):
         except ValueError as exec:
             raise RMEMeasFormatError('no umech_id in cov') from exec
         try:
-            return self.mc.sel(sample_id=0, drop=True)
+            return self.mc.mean(dim='sample_id')
         except (TypeError, AttributeError, KeyError):
             pass
         except ValueError as exec:
-            raise RMEMeasFormatError('no umech_id in mc') from exec
+            raise RMEMeasFormatError('no sample_id in mc') from exec
         raise RMEMeasFormatError(
             'Both cov and mc attributes are empty. No nominal data available'
         )
@@ -976,7 +1010,6 @@ class RMEMeas[A](GroupSaveable):
         # individual uncertainties
         if deg or rad:
             s = _angle_diff(cov[1:, ...], cov[0, ...], deg=deg)
-            print(s)
         else:
             s = cov[1:, ...] - cov[0, ...]
         covunc = np.sqrt((s**2).sum(dim='umech_id'))
@@ -1033,9 +1066,12 @@ class RMEMeas[A](GroupSaveable):
         """
         try:
             if not deg and not rad:
+                # Use perturbation magnitude so real and imaginary components
+                # contribute nonnegative terms to the root-sum-square.
                 covunc = (
                     k
-                    * (((self.cov - self.cov[0, ...]) ** 2).sum(dim='umech_id')) ** 0.5
+                    * ((np.abs(self.cov - self.cov[0, ...]) ** 2).sum(dim='umech_id'))
+                    ** 0.5
                 )
             else:
                 if deg and rad:
@@ -1265,9 +1301,6 @@ class RMEMeas[A](GroupSaveable):
         # else, get the unused mechanisms, and copy their covariance categories
         if len(unused_locs) > 0:
             new.append(self.cov.sel(umech_id=unused_locs))
-            print('DELETE ME DEBUG')
-            print(newdofs.dtype, self.covdofs.dtype)
-            print(newdofs.umech_id.dtype, self.covdofs.umech_id.dtype)
             newdofs = xr.concat(
                 (newdofs, self.covdofs.loc[unused_locs]), dim='umech_id'
             )
@@ -1464,10 +1497,8 @@ class RMEMeas[A](GroupSaveable):
         Raises
         ------
         ValueError
-            If 'nominal' is passed to umech_id, or 0 is passed to
-            the sample_id. Those represent the nominal values and are
-            always included by default, since an uncertainty object should
-            always have a nominal value.
+            If 'nominal' is passed to umech_id. The covariance nominal is always
+            included because an uncertainty object must retain a nominal value.
 
         Returns
         -------
@@ -1512,15 +1543,19 @@ class RMEMeas[A](GroupSaveable):
         elif umechs is not None:
             raise ValueError('umech_id not recognized, must be iterable')
 
-        if sample_id or isinstance(sample_id, list):
-            if 0 in sample_id:
-                raise ValueError(
-                    '0 index always included (it is the nominal), dont pass it.'
+        if sample_id is not None:
+            if isinstance(sample_id, (str, bytes)) or not isinstance(
+                sample_id, Iterable
+            ):
+                raise ValueError('mcsamples not recognized, must be iterable')
+            keep = np.asarray(list(sample_id), dtype=int)
+            if keep.size == 0:
+                mc = None
+            else:
+                mc = self.mc.isel(sample_id=keep)
+                mc = mc.assign_coords(
+                    sample_id=np.arange(mc.sizes['sample_id'])
                 )
-            keep = np.append([0], np.array(sample_id, dtype=int))
-            mc = self.mc.isel(sample_id=keep)
-        elif sample_id is not None:
-            raise ValueError('mcsamples not recognized, must be iterable')
         # make sure nominal is first
         uid_sorted = np.append(
             cov.umech_id[cov.umech_id == 'nominal'],
@@ -1823,11 +1858,10 @@ class RMEMeas[A](GroupSaveable):
         """
 
         # param_names = param_names
-        def fit(arr):
-            # fit to the nominal first to generate an initial guess
+        def fit(arr, nominal):
+            # Fit the independent nominal first to generate an initial guess.
             coeffs = (
-                arr[0, ...]
-                .curvefit(
+                nominal.curvefit(
                     coords,
                     func,
                     reduce_dims=reduce_dims,
@@ -1857,10 +1891,11 @@ class RMEMeas[A](GroupSaveable):
             ).curvefit_coefficients
             return coeffs
 
-        cov = fit(self.cov)
+        nominal = self.nom
+        cov = fit(self.cov, nominal)
         mc = None
         if self.mc is not None:
-            mc = fit(self.mc)
+            mc = fit(self.mc, nominal)
         return RMEMeas(self.name, cov, mc, self.covdofs.copy(), self.covcats.copy())
 
     def curveval(

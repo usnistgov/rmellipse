@@ -27,6 +27,7 @@ def test_from_dist():
     )
     assert np.isclose(a.nom, nom)
     assert np.isclose(a.stdunc().cov, std)
+    assert a.mc.sizes['sample_id'] == 1000
 
     a = from_dist(name='dummy', nom=1, std=1, dist='normal', use_sample_mean=False)
     assert np.isclose(a.nom, nom)
@@ -317,6 +318,8 @@ def test_xml():
 
     m2 = RMEMeas.from_xml(str(str(target / 'test_name.meas')), from_csv=from_txt)
     assert (m2.cov.values == m1.cov.values).all()
+    assert (m2.mc.values == m1.mc.values).all()
+    np.testing.assert_array_equal(m2.mc.sample_id, np.arange(m1.mc.shape[0]))
 
 
 def test_copy():
@@ -493,12 +496,13 @@ def test_indexing():
         raised = True
     assert raised
 
-    raised = False
-    try:
-        test.usel(sample_id=[0])
-    except ValueError:
-        raised = True
-    assert raised
+    first_sample = test.usel(sample_id=[0])
+    assert first_sample.mc.sizes['sample_id'] == 1
+    np.testing.assert_array_equal(first_sample.mc.sample_id, [0])
+    xr.testing.assert_equal(
+        first_sample.mc.isel(sample_id=0, drop=True),
+        test.mc.isel(sample_id=0, drop=True),
+    )
 
     raised = False
     try:
@@ -509,14 +513,17 @@ def test_indexing():
 
     usel = test.usel(umech_id=[test.umech_id[0]])
     assert len(usel.umech_id) == 1
-    # no cov samples
+    # no covariance mechanisms
     usel = test.usel(umech_id=[])
     assert len(usel.umech_id) == 0
     usel = test.usel(sample_id=[2, 3])
-    assert usel.mc.shape[0] == 3  # nominal plus 2 samples
+    assert usel.mc.shape[0] == 2
+    np.testing.assert_array_equal(usel.mc.sample_id, [0, 1])
+    np.testing.assert_allclose(usel.mc, test.mc.isel(sample_id=[2, 3]))
     usel = test.usel(umech_id=[], sample_id=[2, 3])
-    assert usel.mc.shape[0] == 3 and len(usel.umech_id) == 0
+    assert usel.mc.shape[0] == 2 and len(usel.umech_id) == 0
     assert 'nominal' not in usel.umech_id
+    assert test.usel(sample_id=[]).mc is None
 
 
 def test_make_umechs_unique():
@@ -549,7 +556,7 @@ def test_nom():
     m = make_example_meas(N_mc_samples=10)
     test = m.copy()
     test.cov = None
-    test.nom
+    xr.testing.assert_allclose(test.nom, m.mc.mean(dim='sample_id'))
 
     test = m.copy()
     test.mc = None
@@ -579,7 +586,7 @@ def test_umech_id_attr():
         test.umech_id
 
 
-def test_confint():
+def test_confint(capsys):
     m = from_dist('dummy', 0, 1.0, dist='gaussian')
     cl, cu = m.confint(0.95)
     assert np.isclose(cu, 1.96, atol=0.01)
@@ -589,6 +596,8 @@ def test_confint():
 
     with pytest.raises(ValueError):
         m.confint(0.95, rad=True, deg=True)
+
+    assert capsys.readouterr().out == ''
 
 
 def test_dof_fails():
@@ -633,6 +642,211 @@ def test_create_empty_categories():
     assert 'a' in m.covcats.categories
     m.create_empty_categories(['a', 'b', 'c'])
     assert all([ci in m.covcats.categories for ci in ['a', 'b', 'c']])
+
+
+def test_add_mc_sample_stores_the_first_stochastic_trial_at_zero():
+    measurement = RMEMeas.from_nom('samples', xr.DataArray([100.0], dims='point'))
+    first_draw = xr.DataArray([1.5], dims='point')
+    second_draw = xr.DataArray([2.5], dims='point')
+
+    measurement.add_mc_sample(first_draw)
+    measurement.add_mc_sample(second_draw)
+
+    assert measurement.mc.sizes['sample_id'] == 2
+    np.testing.assert_array_equal(measurement.mc.sample_id, [0, 1])
+    xr.testing.assert_equal(measurement.mc.isel(sample_id=0, drop=True), first_draw)
+    xr.testing.assert_equal(measurement.mc.isel(sample_id=1, drop=True), second_draw)
+    xr.testing.assert_equal(measurement.nom, xr.DataArray([100.0], dims='point'))
+
+
+def test_mc_standard_uncertainty_uses_every_stored_stochastic_trial():
+    measurement = RMEMeas(
+        name='stochastic-only uncertainty',
+        cov=xr.DataArray(
+            [100.0], dims='umech_id', coords={'umech_id': ['nominal']}
+        ),
+        mc=xr.DataArray(
+            [0.0, 2.0], dims='sample_id', coords={'sample_id': [0, 1]}
+        ),
+    )
+
+    assert measurement.stdunc().mc.item() == pytest.approx(1.0)
+
+
+def test_from_dist_sample_statistics_use_all_stochastic_trials():
+    np.random.seed(1234)
+    measurement = from_dist(
+        name='sample statistics',
+        nom=10.0,
+        std=2.0,
+        dist='normal',
+        samples=12,
+        use_sample_mean=True,
+    )
+
+    assert measurement.mc.sizes['sample_id'] == 12
+    assert measurement.nom.item() == pytest.approx(
+        measurement.mc.mean(dim='sample_id').item()
+    )
+    assert (measurement.cov.isel(umech_id=1) - measurement.nom).item() == pytest.approx(
+        measurement.mc.std(dim='sample_id', ddof=1).item()
+    )
+
+
+def test_curvefit_uses_the_independent_nominal_to_seed_mc_fits(monkeypatch):
+    calls = []
+
+    def fake_curvefit(array, *args, **kwargs):
+        calls.append(array.copy())
+        leading = next(
+            (dim for dim in ('umech_id', 'sample_id') if dim in array.dims),
+            None,
+        )
+        if leading is None:
+            coefficients = xr.DataArray(
+                [array.mean().item()], dims='param', coords={'param': ['offset']}
+            )
+        else:
+            coefficients = array.mean(dim='x').expand_dims(param=['offset'])
+            coefficients = coefficients.transpose(leading, 'param')
+        return xr.Dataset({'curvefit_coefficients': coefficients})
+
+    monkeypatch.setattr(xr.DataArray, 'curvefit', fake_curvefit)
+    measurement = RMEMeas(
+        name='fit',
+        cov=xr.DataArray(
+            [[10.0, 10.0], [11.0, 11.0]],
+            dims=('umech_id', 'x'),
+            coords={'umech_id': ['nominal', 'source'], 'x': [0.0, 1.0]},
+        ),
+        mc=xr.DataArray(
+            [[100.0, 100.0], [101.0, 101.0]],
+            dims=('sample_id', 'x'),
+            coords={'sample_id': [0, 1], 'x': [0.0, 1.0]},
+        ),
+    )
+
+    measurement.curvefit('x', lambda x, offset: x + offset)
+
+    assert len(calls) == 4
+    np.testing.assert_allclose(calls[0], [10.0, 10.0])
+    np.testing.assert_allclose(calls[2], [10.0, 10.0])
+    np.testing.assert_allclose(calls[3].isel(sample_id=0), [100.0, 100.0])
+
+
+def test_constructor_defaults_name_without_mutating_attrs():
+    cov = xr.DataArray(
+        [1.0],
+        dims='umech_id',
+        coords={'umech_id': ['nominal']},
+    )
+    attrs = {'nested': {'value': 1}}
+
+    measurement = RMEMeas(cov=cov, attrs=attrs)
+    measurement.attrs['nested']['value'] = 2
+
+    assert measurement.name == 'RMEMeas'
+    assert attrs == {'nested': {'value': 1}}
+
+
+def test_validate_rejects_noncanonical_monte_carlo_structure():
+    cov = xr.DataArray(
+        [1.0],
+        dims='umech_id',
+        coords={'umech_id': ['nominal']},
+    )
+    bad_ids = RMEMeas(
+        name='bad ids',
+        cov=cov,
+        mc=xr.DataArray(
+            [1.0, 1.1],
+            dims='sample_id',
+            coords={'sample_id': [0, 2]},
+        ),
+    )
+    with pytest.raises(RMEMeasFormatError, match='consecutive integers'):
+        bad_ids.validate()
+
+    stochastic_first_row = RMEMeas(
+        name='stochastic first row',
+        cov=cov,
+        mc=xr.DataArray(
+            [9.0, 1.1],
+            dims='sample_id',
+            coords={'sample_id': [0, 1]},
+        ),
+    )
+    stochastic_first_row.validate()
+
+    layout_cov = xr.DataArray(
+        [[1.0, 2.0]],
+        dims=('umech_id', 'point'),
+        coords={'umech_id': ['nominal'], 'point': [0, 1]},
+    )
+    bad_layout = RMEMeas(
+        name='bad layout',
+        cov=layout_cov,
+        mc=xr.DataArray(
+            [[0.9, 2.1]],
+            dims=('sample_id', 'point'),
+            coords={'sample_id': [0], 'point': [0, 2]},
+        ),
+    )
+    with pytest.raises(RMEMeasFormatError, match='dimensions and coordinates'):
+        bad_layout.validate()
+
+
+def test_validate_rechecks_metadata_after_in_place_edits():
+    measurement = RMEMeas(
+        name='metadata',
+        cov=xr.DataArray(
+            [1.0, 1.2],
+            dims='umech_id',
+            coords={'umech_id': ['nominal', 'source']},
+        ),
+    )
+    measurement.covdofs = measurement.covdofs.assign_coords(
+        umech_id=['different source']
+    )
+
+    with pytest.raises(RMEMeasFormatError, match='covdofs umech_id coordinates'):
+        measurement.validate()
+
+
+def test_stdunc_uses_complex_perturbation_magnitude():
+    measurement = RMEMeas(
+        name='complex uncertainty',
+        cov=xr.DataArray(
+            [1.0 + 2.0j, 1.3 + 2.4j],
+            dims='umech_id',
+            coords={'umech_id': ['nominal', 'complex source']},
+        ),
+    )
+
+    assert measurement.stdunc().cov.item() == pytest.approx(0.5)
+
+
+def test_empty_construction_is_valid():
+    empty = RMEMeas()
+
+    assert empty.name == 'RMEMeas'
+    assert empty.cov is None
+    assert empty.mc is None
+    assert empty.validate() is empty
+
+
+def test_legacy_monte_carlo_axis_is_validated_after_rename():
+    legacy = RMEMeas(
+        name='legacy Monte Carlo',
+        mc=xr.DataArray(
+            [1.0, 1.1],
+            dims='umech_id',
+            coords={'umech_id': [0, 1]},
+        ),
+    )
+
+    assert legacy.mc.dims == ('sample_id',)
+    assert legacy.validate() is legacy
 
 
 if __name__ == '__main__':

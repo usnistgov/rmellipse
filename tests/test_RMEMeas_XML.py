@@ -22,6 +22,7 @@ def test_umech_id():
 
     expected = ['TypeD_S_params_PCA_1', 'TypeD_S_params_PCA_2', 'TypeD_S_params_PCA_0']
     assert all([e == u for e, u in zip(expected, data.umech_id)])
+    assert data.mc is None
 
 
 if __name__ == '__main__':

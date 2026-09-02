@@ -93,13 +93,13 @@ complete.
 ```
 tools/profile.sh <path/to/script.py>
 ```
+> [!Important]
+In accordance with Guidance for NIST Researchers' Use of AI Tools v1.0, the use of AI tools are disclosed. These code and documentation changes were created with the assistance of AI tool (ChatGPT Sol 5.6), developed by OpenAI. The AI tool was used, in accordance with the author's instructions, to search, edit, modify, test, and document this codebase, as reflected in the diff(s) under this pull request. All content has been reviewed to ensure accuracy and originality.
 
 ## Acknowledgements
 The development of RMEllipse is partially funded through the [CHIPS Metrology program](https://www.nist.gov/chips/research-development-programs/metrology-program). Our goal is to use it to disseminate RF calibration and uncertainty analysis techniques to monitor RF power delivered to plasma etching and deposition tools used in semiconductor manufacturing.
 
 ## Authors
 
-Contributors names and contact info
-
-Daniel C. Gray, Zenn C. Roberts, Aaron M. Hagerstrom
+Daniel C. Gray, Joshua Kast, Zenn C. Roberts, Aaron M. Hagerstrom
 

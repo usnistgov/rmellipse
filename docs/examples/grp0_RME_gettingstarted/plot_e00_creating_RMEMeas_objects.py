@@ -153,19 +153,16 @@ print(linunc)
 # samples.
 sample = meas.usel(umech_id=[], sample_id=[1])
 
-print(sample.mc[1, ...])
+print(sample.mc[0, ...])
 
 # %%%
-# While the xarray indexing methods index across uncertainty mechanisms and
-# Monte Carlo samples, the usel method indexes into uncertainty mechanisms
-# and Monte Carlo samples. In either case, the nominal values (the 'nominal'
-# parameter location and 0th Monte Carlo sample) are always protected and
-# always kept regardless of method.
+# While the xarray indexing methods retain all uncertainty rows, ``usel`` can
+# select specific covariance mechanisms and stochastic Monte Carlo samples.
+# The covariance nominal (the ``'nominal'`` mechanism row) is always retained;
+# Monte Carlo sample 0 is an ordinary stochastic trial and may be selected.
 #
-# For example, using usel and giving empty lists for umech_id
-# and mcsamples throws away all the uncertainty information, and just keeps
-# the nominal. This effectively means it no longer has any associated
-# uncertainties.
+# For example, giving empty lists for ``umech_id`` and ``sample_id`` throws
+# away all uncertainty information and keeps only the covariance nominal.
 
 nominal_only = meas.usel(umech_id=[], sample_id=[])
 

@@ -49,21 +49,17 @@ myprop = rme.RMEProp(montecarlo_sims=1000, sensitivity=True)
 # uncertainty mechanism with the same umech_id (i.e. they both have a perturbed copy of the nominal
 # with the same index label), then they are assume to be fully correlated.
 #
-# The`RMEMeas.mc` attribute stores the monte-carlo data. It is also an xarray.DataArray,
-# where the first dimension is always called umech_id, and the first
-# index of the dimension represents the nominal value. However, the index is
-# instead a numeric index, starting at zero and counting up. Indexes starting from
-# 1 and up of this dimension represent samples of the probability distribution of
-# the measurement. The RMEMeas will randomly sample from this distribution to
-# perform the monte-carlo analysis.
+# The `RMEMeas.mc` attribute stores Monte Carlo data in an xarray.DataArray.
+# Its first dimension is called `sample_id`; every row is a stochastic sample,
+# with integer labels starting at zero. The independent nominal value remains in
+# the first row of `RMEMeas.cov`.
 #
 # In this case, we will create a voltage and current measurement, both drawing
 # from a gaussian distribution. Because we are creating a measurement using
 # a float, the resulting`RMEMeas.cov`attribute will be shape (2,) (index 0 for the nominal
 # value and index 1 representing the uncertainty associated with the Gaussian
-# we sampled from). The`RMEMeas.mc` attribute will have shape (1001,) (index 0 for the
-# nominal and index 1-1001 representing the samples from the gaussian
-# distribution)
+# we sampled from). The `RMEMeas.mc` attribute will have shape (1000,), with
+# every index representing a sample from the Gaussian distribution.
 
 
 def make_measurement(d1_coords, std=0.1):
@@ -123,10 +119,10 @@ print('V linear uncertainty mechanisms :', V.umech_id)
 # that don't exist in a variable are filled with a copy of the nominal in the
 # newly aligned dimension.
 #
-# For the Monte Carlo analysis, the propagator will pick random samples from the
-# data stored in the`RMEMeas.mc` attribute. We defined 1000 montecarlo sims in our propagator
-# so v and i will have shape (1001,) when passed through our power function (
-# 1000 random samples and 1 copy of the nominal value).
+# For the Monte Carlo analysis, the propagator uses samples from the data stored
+# in the `RMEMeas.mc` attribute. We defined 1000 Monte Carlo simulations in our
+# propagator, so v and i will have shape (1000,) when passed through our power
+# function.
 #
 # Note that while the propagator is design to encourage vectorization for
 # efficiency, if that is not possible simply you can turn off vectorization

@@ -81,8 +81,8 @@ def from_dist(
 
     def choose_mean_nom(vals, nom, std):
         if use_sample_mean:
-            nom = np.mean(vals[1:, ...], axis=0)
-            std = np.std(vals[1:, ...], axis=0, ddof=1)
+            nom = np.mean(vals, axis=0)
+            std = np.std(vals, axis=0, ddof=1)
         return nom, std
 
     # make the montecarlo distributions
@@ -92,13 +92,12 @@ def from_dist(
             return np.random.normal(loc=n, scale=s)
 
         f = np.vectorize(f)
-        vals = np.array([f(nom, std) for i in range(samples + 1)])
+        vals = np.array([f(nom, std) for i in range(samples)])
         nom, std = choose_mean_nom(vals, nom, std)
-        vals[0] = nom
         dims = list(vals.shape)
         dims[0] = MC_DIM_NAME
         mc = xr.DataArray(
-            data=vals, dims=dims, coords={MC_DIM_NAME: np.arange(0, samples + 1)}
+            data=vals, dims=dims, coords={MC_DIM_NAME: np.arange(samples)}
         )
 
     if dist == 'uniform' or dist == 'rectangular':
@@ -110,13 +109,12 @@ def from_dist(
             return np.random.uniform(low=l, high=h)
 
         f = np.vectorize(f)
-        vals = np.array([f(high, low) for i in range(samples + 1)])
+        vals = np.array([f(high, low) for i in range(samples)])
         nom, std = choose_mean_nom(vals, nom, std)
-        vals[0] = nom
         dims = list(vals.shape)
         dims[0] = MC_DIM_NAME
         mc = xr.DataArray(
-            data=vals, dims=dims, coords={MC_DIM_NAME: np.arange(0, samples + 1)}
+            data=vals, dims=dims, coords={MC_DIM_NAME: np.arange(samples)}
         )
 
     cov_dims = [cd for cd in dims]

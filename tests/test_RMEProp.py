@@ -26,8 +26,7 @@ def test_sample_distributions():
     sampled = RMEProp._sample_distribution(10, flt)
     assert sampled == flt
     sampled = RMEProp._sample_distribution(10, m)
-    # shoul return 1 + number of samples (acounting for nominal)
-    assert len(sampled.sample_id) == 11
+    assert len(sampled.sample_id) == 10
 
 
 def test_MIMO_vectorized():
@@ -201,7 +200,7 @@ def test_mc_linear_propagate_options():
     myprop.settings['montecarlo_sims'] = N
 
     test1 = mult(V, I)
-    assert test1.mc.shape == (N + 1,)
+    assert test1.mc.shape == (N,)
     assert test1.cov.shape == (3,)
     assert test1.nom == 3
     test1.umech_id
@@ -212,7 +211,7 @@ def test_mc_linear_propagate_options():
     myprop.settings['montecarlo_sims'] = N
 
     test1 = mult(V, I)
-    assert test1.mc.shape == (N + 1,)
+    assert test1.mc.shape == (N,)
     assert test1.cov.shape == (1,)
     assert test1.nom == 3
     test1.umech_id
@@ -245,7 +244,7 @@ def test_mc_linear_propagate_options():
     myprop.settings['montecarlo_sims'] = N
 
     test1 = mult(V, I)
-    assert test1.mc.shape == (N + 1,)
+    assert test1.mc.shape == (N,)
     assert test1.cov.shape == (3,)
     assert test1.nom == 3
     test1.umech_id
@@ -256,7 +255,7 @@ def test_mc_linear_propagate_options():
     myprop.settings['montecarlo_sims'] = N
 
     test1 = mult(V, I)
-    assert test1.mc.shape == (N + 1,)
+    assert test1.mc.shape == (N,)
     assert test1.cov.shape == (1,)
     assert test1.nom == 3
     test1.umech_id
@@ -427,6 +426,232 @@ def test_combine():
 
     with pytest.raises(ValueError):
         prop.combine()
+
+
+def _regression_measurement(name, mechanism_ids, *, mc=None):
+    nominal = xr.DataArray([1.0, 2.0], dims='point', coords={'point': [0, 1]})
+    rows = [nominal]
+    for index, _ in enumerate(mechanism_ids, start=1):
+        rows.append(nominal + index)
+    cov = xr.concat(
+        rows,
+        dim=xr.IndexVariable('umech_id', ['nominal', *mechanism_ids]),
+    )
+    return RMEMeas(name=name, cov=cov, mc=mc)
+
+
+def test_unique_mechanisms_preserve_first_seen_order():
+    first = _regression_measurement('first', ['b', 'a'])
+    second = _regression_measurement('second', ['c', 'b'])
+
+    assert RMEProp._get_unique_umech_id(first, second) == ['b', 'a', 'c']
+
+
+def test_sample_distribution_counts_rows_not_coordinate_values():
+    mc = xr.DataArray(
+        [[1.1, 2.1], [0.9, 1.9], [1.2, 2.2]],
+        dims=('sample_id', 'point'),
+        coords={'sample_id': [0, 10, 20], 'point': [0, 1]},
+    )
+    measurement = _regression_measurement('mc', ['source'], mc=mc)
+
+    sampled = RMEProp._sample_distribution(3, measurement)
+    np.testing.assert_allclose(sampled, mc)
+    np.testing.assert_array_equal(sampled.sample_id, [0, 1, 2])
+    with pytest.raises(ValueError, match='3 available trials'):
+        RMEProp._sample_distribution(4, measurement)
+    with pytest.raises(ValueError, match='non-negative integer'):
+        RMEProp._sample_distribution(-1, measurement)
+
+
+@pytest.mark.parametrize('multiple_outputs', [False, True])
+def test_unvectorized_keyword_inputs_propagate_linear_and_mc_rows(multiple_outputs):
+    cov = xr.DataArray(
+        [2.0, 2.5],
+        dims='umech_id',
+        coords={'umech_id': ['nominal', 'keyword source']},
+    )
+    mc = xr.DataArray(
+        [1.8, 2.3],
+        dims='sample_id',
+        coords={'sample_id': [0, 1]},
+    )
+    measurement = RMEMeas(name='keyword', cov=cov, mc=mc)
+    propagator = RMEProp(
+        sensitivity=True,
+        montecarlo_sims=2,
+        vectorize=False,
+        set_active=False,
+    )
+
+    @propagator.propagate
+    def add_keyword(value, *, offset):
+        added = value + offset
+        if multiple_outputs:
+            return added, value - offset
+        return added
+
+    result = add_keyword(1.0, offset=measurement)
+
+    results = result if multiple_outputs else (result,)
+    expected = [([3.0, 3.5], [2.8, 3.3])]
+    if multiple_outputs:
+        expected.append(([-1.0, -1.5], [-0.8, -1.3]))
+    for output, (expected_cov, expected_mc) in zip(results, expected):
+        np.testing.assert_allclose(output.cov.values, expected_cov)
+        np.testing.assert_allclose(output.mc.values, expected_mc)
+
+
+def test_unvectorized_monte_carlo_preserves_a_single_stochastic_trial():
+    measurement = RMEMeas(
+        name='one trial',
+        cov=xr.DataArray(
+            [10.0], dims='umech_id', coords={'umech_id': ['nominal']}
+        ),
+        mc=xr.DataArray(
+            [9.5], dims='sample_id', coords={'sample_id': [0]}
+        ),
+    )
+    propagator = RMEProp(
+        sensitivity=False,
+        montecarlo_sims=1,
+        vectorize=False,
+        set_active=False,
+    )
+
+    @propagator.propagate
+    def double(value):
+        return 2.0 * value
+
+    result = double(measurement)
+
+    assert result.mc.dims == ('sample_id',)
+    np.testing.assert_array_equal(result.mc.sample_id, [0])
+    np.testing.assert_allclose(result.mc, [19.0])
+    assert result.nom.item() == pytest.approx(20.0)
+
+
+def test_montecarlo_combine_adds_type_a_noise_to_every_trial(monkeypatch):
+    measurement = RMEMeas(
+        name='combine samples',
+        cov=xr.DataArray(
+            [15.0], dims='umech_id', coords={'umech_id': ['nominal']}
+        ),
+        mc=xr.DataArray(
+            [10.0, 20.0], dims='sample_id', coords={'sample_id': [0, 1]}
+        ),
+    )
+    monkeypatch.setattr(
+        np.random,
+        'normal',
+        lambda *, size: np.ones(size),
+    )
+
+    combined = RMEProp._montecarlo_combine(
+        (measurement,), np.array([[1.0]]), montecarlo_trials=2
+    )
+
+    np.testing.assert_allclose(combined, [11.0, 21.0])
+
+
+def test_repack_restores_reserved_axes_to_the_front():
+    mc = xr.DataArray(
+        [[1.1, 2.1], [0.9, 1.9]],
+        dims=('sample_id', 'point'),
+        coords={'sample_id': [0, 1], 'point': [0, 1]},
+    )
+    measurement = _regression_measurement('axis order', ['source'], mc=mc)
+    propagator = RMEProp(
+        sensitivity=True,
+        montecarlo_sims=1,
+        vectorize=True,
+        set_active=False,
+    )
+
+    @propagator.propagate
+    def physical_axis_first(value):
+        structural = 'umech_id' if 'umech_id' in value.dims else 'sample_id'
+        return value.transpose('point', structural)
+
+    result = physical_axis_first(measurement)
+
+    assert result.cov.dims == ('umech_id', 'point')
+    assert result.mc.dims == ('sample_id', 'point')
+
+
+def test_public_metadata_merge_wrappers_match_existing_algorithms():
+    measurement = _regression_measurement('metadata', ['source'])
+    mechanism_ids = ['source']
+
+    expected_categories = RMEProp._get_new_categories(
+        mechanism_ids, [measurement], {}, sensitivity=True
+    )
+    expected_dofs = RMEProp._get_new_covdofs(
+        mechanism_ids, [measurement], {}, sensitivity=True
+    )
+
+    xr.testing.assert_equal(
+        RMEProp.merge_categories(mechanism_ids, [measurement], {}),
+        expected_categories,
+    )
+    xr.testing.assert_equal(
+        RMEProp.merge_covdofs(mechanism_ids, [measurement], {}),
+        expected_dofs,
+    )
+
+
+def test_constructor_copies_mutable_mapping_settings():
+    first = RMEProp(set_active=False)
+    second = RMEProp(set_active=False)
+
+    first.settings['common_coords']['frequency'] = [1.0]
+    first.settings['interp_kwargs']['method'] = 'nearest'
+
+    assert second.settings['common_coords'] == {}
+    assert second.settings['interp_kwargs'] == {}
+
+    supplied_coords = {}
+    supplied_interp = {}
+    copied = RMEProp(
+        common_coords=supplied_coords,
+        interp_kwargs=supplied_interp,
+        set_active=False,
+    )
+    copied.settings['common_coords']['frequency'] = [2.0]
+    copied.settings['interp_kwargs']['method'] = 'linear'
+
+    assert supplied_coords == {}
+    assert supplied_interp == {}
+
+
+def test_generate_error_vectors_uses_requested_observation_axis():
+    observations = xr.DataArray(
+        [[1.0, 2.0], [2.0, 4.0], [3.0, 6.0]],
+        dims=('repeat', 'frequency'),
+        coords={'frequency': [1.0, 2.0]},
+    )
+    measurement = RMEMeas(
+        name='repeated observations',
+        cov=observations.expand_dims(umech_id=['nominal']),
+    )
+
+    error_vectors, type_a = RMEProp._generate_error_vectors(
+        (measurement,),
+        error_of_mean=True,
+        n_single_values=0.9,
+        generate_across_dim='repeat',
+    )
+
+    assert error_vectors.shape == (1, 2)
+    assert type_a.dims == ('umech_id', 'frequency')
+    np.testing.assert_allclose(
+        type_a.isel(umech_id=0).values - error_vectors[0],
+        [2.0, 4.0],
+    )
+    np.testing.assert_allclose(
+        np.abs(error_vectors[0]),
+        np.array([1.0, 2.0]) / np.sqrt(3.0),
+    )
 
 
 if __name__ == '__main__':

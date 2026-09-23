@@ -115,7 +115,8 @@ plot_gallery = True
 try:
     tags = get_all_git_tags()
     print(
-        'All tags : ', tags + ['v99.99.99-alpha', 'v100.99.99-alpha.1']
+        'All tags : ',
+        tags,  # this was to see if the filters were working + ['v99.99.99-alpha', 'v100.99.99-alpha.1']
     )  # these should get filtered out
     tags = [t for t in tags if '-' not in tags]
     print('Filtered tags: ', tags)

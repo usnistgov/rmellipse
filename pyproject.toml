@@ -62,21 +62,27 @@ dependencies = [
   "jsonschema>=4.25.0",
   "gitpython>=3.1.45",
   "pydantic>=2.13.4",
+  "defusedxml>=0.7.1",
 ]
 license-files = ["LICENSE.md"]
+
+[tool.bandit]
+targets = ["src/rmellipse"]
+skips = ["B101"] # B101 is a warning that assert is used, not a security risk
+
 
 [project.scripts]
 rme = 'rmellipse._cli:main'
 
 [dependency-groups]
 dev = [
-    "astroid==3.3.8",
-    "numpydoc==1.7.0",
-    "pytest==8.3.3",
-    "pytest-cov==6.1.1",
+    "astroid>=3.3.8",
+    "numpydoc>=1.7.0",
+    "pytest>=8.3.3",
+    "pytest-cov>=6.1.1",
     "sphinx>=8.0,<9",
-    "sphinx-autoapi==3.6.0",
-    "sphinx-gallery==0.17.0",
+    "sphinx-autoapi>=3.6.0",
+    "sphinx-gallery>=0.17.0",
     "snakeviz>=2.2.2",
     "sphinx-multiversion>=0.2.4",
     "pre-commit>=4.3.0",
@@ -85,5 +91,7 @@ dev = [
     "ipython>=9.16.1",
     "spyder-kernels==3.1.*",
     "myst-parser>=5.1",
-    "sphinx-click"
+    "sphinx-click",
+    "pip-audit>=2.10.1",
+    "bandit>=1.9.4",
 ]

@@ -9,7 +9,11 @@ the package can read/write to them.
 """
 
 import os  # to manipulate file paths
-import xml.etree.ElementTree as ET  # to manipulate XML
+
+# Element and SubElement are only used for generating new XML data,
+# no sec risk
+from xml.etree.ElementTree import Element, SubElement, ElementTree  # nosec B405
+import defusedxml.ElementTree as DET  # to manipulate XML
 
 
 def _indent(elem, level=0):
@@ -61,7 +65,7 @@ class MUFMeasParser:
         file : str
             Path to file to be opened.
         """
-        self.etree = ET.parse(file)
+        self.etree = DET.parse(file)
         self.name = self._parse_name()
         self.parmameter_dict = self._parse_parameter_dict()
         self.covariance_dict = self._parse_covariance_dict()
@@ -381,42 +385,40 @@ class MUFMeasParser:
             'FullName': 'Me_SplitContainer2__GroupBox5_MeasurementDocumentation',
         }
 
-        CorrectedMeasurement = ET.Element(
+        CorrectedMeasurement = Element(
             'CorrectedMeasurement', CorrectedMeasurement_attrib
         )
-        MenuStripTextBoxes = ET.SubElement(CorrectedMeasurement, 'MenuStripTextBoxes')
-        ET.SubElement(
-            MenuStripTextBoxes, 'CreatedByUserName', CreatedByUserName_attrbib
-        )
-        ET.SubElement(MenuStripTextBoxes, 'CreatedByProgram', CreatedByProgram_attrib)
-        ET.SubElement(MenuStripTextBoxes, 'CreatedByVersion', CreatedByVersion_attrib)
-        ET.SubElement(MenuStripTextBoxes, 'CreatedByDate', CreatedByDate_attrib)
-        ET.SubElement(
+        MenuStripTextBoxes = SubElement(CorrectedMeasurement, 'MenuStripTextBoxes')
+        SubElement(MenuStripTextBoxes, 'CreatedByUserName', CreatedByUserName_attrbib)
+        SubElement(MenuStripTextBoxes, 'CreatedByProgram', CreatedByProgram_attrib)
+        SubElement(MenuStripTextBoxes, 'CreatedByVersion', CreatedByVersion_attrib)
+        SubElement(MenuStripTextBoxes, 'CreatedByDate', CreatedByDate_attrib)
+        SubElement(
             MenuStripTextBoxes, 'CreatedByFirstFileName', CreatedByFirstFileName_attrib
         )
-        ET.SubElement(
+        SubElement(
             MenuStripTextBoxes,
             'CreatedByUpdatedFileName',
             CreatedByUpdatedFileName_attrib,
         )
-        ET.SubElement(
+        SubElement(
             MenuStripTextBoxes,
             'CreatedFromFirstFileName',
             CreatedFromFirstFileName_attrib,
         )
-        ET.SubElement(
+        SubElement(
             MenuStripTextBoxes,
             'CreatedFromUpdatedFileName',
             CreatedFromUpdatedFileName_attrib,
         )
-        ET.SubElement(MenuStripTextBoxes, 'MyVersion', MyVersion_attrib)
+        SubElement(MenuStripTextBoxes, 'MyVersion', MyVersion_attrib)
 
         # **********************************************************************
         # Nominal, Covariance, and Monte-Carlo information is under Controls
         # **********************************************************************
-        Controls = ET.SubElement(CorrectedMeasurement, 'Controls')
-        ET.SubElement(Controls, 'MeasurementName', MeasurementName_attrib)
-        ET.SubElement(
+        Controls = SubElement(CorrectedMeasurement, 'Controls')
+        SubElement(Controls, 'MeasurementName', MeasurementName_attrib)
+        SubElement(
             Controls, 'MeasurementDocumentation', MeasurementDocumentation_attrib
         )
 
@@ -429,7 +431,7 @@ class MUFMeasParser:
             'Count': str(len(self.montecarlo_dict)),
         }
 
-        MonteCarloPerturbedSParams = ET.SubElement(
+        MonteCarloPerturbedSParams = SubElement(
             Controls, 'MonteCarloPerturbedSParams', MonteCarloPerturbedSParams_attrib
         )
         for i in range(len(self.montecarlo_dict)):
@@ -446,9 +448,9 @@ class MUFMeasParser:
                 'Text': self.montecarlo_dict[i]['location'],
             }
 
-            Item = ET.SubElement(MonteCarloPerturbedSParams, 'Item', Item_attrib)
-            ET.SubElement(Item, 'SubItem', SubItem0_attrib)
-            ET.SubElement(Item, 'SubItem', SubItem1_attrib)
+            Item = SubElement(MonteCarloPerturbedSParams, 'Item', Item_attrib)
+            SubElement(Item, 'SubItem', SubItem0_attrib)
+            SubElement(Item, 'SubItem', SubItem1_attrib)
 
         # **********************************************************************
         # Nominal
@@ -459,16 +461,16 @@ class MUFMeasParser:
             'Count': '1',
         }
 
-        MeasSParams = ET.SubElement(Controls, 'MeasSParams', MeasSParams_attrib)
+        MeasSParams = SubElement(Controls, 'MeasSParams', MeasSParams_attrib)
         Item_attrib = {'Index': '0', 'Text': self.nominal_dict['name'], 'Count': '2'}
 
         SubItem0_attrib = {'Index': '0', 'Text': self.nominal_dict['name']}
 
         SubItem1_attrib = {'Index': '1', 'Text': self.nominal_dict['location']}
 
-        Item = ET.SubElement(MeasSParams, 'Item', Item_attrib)
-        ET.SubElement(Item, 'SubItem', SubItem0_attrib)
-        ET.SubElement(Item, 'SubItem', SubItem1_attrib)
+        Item = SubElement(MeasSParams, 'Item', Item_attrib)
+        SubElement(Item, 'SubItem', SubItem0_attrib)
+        SubElement(Item, 'SubItem', SubItem1_attrib)
 
         # **********************************************************************
         # Covariance
@@ -479,7 +481,7 @@ class MUFMeasParser:
             'Count': str(len(self.covariance_dict)),
         }
 
-        PerturbedSParams = ET.SubElement(
+        PerturbedSParams = SubElement(
             Controls, 'PerturbedSParams', PerturbedSParams_attrib
         )
         for i in range(len(self.covariance_dict)):
@@ -501,15 +503,15 @@ class MUFMeasParser:
                 'Text': self.covariance_dict[i]['parameter_location'],
             }
 
-            Item = ET.SubElement(PerturbedSParams, 'Item', Item_attrib)
-            ET.SubElement(Item, 'SubItem', SubItem0_attrib)
-            ET.SubElement(Item, 'SubItem', SubItem1_attrib)
-            ET.SubElement(Item, 'SubItem', SubItem2_attrib)
+            Item = SubElement(PerturbedSParams, 'Item', Item_attrib)
+            SubElement(Item, 'SubItem', SubItem0_attrib)
+            SubElement(Item, 'SubItem', SubItem1_attrib)
+            SubElement(Item, 'SubItem', SubItem2_attrib)
 
         # **********************************************************************
         # The end
         # **********************************************************************
 
         _indent(CorrectedMeasurement, level=1)
-        new_ET = ET.ElementTree(CorrectedMeasurement)
+        new_ET = ElementTree(CorrectedMeasurement)
         new_ET.write(output_file, xml_declaration=True)

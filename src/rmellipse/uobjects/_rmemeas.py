@@ -29,7 +29,6 @@ from typing import TypeVar, Any
 
 # umechdim = 'umechs'
 
-
 __all__ = [
     'CovarianceDataArray',
     'CovarianceDOFMetadata',
@@ -512,9 +511,7 @@ class RMEMeas[A](GroupSaveable):
                 raise RMEMeasFormatError(
                     f'First dimension of {attribute_name} MUST be called "umech_id"'
                 )
-            actual = [
-                str(value) for value in metadata.coords['umech_id'].values
-            ]
+            actual = [str(value) for value in metadata.coords['umech_id'].values]
             if actual != expected_mechanisms:
                 raise RMEMeasFormatError(
                     f'{attribute_name} umech_id coordinates must match cov '
@@ -804,9 +801,7 @@ class RMEMeas[A](GroupSaveable):
         if self.mc is None:
             self.mc = new_sample
         else:
-            self.mc = xr.concat(
-                [self.mc, new_sample], dim='sample_id', join='override'
-            )
+            self.mc = xr.concat([self.mc, new_sample], dim='sample_id', join='override')
 
     def add_umech(
         self,
@@ -1553,9 +1548,7 @@ class RMEMeas[A](GroupSaveable):
                 mc = None
             else:
                 mc = self.mc.isel(sample_id=keep)
-                mc = mc.assign_coords(
-                    sample_id=np.arange(mc.sizes['sample_id'])
-                )
+                mc = mc.assign_coords(sample_id=np.arange(mc.sizes['sample_id']))
         # make sure nominal is first
         uid_sorted = np.append(
             cov.umech_id[cov.umech_id == 'nominal'],
@@ -1860,20 +1853,17 @@ class RMEMeas[A](GroupSaveable):
         # param_names = param_names
         def fit(arr, nominal):
             # Fit the independent nominal first to generate an initial guess.
-            coeffs = (
-                nominal.curvefit(
-                    coords,
-                    func,
-                    reduce_dims=reduce_dims,
-                    skipna=skipna,
-                    p0=p0,
-                    bounds=bounds,
-                    param_names=param_names,
-                    errors=errors,
-                    kwargs=kwargs,
-                )
-                .curvefit_coefficients
-            )
+            coeffs = nominal.curvefit(
+                coords,
+                func,
+                reduce_dims=reduce_dims,
+                skipna=skipna,
+                p0=p0,
+                bounds=bounds,
+                param_names=param_names,
+                errors=errors,
+                kwargs=kwargs,
+            ).curvefit_coefficients
 
             # refit to the rest of the data with an accurate initial guess
             fit_param_names = list(coeffs.param.values)
@@ -1918,7 +1908,7 @@ class RMEMeas[A](GroupSaveable):
             coordinates.
         """
 
-        def eval(arr):
+        def _eval(arr):
             output = None
             use_dim = 'umech_id'
             if use_dim not in arr.coords:
@@ -1936,10 +1926,10 @@ class RMEMeas[A](GroupSaveable):
                 output[i, ...] = values
             return output
 
-        cov = eval(self.cov)
+        cov = _eval(self.cov)
         mc = None
         if self.mc is not None:
-            mc = eval(self.mc)
+            mc = _eval(self.mc)
         return RMEMeas(self.name, cov, mc, self.covdofs.copy(), self.covcats.copy())
 
 

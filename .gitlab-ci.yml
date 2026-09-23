@@ -6,6 +6,7 @@ image: python:3.12.4
 
 stages:
   - install
+  - security
   - test
   - deploy
 
@@ -22,6 +23,48 @@ install_dependencies:
     policy: pull-push
   script:
     - *build-env
+
+bandit_scan:
+  stage: security
+  script:
+    - *build-env
+    - uv run bandit -c pyproject.toml -r src/ -f xml -o bandit-report.xml
+  artifacts:
+    when: always
+    paths:
+      - bandit-report.xml
+    reports:
+      junit: bandit-report.xml
+  rules:
+  - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ "/^development.*$/"'
+  - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ "/^stable.*$/"'
+  - if: '$CI_COMMIT_REF_NAME =~ "/^development.*$/" || $CI_COMMIT_REF_NAME =~ "/^stable.*$/"'
+  - if: $CI_PIPELINE_SOURCE == "schedule" # Runs automatically on schedule
+  allow_failure: True
+
+pip_audit_scan:
+  stage: security
+  script:
+    # Generates a CycloneDX SBOM including found vulnerabilities
+    - *build-env
+    - uv run pip-audit -f cyclonedx-xml -o gl-sbom-python.cdx.xml
+  artifacts:
+    name: "pip-audit-security-report"
+    when: always
+    expire_in: 1 week
+    paths:
+      - gl-sbom-python.cdx.xml
+    reports:
+      # This exposes the data directly into GitLab's dependency scanner UI
+      junit: gl-sbom-python.cdx.xml
+  # Allow the pipeline to pass even if vulnerabilities are found (Optional)
+  # Remove the line below if you want failing audits to break your build
+  allow_failure: True
+  rules:
+  - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ "/^development.*$/"'
+  - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ "/^stable.*$/"'
+  - if: '$CI_COMMIT_REF_NAME =~ "/^development.*$/" || $CI_COMMIT_REF_NAME =~ "/^stable.*$/"'
+  - if: $CI_PIPELINE_SOURCE == "schedule" # Runs automatically on schedule
 
 unit_test:
   stage: test

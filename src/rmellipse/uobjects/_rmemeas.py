@@ -1007,6 +1007,8 @@ class RMEMeas[A](GroupSaveable):
             s = _angle_diff(cov[1:, ...], cov[0, ...], deg=deg)
         else:
             s = cov[1:, ...] - cov[0, ...]
+        # use magnitudes so complex perturbations don't cancel, same as stdunc
+        s = np.abs(s)
         covunc = np.sqrt((s**2).sum(dim='umech_id'))
 
         num = covunc**4
@@ -1243,7 +1245,7 @@ class RMEMeas[A](GroupSaveable):
                     ((x.values - nominal.values) + const) % (2 * const) - const
                 ) ** 2
             else:
-                temp = (x.values - nominal.values) ** 2
+                temp = np.abs(x.values - nominal.values) ** 2
             temp = np.sum(temp, axis=0) ** 0.5 + nominal.values
             out = nominal.copy()
             out.values = temp

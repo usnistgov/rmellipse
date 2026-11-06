@@ -14,6 +14,7 @@ import os  # to manipulate file paths
 # no sec risk
 from xml.etree.ElementTree import Element, SubElement, ElementTree  # nosec B405
 import defusedxml.ElementTree as DET  # to manipulate XML
+from pathlib import PureWindowsPath, PurePosixPath
 
 
 def _indent(elem, level=0):
@@ -31,6 +32,23 @@ def _indent(elem, level=0):
     else:
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
+
+
+def swap_base_dirs(location_path: str, old_base_dir: str, new_base_dir: str) -> str:
+    safe_old_base_dir: str = PureWindowsPath(old_base_dir).as_posix()
+    safe_new_base_dir: str = PureWindowsPath(new_base_dir).as_posix()
+    safe_location_path: str = PureWindowsPath(location_path).as_posix()
+    new_location_path: str = safe_location_path.replace(
+        safe_old_base_dir, safe_new_base_dir
+    )
+
+    new_dir_is_windows_path: bool = len(PurePosixPath(new_base_dir).parts) < len(
+        PureWindowsPath(new_base_dir).parts
+    )
+    if new_dir_is_windows_path:
+        new_location_path = str(PureWindowsPath(new_location_path))
+
+    return new_location_path
 
 
 class MUFMeasParser:
@@ -89,17 +107,21 @@ class MUFMeasParser:
         """
         if old_base_dir is not None:
             # change nominal path
-            self.nominal_dict['location'] = self.nominal_dict['location'].replace(
-                old_base_dir, new_base_dir
+            self.nominal_dict['location'] = swap_base_dirs(
+                self.nominal_dict['location'], old_base_dir, new_base_dir
             )
 
             # change montecarlo path
             for i, item in enumerate(self.montecarlo_dict):
-                item['location'] = item['location'].replace(old_base_dir, new_base_dir)
+                item['location'] = swap_base_dirs(
+                    item['location'], old_base_dir, new_base_dir
+                )
 
             # change covariance path
             for i, item in enumerate(self.covariance_dict):
-                item['location'] = item['location'].replace(old_base_dir, new_base_dir)
+                item['location'] = swap_base_dirs(
+                    item['location'], old_base_dir, new_base_dir
+                )
 
         # load nominal
         nominal_data = open_fcn(self.nominal_dict['location'], *open_fcn_extra_args)

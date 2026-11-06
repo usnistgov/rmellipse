@@ -826,6 +826,35 @@ def test_stdunc_uses_complex_perturbation_magnitude():
     assert measurement.stdunc().cov.item() == pytest.approx(0.5)
 
 
+def test_dof_uses_complex_perturbation_magnitude():
+    # real and imaginary perturbations must not cancel in the welch-satterthwaite sum
+    measurement = RMEMeas.from_nom('complex dof', xr.DataArray(1.0 + 1.0j))
+    measurement.add_umech('real source', measurement.nom + 0.1, dof=5)
+    measurement.add_umech('imag source', measurement.nom + 0.1j, dof=5)
+
+    dof = measurement.dof()
+    assert not np.iscomplexobj(dof)
+    assert dof.item() == pytest.approx(10.0)
+
+
+def test_group_combine_mechanisms_uses_complex_perturbation_magnitude():
+    measurement = RMEMeas.from_nom('complex group', xr.DataArray(1.0 + 1.0j))
+    group = {'combine_id': 'group'}
+    measurement.add_umech('real member', measurement.nom + 0.3, dof=4, category=group)
+    measurement.add_umech('imag member', measurement.nom + 0.4j, dof=4, category=group)
+    measurement.add_umech('other source', measurement.nom + 0.5, dof=8)
+
+    grouped = measurement.group_combine_mechanisms()
+    assert grouped.stdunc().cov.item() == pytest.approx(
+        measurement.stdunc().cov.item()
+    )
+
+    # grouped 0.5 (dof 4) with 0.5 (dof 8): 0.5**2 / (0.5**4 * (1/4 + 1/8))
+    dof = measurement.dof()
+    assert not np.iscomplexobj(dof)
+    assert dof.item() == pytest.approx(32 / 3)
+
+
 def test_empty_construction_is_valid():
     empty = RMEMeas()
 

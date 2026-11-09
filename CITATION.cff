@@ -1,0 +1,80 @@
+cff-version: 1.2.0
+title: Rocky Mountain Ellipse Digital Traceability Software
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - affiliation: National Institute of Standards and Technology
+    orcid: "https://orcid.org/0009-0003-1381-8725"
+    given-names: Daniel Cole
+    family-names: Gray
+    email: daniel.c.gray@nist.gov
+  - given-names: Zenn
+    family-names: Roberts
+    orcid: "https://orcid.org/0009-0001-9486-4269"
+    affiliation: National Institute of Standards and Technology
+  - given-names: Joshua
+    family-names: Kast
+    orcid: "https://orcid.org/0000-0001-7650-5580"
+    affiliation: National Institute of Standards and Technology
+    email: joshua.kast@nist.gov
+  - given-names: Aaron Morgan
+    family-names: Hagerstrom
+    email: aaron.hagerstrom@nist.gov
+    orcid: "https://orcid.org/0000-0003-4675-4636"
+    affiliation: National Institute of Standards and Technology
+  - given-names: Michael Kenneth
+    family-names: Dawson
+    name-suffix: Jr.
+    email: michael.dawson@nist.gov
+    orcid: "https://orcid.org/0000-0002-7151-5664"
+    affiliation: National Institute of Standards and Technology
+identifiers:
+  - type: doi
+    value: 10.18434/mds2-3825
+  - type: url
+    value: "https://data.nist.gov/od/id/mds2-3825"
+    description: >-
+      The URL of the software on the NIST Public Data
+      Repository.
+repository-code: "https://github.com/usnistgov/rmellipse"
+url: "https://pages.nist.gov/rmellipse-ipages/stable/index.html"
+repository-artifact: "https://data.nist.gov/od/id/mds2-3825"
+abstract: >-
+  Rocky Mountain Ellipse (RME) is a software package
+  designed to provide an explicit digital record of the
+  metrological traceability of a measurement result. In
+  other words, RME will allows users to build a record that
+  describes how a measurement result can be related to a
+  reference through a documented unbroken chain of
+  calibrations, each contributing to the measurement
+  uncertainty (https://jcgm.bipm.org/vim/en/2.41.html). To
+  show the traceability of measurements, RME provides a
+  flexible, explicit system to organize and annotate
+  scientific data and data analysis workflows. Because
+  measurement uncertainty is closely related to
+  traceability, RME allows users to track how the
+  uncertainty of a measurement results derives from other
+  measurements by providing tools to facilitate measurement
+  uncertainty propagation (linear finite-difference and
+  Monte-Carlo) through arbitrary Python functions. The
+  system is compatible with the BIPM Guide to the expression
+  of uncertainty in measurement (GUM). RME is intended to be
+  part of a FAIR (https://www.go-fair.org/fair-principles/)
+  software ecosystem that will facilitate re-use of code and
+  data. This vision includes an online archive that could
+  eventually store records of NIST’s entire traceability
+  chain, and beyond.
+keywords:
+  - Uncertainty propagation
+  - metrological traceability
+license: NIST-Software
+# ^ The CFF schema does not account for updates to the SPDX license list, so it
+# considers this license ID to be invalid.
+# However, it is a valid ID and up-to-date as of v3.29.0 of the license list
+# (https://github.com/spdx/license-list-XML/releases/tag/v3.29.0).
+# See also https://github.com/spdx/license-list-XML/commit/1308813298d5e1a9c11489e5886c9269980b1bf5.
+commit: UPDATE ME
+version: 1.0.0
+date-released: UPDATE ME
